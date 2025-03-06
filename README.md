@@ -1,4 +1,4 @@
-#HEALTHCARE
+# HEALTHCARE
 
 Este repositório é destinado ao projeto Health Care, um aplicativo móvel voltado para o monitoramento de saúde. Seu objetivo é fornecer uma análise de longo prazo e contribuir com relatórios gerados por inteligência artificial (IA) para médicos, auxiliando no rastreamento e diagnóstico de doenças. A plataforma é projetada para atender a todos os usuários interessados em acompanhar sua saúde de forma eficaz e precisa.
 
