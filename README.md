@@ -10,5 +10,5 @@ Health Care é um aplicativo móvel inovador voltado para o monitoramento contí
 ## Tecnologias Utilizadas
 
 - **Back-end**: Java script com node.js.
-- **Front-end**: IONIC
+- **Front-end**: React Native
 - **Banco**: MySQL
