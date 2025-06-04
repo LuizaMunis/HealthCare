@@ -1,14 +1,50 @@
-# HEALTHCARE
+# Welcome to your Expo app 👋
 
-Este repositório é destinado ao projeto Health Care, um aplicativo móvel voltado para o monitoramento de saúde. Seu objetivo é fornecer uma análise de longo prazo e contribuir com relatórios gerados por inteligência artificial (IA) para médicos, auxiliando no rastreamento e diagnóstico de doenças. A plataforma é projetada para atender a todos os usuários interessados em acompanhar sua saúde de forma eficaz e precisa.
-Drive do projeto: https://drive.google.com/drive/folders/19zqyPYoBOdYRvkmEjRKoDLUiOiJU8tcd.
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Descrição do Projeto
+## Get started
 
-Health Care é um aplicativo móvel inovador voltado para o monitoramento contínuo da saúde de seus usuários. Desenvolvido para atender a qualquer pessoa interessada em acompanhar seu bem-estar, o app utiliza tecnologia avançada para fornecer uma análise detalhada de dados de saúde ao longo do tempo. A principal função do Health Care é gerar relatórios baseados em inteligência artificial (IA), que podem ser compartilhados com médicos, facilitando o rastreamento de condições de saúde e auxiliando no diagnóstico precoce de doenças. A plataforma oferece uma maneira prática e eficiente de monitorar a saúde, promovendo o cuidado preventivo e melhorando a qualidade de vida dos usuários.
+1. Install dependencies
 
-## Tecnologias Utilizadas
+   ```bash
+   npm install
+   ```
 
-- **Back-end**: Java script com node.js.
-- **Front-end**: IONIC
-- **Banco**: MySQL
+2. Start the app
+
+   ```bash
+   npx expo start
+   ```
+
+In the output, you'll find options to open the app in a
+
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Get a fresh project
+
+When you're ready, run:
+
+```bash
+npm run reset-project
+```
+
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+
+## Learn more
+
+To learn more about developing your project with Expo, look at the following resources:
+
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+
+## Join the community
+
+Join our community of developers creating universal apps.
+
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
