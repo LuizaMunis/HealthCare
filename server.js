@@ -35,4 +35,3 @@ app.get('/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-1.10 Script SQL para Criar
