@@ -15,6 +15,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarInactiveTintColor: '#8e8e93',
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
@@ -26,20 +27,50 @@ export default function TabLayout() {
           default: {},
         }),
       }}>
+
+      {/* Aba Home: Ícone de casa. */}
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }: { color: string }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
+
+      {/* Aba Registros. Ícone de uma pasta/maleta com um "+". */}
       <Tabs.Screen
-        name="explore"
+        name="registros"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Registros',
+          tabBarIcon: ({ color }: { color: string }) => (
+            // Exemplo de ícone, pode variar conforme sua biblioteca.
+            <IconSymbol size={28} name="plus.rectangle.fill" color={color} />
+          ),
         }}
       />
+
+      {/* Aba Relatórios. Ícone de gráfico de barras. */}
+      <Tabs.Screen
+        name="relatorios"
+        options={{
+          title: 'Relatórios',
+          tabBarIcon: ({ color }: { color:string }) => (
+            <IconSymbol size={28} name="chart.bar.fill" color={color} />
+          ),
+        }}
+      />
+
+      {/* Aba Conta. Ícone de pessoa. */}
+      <Tabs.Screen
+        name="conta"
+        options={{
+          title: 'Conta',
+          tabBarIcon: ({ color }: { color: string }) => (
+            <IconSymbol size={28} name="person.fill" color={color} />
+          ),
+        }}
+      />
+
     </Tabs>
   );
 }
