@@ -1,167 +1,125 @@
+import { Feather } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Hook que centraliza a lógica
-import { useBloodPressureRecords } from '@/hooks/useBloodPressureRecords';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
-// Componentes de UI
-import DeleteConfirmModal from '@/components/BloodPressure/DeleteConfirmModal';
-import HistoryView from '@/components/BloodPressure/HistoryView'; // <-- NOVO
-import RegistrationView from '@/components/BloodPressure/RegistrationView'; // <-- NOVO
-
-const BloodPressureScreen = () => {
-  // 1. O hook continua sendo a única fonte da verdade para o estado.
-  const {
-    records,
-    currentView,
-    editingRecord,
-    showDeleteConfirm,
-    message,
-    form,
-    setCurrentView,
-    setSystolic,
-    setDiastolic,
-    setDate,
-    setTime,
-    handleSave,
-    handleEdit,
-    handleDelete,
-    confirmDelete,
-    cancelDelete,
-    cancelEdit,
-  } = useBloodPressureRecords();
-
-  // 2. Função intermediária para o formulário.
-  const handleFormChange = (field, value) => {
-    const setters = {
-      systolic: setSystolic,
-      diastolic: setDiastolic,
-      date: setDate,
-      time: setTime,
-    };
-    if (setters[field]) {
-      setters[field](value);
-    }
-  };
-  
-  // 3. Renderiza o layout e a view correta (Registro ou Histórico)
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* O Header e a Mensagem continuam aqui, pois são comuns a ambas as views. */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Pressão Arterial</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={[styles.headerButton, currentView === 'register' && styles.activeButton]}
-            onPress={() => setCurrentView('register')}
-          >
-            <Text style={[styles.headerButtonText, currentView === 'register' && styles.activeButtonText]}>
-              Novo Registro
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.headerButton, currentView === 'history' && styles.activeButton]}
-            onPress={() => setCurrentView('history')}
-          >
-            <Text style={[styles.headerButtonText, currentView === 'history' && styles.activeButtonText]}>
-              Histórico
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {message.text ? (
-        <View style={[styles.message, styles[`message${message.type.charAt(0).toUpperCase() + message.type.slice(1)}`]]}>
-          <Text style={styles.messageText}>{message.text}</Text>
-        </View>
-      ) : null}
-
-      {/* Renderização Condicional dos novos componentes de view */}
-      {currentView === 'register' ? (
-        <RegistrationView
-          isEditing={!!editingRecord}
-          formState={form}
-          onFormChange={handleFormChange}
-          onSave={handleSave}
-          onCancelEdit={cancelEdit}
-        />
-      ) : (
-        <HistoryView
-          records={records}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      )}
-
-      {/* O Modal de confirmação continua aqui, pois pode ser chamado de qualquer view. */}
-      <DeleteConfirmModal
-        visible={showDeleteConfirm !== null}
-        onCancel={cancelDelete}
-        onConfirm={confirmDelete}
-      />
-    </SafeAreaView>
-  );
+// Componente para os botões de Acesso Rápido com navegação
+type QuickAccessButtonProps = {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+  href: string;
+  themeColors: any;
 };
 
-// Os estilos para o layout principal permanecem os mesmos.
+const QuickAccessButton: React.FC<QuickAccessButtonProps> = ({ icon, label, href, themeColors }) => (
+  <Link href={href} asChild>
+    <TouchableOpacity style={styles.quickAccessItem}>
+      <View style={[styles.quickAccessButton, { backgroundColor: themeColors.card }]}>
+        <Feather name={icon} size={24} color={themeColors.primary} />
+      </View>
+      <Text style={[styles.quickAccessLabel, { color: themeColors.textSecondary }]}>{label}</Text>
+    </TouchableOpacity>
+  </Link>
+);
+
+export default function RegistrosScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const themeColors = Colors[colorScheme];
+
+  // Tipagem explícita dos itens
+  type MonitoringItem = {
+    icon: React.ComponentProps<typeof Feather>['name'];
+    label: string;
+    href: string;
+  };
+
+  type HealthRecordItem = {
+    icon: React.ComponentProps<typeof Feather>['name'];
+    label: string;
+  };
+
+  // Array de itens para Monitoramento
+  const monitoringItems: MonitoringItem[] = [
+    { icon: 'heart', label: 'Coração', href: '/monitor/heart' },
+    { icon: 'droplet', label: 'Glicemia', href: '/monitor/glucose' },
+    { icon: 'thermometer', label: 'Temperatura', href: '/monitor/temperature' },
+    { icon: 'activity', label: 'Pressão', href: '/monitor/pressure' },
+  ];
+
+  // Array de itens para Registro de Saúde (exemplo)
+  const healthRecordItems: HealthRecordItem[] = [
+      { icon: 'shield', label: 'Vacinas' },
+      { icon: 'clipboard', label: 'Consultas' },
+      { icon: 'package', label: 'Medicamentos' },
+      { icon: 'award', label: 'Doenças' },
+  ];
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <ScrollView>
+        <Text style={[styles.mainTitle, { color: themeColors.text }]}>Meus Registros</Text>
+
+        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Monitoramento</Text>
+        <View style={styles.gridContainer}>
+          {monitoringItems.map(item => (
+            <QuickAccessButton
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              href={item.href}
+              themeColors={themeColors}
+            />
+          ))}
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Registros de Saúde</Text>
+        <View style={styles.gridContainer}>
+          {healthRecordItems.map(item => (
+            <QuickAccessButton
+              key={item.label}
+              icon={item.icon}
+              href="/em-breve" // Rota de placeholder
+              label={item.label}
+              themeColors={themeColors}
+            />
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    backgroundColor: '#2196F3',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 15,
-  },
-  headerButtons: {
+  container: { flex: 1 },
+  mainTitle: { fontSize: 28, fontWeight: 'bold', padding: 20 },
+  sectionTitle: { fontSize: 20, fontWeight: '600', paddingHorizontal: 20, marginTop: 20, marginBottom: 10 },
+  gridContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 10,
+  },
+  quickAccessItem: {
+    width: '25%', // 4 itens por linha
+    alignItems: 'center',
+    padding: 10,
+  },
+  quickAccessButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 15,
     justifyContent: 'center',
-    gap: 10,
+    alignItems: 'center',
+    marginBottom: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
-  headerButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  activeButton: {
-    backgroundColor: 'white',
-  },
-  headerButtonText: {
-    color: 'white',
-    fontWeight: '500',
-  },
-  activeButtonText: {
-    color: '#2196F3',
-  },
-  message: {
-    padding: 15,
-    marginHorizontal: 20,
-    marginTop: 15,
-    borderRadius: 8,
-  },
-  messageSuccess: {
-    backgroundColor: '#d4edda',
-  },
-  messageError: {
-    backgroundColor: '#f8d7da',
-  },
-  messageWarning: {
-    backgroundColor: '#fff3cd',
-  },
-  messageText: {
+  quickAccessLabel: {
     textAlign: 'center',
-    fontWeight: '500',
+    fontSize: 12,
   },
 });
-
-export default BloodPressureScreen;
