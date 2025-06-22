@@ -1,175 +1,56 @@
-// frontend/src/viewmodels/UserViewModel.js
-import { useState, useCallback } from 'react';
-import ApiService from '../services/apiService';
-import { UserModel } from '../models/UserModel';
+import UserModel from '../models/UserModel';
+import apiService from '../services/apiService';
+import { API_ENDPOINTS } from '../utils/constants';
 
-export const useUserViewModel = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+class UserViewModel {
+  constructor() {
+    this.userModel = new UserModel();
+  }
 
-  // Limpar erro
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  // Registrar usuário
-  const register = useCallback(async (userData) => {
+  async login(email, password) {
     try {
-      setLoading(true);
-      setError(null);
-
-      // Validações
-      const nameError = UserModel.validateName(userData.name);
-      const emailError = UserModel.validateEmail(userData.email);
-      const passwordError = UserModel.validatePassword(userData.password);
-
-      if (nameError || emailError || passwordError) {
-        throw new Error(nameError || emailError || passwordError);
+      const response = await apiService.post(API_ENDPOINTS.LOGIN, { email, password });
+      // Assumindo que a API retorna um token e/ou dados do usuário
+      if (response && response.token) {
+        this.userModel.setUserData(response.user); // Se a API retornar dados do usuário
+        this.userModel.setToken(response.token);
+        return { success: true, message: 'Login bem-sucedido!' };
+      } else {
+        return { success: false, message: response.message || 'Credenciais inválidas.' };
       }
-
-      const result = await ApiService.registerUser(userData);
-      
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      return { success: true, message: 'Usuário registrado com sucesso!' };
-    } catch (err) {
-      const errorMessage = err.message || 'Erro ao registrar usuário';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Erro no login:', error);
+      return { success: false, message: 'Ocorreu um erro ao tentar fazer login. Por favor, tente novamente.' };
     }
-  }, []);
+  }
 
-  // Fazer login
-  const login = useCallback(async (credentials) => {
+  // Você pode adicionar outros métodos aqui, como register, logout, etc.
+  async register(userData) {
     try {
-      setLoading(true);
-      setError(null);
-
-      // Validações
-      const emailError = UserModel.validateEmail(credentials.email);
-      const passwordError = UserModel.validatePassword(credentials.password);
-
-      if (emailError || passwordError) {
-        throw new Error(emailError || passwordError);
+      const response = await apiService.post(API_ENDPOINTS.REGISTER, userData);
+      if (response && response.success) {
+        return { success: true, message: 'Cadastro realizado com sucesso!' };
+      } else {
+        return { success: false, message: response.message || 'Erro ao cadastrar.' };
       }
-
-      const result = await ApiService.loginUser(credentials);
-      
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      const userData = new UserModel(result.data.data.user);
-      setUser(userData);
-      setIsAuthenticated(true);
-
-      return { success: true, message: 'Login realizado com sucesso!' };
-    } catch (err) {
-      const errorMessage = err.message || 'Erro ao fazer login';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Erro no cadastro:', error);
+      return { success: false, message: 'Ocorreu um erro ao tentar se cadastrar. Por favor, tente novamente.' };
     }
-  }, []);
+  }
 
-  // Buscar perfil do usuário
-  const fetchProfile = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  isLoggedIn() {
+    return !!this.userModel.getToken();
+  }
 
-      const result = await ApiService.getUserProfile();
-      
-      if (!result.success) {
-        throw new Error(result.error);
-      }
+  getUserData() {
+    return this.userModel.getUserData();
+  }
 
-      const userData = new UserModel(result.data.data);
-      setUser(userData);
-      setIsAuthenticated(true);
+  logout() {
+    this.userModel.clearUserData();
+    this.userModel.clearToken();
+  }
+}
 
-      return { success: true, data: userData };
-    } catch (err) {
-      const errorMessage = err.message || 'Erro ao buscar perfil';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Buscar todos os usuários
-  const fetchAllUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await ApiService.getAllUsers();
-      
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      const usersData = result.data.data.map(userData => new UserModel(userData));
-      setUsers(usersData);
-
-      return { success: true, data: usersData };
-    } catch (err) {
-      const errorMessage = err.message || 'Erro ao buscar usuários';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Logout
-  const logout = useCallback(() => {
-    ApiService.removeToken();
-    setUser(null);
-    setUsers([]);
-    setIsAuthenticated(false);
-    setError(null);
-  }, []);
-
-  // Verificar saúde da API
-  const checkApiHealth = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await ApiService.checkHealth();
-      return result;
-    } catch (err) {
-      return { success: false, error: 'Erro ao verificar API' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  return {
-    // Estado
-    loading,
-    error,
-    user,
-    users,
-    isAuthenticated,
-    
-    // Ações
-    register,
-    login,
-    logout,
-    fetchProfile,
-    fetchAllUsers,
-    checkApiHealth,
-    clearError,
-  };
-};
-
-export default useUserViewModel;
+export default new UserViewModel(); // Exporta uma instância única
