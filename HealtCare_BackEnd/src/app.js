@@ -7,12 +7,12 @@ require('dotenv').config();
 const { testConnection } = require('./config/database');
 const UserModel = require('./models/userModel');
 const PerfilModel = require('./models/perfilModel');
-const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel'); // NOVO: Importa o modelo de registros
+const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel');
 
 // Importa as rotas da aplicação
 const userRoutes = require('./routes/userRoutes');
 const perfilRoutes = require('./routes/perfilRoutes');
-const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // NOVO: Importa as rotas de registros
+const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,7 +24,7 @@ app.use(express.json());
 // Definição das rotas da API
 app.use('/api/users', userRoutes);
 app.use('/api/perfil', perfilRoutes);
-app.use('/api/pressao-arterial', registroPressaoArterialRoutes); // NOVO: Adiciona as rotas de pressão arterial
+app.use('/api/pressao-arterial', registroPressaoArterialRoutes);
 
 // Rota de teste de saúde da API
 app.get('/api/health', (req, res) => {
@@ -43,12 +43,13 @@ const startServer = async () => {
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
 
     // Criar ou verificar a existência das tabelas na ordem correta
-    console.log('📦 Verificando/criando tabela de usuários...');
+    // O UserModel.createTable() usará a definição mais recente com VARCHAR(255)
+    console.log('📦 Verificando/criando tabela de usuários (schema VARCHAR(255))...');
     await UserModel.createTable();
     console.log('📦 Verificando/criando tabela de perfis...');
     await PerfilModel.createTable();
     console.log('📦 Verificando/criando tabela de registros de pressão arterial...');
-    await RegistroPressaoArterialModel.createTable(); // NOVO: Chama a criação da tabela de registros
+    await RegistroPressaoArterialModel.createTable();
 
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);
