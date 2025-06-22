@@ -3,7 +3,11 @@
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Defina a URL base da sua API em um só lugar
+const API_URL = 'http://192.168.0.6:3001'; // Ex: http://192.168.1.10:3000
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -11,11 +15,40 @@ export default function LoginScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const router = useRouter();
 
-  const handleLogin = () => {
-    // Aqui virá sua lógica de login real
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Erro', 'Por favor, preencha o email e a senha.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/users/login`, { // Ajuste a rota se necessário
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Login bem-sucedido
+        // 1. Armazene o token de forma segura
+        await AsyncStorage.setItem('userToken', data.data.token);
+        
+        // 2. Redirecione para a tela principal
+        router.replace('/(tabs)/');
+      } else {
+        // Mostra a mensagem de erro vinda do backend
+        Alert.alert('Falha no Login', data.message || 'Credenciais inválidas.');
+      }
+    } catch (error) {
+      // Erro de rede ou outro problema
+      console.error('Erro ao fazer login:', error);
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor. Tente novamente mais tarde.');
+    }
     console.log('Logando com:', { email, password });
-    // Após o sucesso, redireciona para a home, substituindo a tela de login no histórico
-    router.replace('/(tabs)/');
   };
 
   return (

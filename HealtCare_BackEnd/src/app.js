@@ -7,12 +7,14 @@ require('dotenv').config();
 const { testConnection } = require('./config/database');
 const UserModel = require('./models/userModel');
 const PerfilModel = require('./models/perfilModel');
-const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel'); // NOVO: Importa o modelo de registros
+const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel'); 
+const UsuarioModel = require('./models/usuarioModel');
 
 // Importa as rotas da aplicação
 const userRoutes = require('./routes/userRoutes');
 const perfilRoutes = require('./routes/perfilRoutes');
 const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // NOVO: Importa as rotas de registros
+const usuarioRoutes = require('./routes/usuarioRoutes'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,7 +26,8 @@ app.use(express.json());
 // Definição das rotas da API
 app.use('/api/users', userRoutes);
 app.use('/api/perfil', perfilRoutes);
-app.use('/api/pressao-arterial', registroPressaoArterialRoutes); // NOVO: Adiciona as rotas de pressão arterial
+app.use('/api/pressao-arterial', registroPressaoArterialRoutes); 
+app.use('/api/usuarios', usuarioRoutes);
 
 // Rota de teste de saúde da API
 app.get('/api/health', (req, res) => {
