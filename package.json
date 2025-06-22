@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "expo-router": "^5.1.0",
+    "react-router-native": "^6.30.0"
+  }
+}

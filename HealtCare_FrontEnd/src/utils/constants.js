@@ -1,4 +1,5 @@
-// constants.js
+// HealthCare_Frontend/src/utils/constants.js
+
 export const BASE_URL = 'http://localhost:${PORT}/api'; // Mude para a URL da sua API
 
 export const API_ENDPOINTS = {
