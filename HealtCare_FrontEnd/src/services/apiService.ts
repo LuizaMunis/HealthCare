@@ -1,6 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG, ENDPOINTS } from '@/src/constants/api';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 const TOKEN_KEY = 'healthcare_auth_token';
 

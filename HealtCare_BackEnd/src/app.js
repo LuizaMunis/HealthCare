@@ -1,4 +1,5 @@
-// backend/src/app.js
+// HealthCare_Back-End/src/app.js
+
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -24,9 +25,9 @@ app.use(cors());
 app.use(express.json());
 
 // Definição das rotas da API
-app.use('/api/users', userRoutes);
+//app.use('/api/users', userRoutes);
 app.use('/api/perfil', perfilRoutes);
-app.use('/api/pressao-arterial', registroPressaoArterialRoutes); 
+//app.use('/api/pressao-arterial', registroPressaoArterialRoutes); 
 app.use('/api/usuarios', usuarioRoutes);
 
 // Rota de teste de saúde da API

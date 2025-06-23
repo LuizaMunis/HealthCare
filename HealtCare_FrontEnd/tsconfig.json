@@ -1,22 +1,19 @@
 {
   "extends": "expo/tsconfig.base",
-  
   "compilerOptions": {
     "strict": true,
-    
     "baseUrl": ".",
     
     "paths": {
       "@/*": [
-        "./*"
+        "src/*"
       ]
     }
   },
-  
   "include": [
-    "**/*.ts",             // Inclui todos os arquivos TypeScript.
-    "**/*.tsx",             // Inclui todos os arquivos React (TSX).
-    ".expo/types/**/*.ts",  // Inclui os tipos gerados pelo Expo.
-    "expo-env.d.ts"         // Inclui as declarações de tipo para as variáveis de ambiente do Expo.
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ]
 }

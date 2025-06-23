@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/src/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 // Impede que a tela de splash suma antes de carregarmos o que for necessário.
 SplashScreen.preventAutoHideAsync();
