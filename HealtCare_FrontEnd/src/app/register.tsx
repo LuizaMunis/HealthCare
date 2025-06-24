@@ -16,23 +16,23 @@ import {
   Platform
 } from 'react-native';
 
-const API_URL = 'http://192.168.0.6:3000';
+const API_URL = 'http://192.168.15.7:3000';
 
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
+  const [password, setPassword] = useState(''); 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const router = useRouter();
 
   const handleRegister = async () => {
-    if (!nomeCompleto.trim() || !email.trim() || !senha.trim()) {
+    if (!nomeCompleto.trim() || !email.trim() || !password.trim()) { 
       Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/usuarios/register`, {
+      const response = await fetch(`${API_URL}/api/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ export default function RegisterScreen() {
         body: JSON.stringify({
           nome_completo: nomeCompleto,
           email: email,
-          senha: senha,
+          password: password, 
         }),
       });
 
@@ -106,8 +106,8 @@ export default function RegisterScreen() {
               <TextInput
                 style={styles.passwordInput}
                 placeholder="********"
-                value={senha}
-                onChangeText={setSenha}
+                value={password} 
+                onChangeText={setPassword} 
                 secureTextEntry={!isPasswordVisible}
               />
               <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
@@ -134,6 +134,7 @@ export default function RegisterScreen() {
   );
 }
 
+// Estilos (sem alterações)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   scrollContainer: { flexGrow: 1, justifyContent: 'center' },

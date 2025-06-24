@@ -1,4 +1,4 @@
-// Health_Care_BackEnd/src/controllers/userController.js
+// backend/src/controllers/userController.js
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -7,13 +7,12 @@ const UserModel = require('../models/userModel');
 class UserController {
   /**
    * Registra um novo usuário no sistema.
-   * Espera 'nome_completo', 'email' e 'password' no corpo da requisição.
    */
   static async register(req, res) {
     try {
       const { nome_completo, email, password } = req.body;
 
-      // Validações básicas
+      // Validações
       if (!nome_completo || !email || !password) {
         return res.status(400).json({
           success: false,
@@ -21,27 +20,29 @@ class UserController {
         });
       }
 
-      // Verificar se usuário já existe
+      // Validação de formato de email (opcional, mas recomendado)
+      const emailRegex = /\S+@\S+\.\S+/;
+      if (!emailRegex.test(email)) {
+          return res.status(400).json({ 
+              success: false, 
+              message: 'Formato de email inválido.' 
+          });
+      }
+
       const existingUser = await UserModel.findByEmail(email);
       if (existingUser) {
-        return res.status(400).json({
+        return res.status(409).json({ 
           success: false,
-          message: 'Email já cadastrado'
+          message: 'Este email já está em uso.'
         });
       }
 
-      // Criptografar senha (o hash gerado pelo bcrypt é longo e agora suportado pelo VARCHAR(255))
       const senha_hash = await bcrypt.hash(password, 10);
-
-      // Obter a data atual para data_cadastro
-      const data_cadastro = new Date().toISOString().slice(0, 10); // Formato YYYY-MM-DD
-
-      // Criar usuário
+      
       const newUser = await UserModel.create({
         nome_completo,
         email,
         senha_hash,
-        data_cadastro
       });
 
       res.status(201).json({
@@ -50,6 +51,7 @@ class UserController {
         data: newUser
       });
     } catch (error) {
+      console.error('Erro no registro:', error);
       res.status(500).json({
         success: false,
         message: 'Erro interno do servidor ao registrar usuário',
@@ -60,13 +62,11 @@ class UserController {
 
   /**
    * Realiza o login do usuário.
-   * Espera 'email' e 'password' no corpo da requisição.
    */
   static async login(req, res) {
     try {
       const { email, password } = req.body;
 
-      // Validações
       if (!email || !password) {
         return res.status(400).json({
           success: false,
@@ -74,7 +74,6 @@ class UserController {
         });
       }
 
-      // Verificar se usuário existe
       const user = await UserModel.findByEmail(email);
       if (!user) {
         return res.status(401).json({
@@ -83,7 +82,6 @@ class UserController {
         });
       }
 
-      // Verificar senha (compara a senha fornecida com a senha_hash armazenada)
       const isPasswordValid = await bcrypt.compare(password, user.senha_hash);
       if (!isPasswordValid) {
         return res.status(401).json({
@@ -92,7 +90,6 @@ class UserController {
         });
       }
 
-      // Gerar token JWT
       const token = jwt.sign(
         { id: user.id, email: user.email },
         process.env.JWT_SECRET,
@@ -112,6 +109,7 @@ class UserController {
         }
       });
     } catch (error) {
+      console.error('Erro no login:', error);
       res.status(500).json({
         success: false,
         message: 'Erro interno do servidor ao fazer login',
@@ -122,7 +120,6 @@ class UserController {
 
   /**
    * Obtém o perfil do usuário autenticado.
-   * Requer autenticação (req.user.id deve ser populado por um middleware de autenticação).
    */
   static async getProfile(req, res) {
     try {
@@ -137,14 +134,10 @@ class UserController {
 
       res.json({
         success: true,
-        data: {
-          id: user.id,
-          nome_completo: user.nome_completo,
-          email: user.email,
-          data_cadastro: user.data_cadastro
-        }
+        data: user
       });
     } catch (error) {
+      console.error('Erro ao obter perfil:', error);
       res.status(500).json({
         success: false,
         message: 'Erro interno do servidor ao obter perfil',
@@ -154,18 +147,17 @@ class UserController {
   }
 
   /**
-   * Obtém todos os usuários registrados no sistema.
-   * Requer autenticação.
+   * Obtém todos os usuários registrados.
    */
   static async getAllUsers(req, res) {
     try {
       const users = await UserModel.getAll();
-      
       res.json({
         success: true,
         data: users
       });
     } catch (error) {
+      console.error('Erro ao obter todos os usuários:', error);
       res.status(500).json({
         success: false,
         message: 'Erro interno do servidor ao obter todos os usuários',
