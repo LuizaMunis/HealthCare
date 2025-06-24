@@ -33,11 +33,11 @@ export default function LoginScreen() {
       const data = await response.json();
 
       if (data.success) {
-        // Login bem-sucedido
-        // 1. Armazene o token de forma segura
+
         await AsyncStorage.setItem('userToken', data.data.token);
-        
-        // 2. Redirecione para a tela principal
+
+        await AsyncStorage.setItem('userInfo', JSON.stringify(data.data.user));
+
         router.replace('/(tabs)/');
       } else {
         // Mostra a mensagem de erro vinda do backend

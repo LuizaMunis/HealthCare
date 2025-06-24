@@ -1,10 +1,51 @@
-//HealthCare_FrontEnd/src/app/(tabs)/index.tsx
+// HealthCare_FrontEnd/src/app/(tabs)/index.tsx
 
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 
 export default function HomeScreen() {
+  // Estado para armazenar o nome do usuário
+  const [userName, setUserName] = useState('');
+  // Estado para controlar o carregamento
+  const [loading, setLoading] = useState(true);
+
+  // useFocusEffect é um hook que roda toda vez que a tela entra em foco.
+  // É ideal para carregar dados que podem mudar.
+  useFocusEffect(
+    useCallback(() => {
+      const loadUserData = async () => {
+        try {
+          const userInfoString = await AsyncStorage.getItem('userInfo');
+          if (userInfoString) {
+            const userInfo = JSON.parse(userInfoString);
+            // Pega o primeiro nome para uma saudação mais pessoal
+            const firstName = userInfo.nome_completo.split(' ')[0];
+            setUserName(firstName);
+          }
+        } catch (error) {
+          console.error("Falha ao carregar dados do usuário.", error);
+          // Você pode adicionar um tratamento de erro aqui, como redirecionar para o login
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      loadUserData();
+    }, [])
+  );
+
+  // Mostra um indicador de carregamento enquanto os dados não chegam
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#004A61" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -15,7 +56,9 @@ export default function HomeScreen() {
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeStripe} />
           <View>
-            <Text style={styles.welcomeTitle}>Olá, José!</Text>
+            {/* --- LÓGICA ALTERADA --- */}
+            {/* Exibe o nome do estado. Se estiver vazio, mostra 'Usuário'. */}
+            <Text style={styles.welcomeTitle}>Olá, {userName || 'Usuário'}!</Text>
             <Text style={styles.welcomeSubtitle}>Bem-vindo ao Olhealth.</Text>
           </View>
         </View>
@@ -56,7 +99,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#E3F2F5' }, // Um azul bem clarinho de fundo
+    container: { flex: 1, backgroundColor: '#E3F2F5' },
     scrollContainer: { padding: 20 },
     header: { alignItems: 'center', marginBottom: 20 },
     logoText: { fontSize: 24, fontWeight: 'bold', color: '#004A61' },
@@ -74,4 +117,11 @@ const styles = StyleSheet.create({
     quickAccessContainer: { flexDirection: 'row', justifyContent: 'space-between' },
     quickAccessCard: { backgroundColor: '#FFFFFF', borderRadius: 15, width: '48%', alignItems: 'center', paddingVertical: 30, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
     quickAccessTitle: { marginTop: 10, fontSize: 14, fontWeight: 'bold', color: '#333' },
+    // Estilo para o container do loading
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#E3F2F5'
+    }
 });
