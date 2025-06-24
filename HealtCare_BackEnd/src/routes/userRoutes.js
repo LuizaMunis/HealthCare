@@ -4,12 +4,13 @@ const router = express.Router();
 const UserController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Rotas públicas para registro e login
-router.post('/register', UserController.register); //
-router.post('/login', UserController.login); //
+router.post('/register', UserController.register);
+router.post('/login', UserController.login);
+router.get('/profile', authMiddleware, UserController.getProfile);
+router.get('/all', authMiddleware, UserController.getAllUsers);
 
-// Rotas protegidas que exigem autenticação
-router.get('/profile', authMiddleware, UserController.getProfile); //
-router.get('/all', authMiddleware, UserController.getAllUsers); //
+// --- NOVAS ROTAS ---
+router.put('/profile', authMiddleware, UserController.updateProfile);
+router.post('/change-password', authMiddleware, UserController.changePassword);
 
 module.exports = router;

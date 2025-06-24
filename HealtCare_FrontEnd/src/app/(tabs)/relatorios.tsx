@@ -5,39 +5,12 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } f
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
+import { useUserData } from '@/hooks/useUserData';
 
 export default function HomeScreen() {
-  // Estado para armazenar o nome do usuário
-  const [userName, setUserName] = useState('');
-  // Estado para controlar o carregamento
-  const [loading, setLoading] = useState(true);
+  
+  const { userName, loading } = useUserData();
 
-  // useFocusEffect é um hook que roda toda vez que a tela entra em foco.
-  // É ideal para carregar dados que podem mudar.
-  useFocusEffect(
-    useCallback(() => {
-      const loadUserData = async () => {
-        try {
-          const userInfoString = await AsyncStorage.getItem('userInfo');
-          if (userInfoString) {
-            const userInfo = JSON.parse(userInfoString);
-            // Pega o primeiro nome para uma saudação mais pessoal
-            const firstName = userInfo.nome_completo.split(' ')[0];
-            setUserName(firstName);
-          }
-        } catch (error) {
-          console.error("Falha ao carregar dados do usuário.", error);
-          // Você pode adicionar um tratamento de erro aqui, como redirecionar para o login
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      loadUserData();
-    }, [])
-  );
-
-  // Mostra um indicador de carregamento enquanto os dados não chegam
   if (loading) {
     return (
       <View style={styles.loaderContainer}>

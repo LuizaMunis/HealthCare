@@ -1,23 +1,28 @@
-import { useAccount } from '@/hooks/useAccount';
+// HealthCare_FrontEnd/src/app/(tabs)/conta.tsx
+
+import { useAccount } from '@/hooks/useAccount'; // <-- Apenas este hook é necessário
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
+// Não precisamos do useUserData aqui, pois o useAccount já lida com a busca de dados.
 import AdditionalDataModal from '@/components/Account/AdditionalDataModal';
 import ChangePasswordModal from '@/components/Account/ChangePasswordModal';
 import LogoutConfirmModal from '@/components/Account/LogoutConfirmModal';
 import PersonalInfoModal from '@/components/Account/PersonalInfoModal';
 
 export default function AccountScreen() {
+  // Chamamos apenas o useAccount, que já contém toda a lógica para este ecrã.
   const {
-    isLoading,
+    isLoading, // Usamos este estado de loading único.
     activeModal,
     openModal,
     closeModal,
-    personalInfo,
+    personalInfo, // Usamos estes dados para o nome e email.
     additionalData,
+    handleSavePersonalInfo,
     handleSaveAdditionalData,
     handleChangePassword,
     handleLogout,
@@ -33,6 +38,7 @@ export default function AccountScreen() {
     { key: 'logout', icon: 'log-out', label: 'Sair' },
   ];
 
+  // Apenas uma verificação de loading é necessária.
   if (isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: themeColors.background }]}>
@@ -49,7 +55,8 @@ export default function AccountScreen() {
         </View>
 
         <View style={[styles.profileCard, { backgroundColor: themeColors.card }]}>
-            <Text style={[styles.profileName, { color: themeColors.text }]}>Olá, {personalInfo.fullName.split(' ')[0]}!</Text>
+            {/* Usamos personalInfo.fullName, que já vem do hook useAccount */}
+            <Text style={[styles.profileName, { color: themeColors.text }]}>Olá, {personalInfo.fullName.split(' ')[0] || ''}!</Text>
             <Text style={[styles.profileSub, { color: themeColors.textSecondary }]}>Seja bem-vindo ao Olhealth.</Text>
             <TouchableOpacity style={styles.profileAction} onPress={() => openModal('personalInfo')}>
                 <Feather name="user" size={16} color={themeColors.primary}/>
@@ -75,7 +82,7 @@ export default function AccountScreen() {
         visible={activeModal === 'personalInfo'}
         onClose={closeModal}
         data={personalInfo}
-        onSave={(newData) => { /* Chamar handleSavePersonalInfo aqui */ }}
+        onSave={handleSavePersonalInfo}
       />
       <AdditionalDataModal
         visible={activeModal === 'additionalData'}

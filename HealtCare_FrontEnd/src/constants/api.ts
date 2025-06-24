@@ -1,25 +1,26 @@
+// healthcare_frontend/src/constants/api.ts
 /**
- * Arquivo central para constantes relacionadas à API.
+ * Ficheiro central para constantes relacionadas à API.
  */
 
-// MUITO IMPORTANTE: Substitua pelo endereço IP da sua máquina onde o back-end está rodando.
-const API_IP = '192.168.0.100:3000'; // Exemplo: '192.168.0.100:3000'
+// A URL base completa do seu servidor.
+const API_URL_BASE = 'http://192.168.15.7:3000'; 
 
 export const API_CONFIG = {
-  BASE_URL: `http://${API_IP}/api`,
+  BASE_URL: `${API_URL_BASE}/api`,
   TIMEOUT: 10000, // 10 segundos
 };
 
-// Endpoints da API para evitar erros de digitação
+// Endpoints da API para evitar erros de digitação e facilitar a manutenção.
 export const ENDPOINTS = {
   USERS: {
     REGISTER: '/users/register',
     LOGIN: '/users/login',
-    PROFILE: '/users/profile',
-    ALL: '/users/all',
+    PROFILE: '/users/profile', // Usado para GET (buscar) e PUT (atualizar nome/email)
+    CHANGE_PASSWORD: '/users/change-password',
   },
-  RECORDS: {
-    PRESSURE: '/pressao-arterial',
-    // ...outros endpoints de registros
+  PROFILE: {
+    // Usado para GET (buscar dados adicionais) e POST (salvar dados adicionais)
+    GET_SAVE: '/perfil',
   },
 };

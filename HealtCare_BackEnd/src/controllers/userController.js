@@ -1,13 +1,11 @@
-// backend/src/controllers/userController.js
+// HealthCare_Backend/src/controllers/userController.js
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/userModel');
 
 class UserController {
-  /**
-   * Registra um novo usuário no sistema.
-   */
+
   static async register(req, res) {
     try {
       const { nome_completo, email, password } = req.body;
@@ -60,9 +58,6 @@ class UserController {
     }
   }
 
-  /**
-   * Realiza o login do usuário.
-   */
   static async login(req, res) {
     try {
       const { email, password } = req.body;
@@ -118,9 +113,6 @@ class UserController {
     }
   }
 
-  /**
-   * Obtém o perfil do usuário autenticado.
-   */
   static async getProfile(req, res) {
     try {
       const user = await UserModel.findById(req.user.id);
@@ -146,9 +138,6 @@ class UserController {
     }
   }
 
-  /**
-   * Obtém todos os usuários registrados.
-   */
   static async getAllUsers(req, res) {
     try {
       const users = await UserModel.getAll();
@@ -163,6 +152,43 @@ class UserController {
         message: 'Erro interno do servidor ao obter todos os usuários',
         error: error.message
       });
+    }
+  }
+  
+  static async updateProfile(req, res) {
+    try {
+      const { nome_completo, email } = req.body;
+      if (!nome_completo || !email) {
+        return res.status(400).json({ success: false, message: 'Nome e email são obrigatórios.' });
+      }
+      await UserModel.update(req.user.id, { nome_completo, email });
+      res.json({ success: true, message: 'Perfil atualizado com sucesso!' });
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ success: false, message: 'Este email já está em uso.' });
+      }
+      res.status(500).json({ success: false, message: 'Erro ao atualizar perfil.' });
+    }
+  }
+
+  static async changePassword(req, res) {
+    try {
+      const { senha_atual, nova_senha } = req.body;
+      if (!senha_atual || !nova_senha) {
+        return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios.' });
+      }
+
+      const user = await UserModel.findById(req.user.id, true); // Busca usuário com a senha
+      const isPasswordValid = await bcrypt.compare(senha_atual, user.senha_hash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ success: false, message: 'A senha atual está incorreta.' });
+      }
+
+      const nova_senha_hash = await bcrypt.hash(nova_senha, 10);
+      await UserModel.updatePassword(req.user.id, nova_senha_hash);
+      res.json({ success: true, message: 'Senha alterada com sucesso!' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Erro ao alterar senha.' });
     }
   }
 }

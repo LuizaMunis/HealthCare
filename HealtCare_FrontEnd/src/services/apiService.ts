@@ -4,7 +4,6 @@ import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 const TOKEN_KEY = 'healthcare_auth_token';
 
-// Cria uma única instância do Axios para todo o app
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
@@ -13,7 +12,6 @@ const api = axios.create({
   },
 });
 
-// Interceptador para adicionar o token JWT ANTES de cada requisição
 api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem(TOKEN_KEY);
   if (token) {
@@ -22,15 +20,15 @@ api.interceptors.request.use(async (config) => {
   return config;
 }, (error) => Promise.reject(error));
 
-// Objeto que agrupa todos os serviços
+
 const ApiService = {
-  // --- Auth Services ---
+  // --- AUTH ---
   register: async (userData) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.REGISTER, userData);
       return { success: true, data: response.data };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Erro ao registrar.' };
+      return { success: false, error: error.response?.data?.message || 'Erro ao registar.' };
     }
   },
 
@@ -47,11 +45,12 @@ const ApiService = {
     }
   },
 
-  logout: async () => {
+  /*logout: async () => {
     await AsyncStorage.removeItem(TOKEN_KEY);
-  },
+    await AsyncStorage.removeItem('userInfo');
+  },*/
 
-  // --- Profile Services ---
+  // --- PROFILE & USER ---
   getProfile: async () => {
     try {
       const response = await api.get(ENDPOINTS.USERS.PROFILE);
@@ -60,8 +59,42 @@ const ApiService = {
       return { success: false, error: error.response?.data?.message || 'Sessão expirada.' };
     }
   },
+  
+  getAdditionalProfile: async () => {
+    try {
+      const response = await api.get(ENDPOINTS.PROFILE.GET_SAVE);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados adicionais.' };
+    }
+  },
 
-  // ... adicione aqui outros serviços (ex: para registros de pressão)
+  saveProfile: async (profileData) => {
+    try {
+      const response = await api.put(ENDPOINTS.USERS.PROFILE, profileData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao salvar perfil.' };
+    }
+  },
+  
+  saveAdditionalProfile: async (additionalData) => {
+    try {
+      const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, additionalData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao salvar dados adicionais.' };
+    }
+  },
+
+  changePassword: async (passwordData) => {
+    try {
+      const response = await api.post(ENDPOINTS.USERS.CHANGE_PASSWORD, passwordData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao alterar a senha.' };
+    }
+  },
 };
 
 export default ApiService;

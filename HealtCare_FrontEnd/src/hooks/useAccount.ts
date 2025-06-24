@@ -1,9 +1,11 @@
+// HealtCare_FrontEnd/src/hooks/useAccount.ts
+
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import ApiService from '@/services/apiService'; // Usa o nosso serviço de API centralizado
+import ApiService from '@/services/apiService'; // Presume-se que este serviço exista e esteja configurado
 
-// Tipos para os dados do perfil, para um código mais seguro.
+// --- Interfaces para garantir a tipagem dos dados ---
 interface PersonalInfo {
   fullName: string;
   email: string;
@@ -18,9 +20,15 @@ interface AdditionalData {
   height: string;
 }
 
+interface ChangePasswordData {
+    current: string;
+    new: string;
+    confirm: string;
+}
+
 type ModalType = 'personalInfo' | 'additionalData' | 'changePassword' | 'logout' | null;
 
-// Funções para converter o formato do género entre o frontend e o backend.
+// --- Funções auxiliares para conversão de dados ---
 const genderToBackend = (gender: string): 'M' | 'F' | 'O' | null => {
   if (!gender) return null;
   const lowerGender = gender.toLowerCase();
@@ -43,14 +51,8 @@ export function useAccount() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    fullName: 'A carregar...',
-    email: 'A carregar...',
-  });
-  
-  const [additionalData, setAdditionalData] = useState<AdditionalData>({
-    birthDate: '', phone: '', gender: '', cpf: '', weight: '', height: '',
-  });
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({ fullName: 'A carregar...', email: 'A carregar...' });
+  const [additionalData, setAdditionalData] = useState<AdditionalData>({ birthDate: '', phone: '', gender: '', cpf: '', weight: '', height: '' });
 
   const handleLogout = useCallback(async () => {
     await ApiService.logout();
@@ -60,15 +62,14 @@ export function useAccount() {
   const fetchUserData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Faz chamadas paralelas para os endpoints de perfil do utilizador e dados adicionais.
       const [userResult, profileResult] = await Promise.all([
-        ApiService.getProfile(), // Busca dados básicos do utilizador (nome, email)
-        ApiService.getAdditionalProfile(), // Busca dados adicionais (cpf, peso, etc.)
+        ApiService.getProfile(),
+        ApiService.getAdditionalProfile(),
       ]);
       
-      if (userResult.success) {
+      if (userResult.success && userResult.data?.data) {
         setPersonalInfo({
-          fullName: userResult.data.data.name,
+          fullName: userResult.data.data.nome_completo,
           email: userResult.data.data.email,
         });
       } else {
@@ -82,7 +83,7 @@ export function useAccount() {
         setAdditionalData({
           birthDate: data_nascimento ? new Date(data_nascimento).toISOString().split('T')[0] : '',
           phone: celular || '',
-          gender: genderToFrontend(genero), // Converte 'M'/'F'/'O' para o texto completo
+          gender: genderToFrontend(genero),
           cpf: cpf || '',
           weight: peso ? String(peso) : '',
           height: altura ? String(altura) : '',
@@ -91,7 +92,7 @@ export function useAccount() {
       
     } catch (error) {
       console.error('Erro ao buscar dados completos do utilizador:', error);
-      Alert.alert('Erro', 'Ocorreu um erro ao carregar os seus dados. Verifique a sua conexão.');
+      Alert.alert('Erro', 'Ocorreu um erro ao carregar os seus dados.');
     } finally {
       setIsLoading(false);
     }
@@ -104,6 +105,22 @@ export function useAccount() {
   const openModal = (modalName: ModalType) => setActiveModal(modalName);
   const closeModal = () => setActiveModal(null);
 
+  // --- FUNÇÃO NOVA ---
+  const handleSavePersonalInfo = async (newData: PersonalInfo) => {
+    const payload = {
+        nome_completo: newData.fullName,
+        email: newData.email,
+    };
+    const result = await ApiService.saveProfile(payload); // Chama o método para salvar no serviço de API
+    if (result.success) {
+        await fetchUserData(); // Recarrega os dados para manter a UI consistente
+        Alert.alert('Sucesso', 'As suas informações foram atualizadas!');
+        closeModal();
+    } else {
+        Alert.alert('Erro', result.error || 'Não foi possível salvar os dados.');
+    }
+  };
+
   const handleSaveAdditionalData = async (newData: Partial<AdditionalData>) => {
     const payload = {
       data_nascimento: newData.birthDate || null,
@@ -113,20 +130,36 @@ export function useAccount() {
       peso: newData.weight ? parseFloat(newData.weight) : null,
       altura: newData.height ? parseInt(newData.height, 10) : null,
     };
-
     const result = await ApiService.saveAdditionalProfile(payload);
     if (result.success) {
-      // Atualiza o estado local com os dados retornados e formatados do backend
-      fetchUserData(); // Recarrega todos os dados para garantir consistência
+      await fetchUserData();
       Alert.alert('Sucesso', 'Os seus dados foram salvos!');
       closeModal();
     } else {
-      Alert.alert("Erro", `Não foi possível salvar os dados: ${result.error}`);
+      Alert.alert("Erro", result.error || 'Não foi possível salvar os dados.');
     }
   };
   
-  const handleChangePassword = async (passwords: { current: string; new: string }) => {
-     // Lógica para chamar o serviço de troca de senha
+  // --- FUNÇÃO IMPLEMENTADA ---
+  const handleChangePassword = async (passwords: ChangePasswordData) => {
+     if (passwords.new !== passwords.confirm) {
+        Alert.alert('Erro', 'As novas senhas não coincidem.');
+        return;
+     }
+     if (passwords.new.length < 6) {
+        Alert.alert('Erro', 'A nova senha deve ter pelo menos 6 caracteres.');
+        return;
+     }
+     const result = await ApiService.changePassword({
+        senha_atual: passwords.current,
+        nova_senha: passwords.new,
+     });
+     if (result.success) {
+        Alert.alert('Sucesso', 'A sua senha foi alterada!');
+        closeModal();
+     } else {
+        Alert.alert('Erro', result.error || 'Não foi possível alterar a senha.');
+     }
   };
 
   return {
@@ -136,6 +169,7 @@ export function useAccount() {
     closeModal,
     personalInfo,
     additionalData,
+    handleSavePersonalInfo, // Exporta a nova função
     handleSaveAdditionalData,
     handleChangePassword,
     handleLogout,
