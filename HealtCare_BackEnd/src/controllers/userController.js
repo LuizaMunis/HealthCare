@@ -5,12 +5,23 @@ const jwt = require('jsonwebtoken');
 const UserModel = require('../models/userModel');
 
 class UserController {
+<<<<<<< HEAD
 
+=======
+  /**
+   * Registra um novo usuário no sistema.
+   * Espera 'nome_completo', 'email' e 'password' no corpo da requisição.
+   */
+>>>>>>> 955ab6818754a84eaa773769df8ba1f618616e52
   static async register(req, res) {
     try {
       const { nome_completo, email, password } = req.body;
 
+<<<<<<< HEAD
       // Validações
+=======
+      // Validações básicas
+>>>>>>> 955ab6818754a84eaa773769df8ba1f618616e52
       if (!nome_completo || !email || !password) {
         return res.status(400).json({
           success: false,
@@ -35,12 +46,26 @@ class UserController {
         });
       }
 
+<<<<<<< HEAD
       const senha_hash = await bcrypt.hash(password, 10);
       
+=======
+      // Criptografar senha (o hash gerado pelo bcrypt é longo e agora suportado pelo VARCHAR(255))
+      const senha_hash = await bcrypt.hash(password, 10);
+
+      // Obter a data atual para data_cadastro
+      const data_cadastro = new Date().toISOString().slice(0, 10); // Formato YYYY-MM-DD
+
+      // Criar usuário
+>>>>>>> 955ab6818754a84eaa773769df8ba1f618616e52
       const newUser = await UserModel.create({
         nome_completo,
         email,
         senha_hash,
+<<<<<<< HEAD
+=======
+        data_cadastro
+>>>>>>> 955ab6818754a84eaa773769df8ba1f618616e52
       });
 
       res.status(201).json({
@@ -58,6 +83,10 @@ class UserController {
     }
   }
 
+  /**
+   * Realiza o login do usuário.
+   * Espera 'email' e 'password' no corpo da requisição.
+   */
   static async login(req, res) {
     try {
       const { email, password } = req.body;
@@ -77,6 +106,10 @@ class UserController {
         });
       }
 
+<<<<<<< HEAD
+=======
+      // Verificar senha (compara a senha fornecida com a senha_hash armazenada)
+>>>>>>> 955ab6818754a84eaa773769df8ba1f618616e52
       const isPasswordValid = await bcrypt.compare(password, user.senha_hash);
       if (!isPasswordValid) {
         return res.status(401).json({
@@ -113,6 +146,10 @@ class UserController {
     }
   }
 
+  /**
+   * Obtém o perfil do usuário autenticado.
+   * Requer autenticação (req.user.id deve ser populado por um middleware de autenticação).
+   */
   static async getProfile(req, res) {
     try {
       const user = await UserModel.findById(req.user.id);
@@ -126,7 +163,12 @@ class UserController {
 
       res.json({
         success: true,
-        data: user
+        data: {
+          id: user.id,
+          nome_completo: user.nome_completo,
+          email: user.email,
+          data_cadastro: user.data_cadastro
+        }
       });
     } catch (error) {
       console.error('Erro ao obter perfil:', error);
@@ -138,6 +180,10 @@ class UserController {
     }
   }
 
+  /**
+   * Obtém todos os usuários registrados no sistema.
+   * Requer autenticação.
+   */
   static async getAllUsers(req, res) {
     try {
       const users = await UserModel.getAll();
