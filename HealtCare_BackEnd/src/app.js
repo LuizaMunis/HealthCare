@@ -25,7 +25,22 @@ app.use(express.json());
 // Definição das rotas da API
 app.use('/api/users', userRoutes);
 app.use('/api/perfil', perfilRoutes);
-//app.use('/api/pressao-arterial', registroPressaoArterialRoutes); 
+app.use('/api/pressao-arterial', registroPressaoArterialRoutes); 
+
+// Rota base para /api
+// Esta rota responderá quando alguém acessar http://seu_ip:3000/api
+app.get('/api', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Bem-vindo à API HealthCare!',
+        availableEndpoints: [
+            '/api/health',
+            '/api/users',
+            '/api/perfil',
+            '/api/pressao-arterial' // Lembre-se de descomentar a rota abaixo se for usá-la
+        ]
+    });
+});
 
 // Rota de teste de saúde da API
 app.get('/api/health', (req, res) => {
@@ -50,6 +65,7 @@ const startServer = async () => {
     await PerfilModel.createTable();
     console.log('📦 Verificando/criando tabela de registros de pressão arterial...');
     await RegistroPressaoArterialModel.createTable(); // NOVO: Chama a criação da tabela de registros
+
 
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);

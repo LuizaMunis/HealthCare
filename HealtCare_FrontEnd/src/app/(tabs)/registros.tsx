@@ -1,14 +1,16 @@
 // HealthCare_FrontEnd/src/app/(tabs)/index.tsx
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator,  TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import { useUserData } from '@/hooks/useUserData';
+import { useRouter } from 'expo-router'; // Passo 1: Importar o useRouter
 
 export default function HomeScreen() {
    const { userName, loading } = useUserData();
+   const router = useRouter();
  
    if (loading) {
      return (
@@ -37,10 +39,14 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Acesso rápido</Text>
         <View style={styles.quickAccessContainer}>
-            <View style={styles.quickAccessCard}>
+          <TouchableOpacity 
+              style={styles.quickAccessCard} 
+              onPress={() => router.push('/monitor/pressure')}
+            >
                 <Feather name="activity" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Pressão Arterial</Text>
-            </View>
+          </TouchableOpacity>
+            
             <View style={styles.quickAccessCard}>
                 <Feather name="heart" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Frequência Cardíaca</Text>
