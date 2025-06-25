@@ -1,4 +1,5 @@
-// frontend/src/models/UserModel.js
+// HealthCare_Frontend/src/models/UserModel.js
+
 export class UserModel {
   constructor(data = {}) {
     this.id = data.id || null;
