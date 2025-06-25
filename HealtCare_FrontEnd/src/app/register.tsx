@@ -16,7 +16,7 @@ import {
   Platform
 } from 'react-native';
 
-const API_URL = 'http://192.168.15.7:3000';
+const API_URL = 'http://192.168.56.1:3000';
 
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');

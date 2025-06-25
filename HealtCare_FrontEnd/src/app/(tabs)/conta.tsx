@@ -6,6 +6,7 @@ import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useUserData } from '@/hooks/useUserData';
 
 // Não precisamos do useUserData aqui, pois o useAccount já lida com a busca de dados.
 import AdditionalDataModal from '@/components/Account/AdditionalDataModal';
@@ -14,6 +15,8 @@ import LogoutConfirmModal from '@/components/Account/LogoutConfirmModal';
 import PersonalInfoModal from '@/components/Account/PersonalInfoModal';
 
 export default function AccountScreen() {
+  const { userName, loading } = useUserData();
+
   // Chamamos apenas o useAccount, que já contém toda a lógica para este ecrã.
   const {
     isLoading, // Usamos este estado de loading único.
@@ -56,7 +59,7 @@ export default function AccountScreen() {
 
         <View style={[styles.profileCard, { backgroundColor: themeColors.card }]}>
             {/* Usamos personalInfo.fullName, que já vem do hook useAccount */}
-            <Text style={[styles.profileName, { color: themeColors.text }]}>Olá, {personalInfo.fullName.split(' ')[0] || ''}!</Text>
+            <Text style={[styles.profileName, { color: themeColors.text }]}>Olá, {userName || 'Usuário'}!</Text>
             <Text style={[styles.profileSub, { color: themeColors.textSecondary }]}>Seja bem-vindo ao Olhealth.</Text>
             <TouchableOpacity style={styles.profileAction} onPress={() => openModal('personalInfo')}>
                 <Feather name="user" size={16} color={themeColors.primary}/>
