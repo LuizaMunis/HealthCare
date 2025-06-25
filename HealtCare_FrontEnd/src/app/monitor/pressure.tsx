@@ -1,12 +1,84 @@
 // HealthCare_FrontEnd/src/app/monitor/pressure.tsx
 
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Importe o AsyncStorage
+
+// Use a variável de ambiente para a URL da API para facilitar a manutenção
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.10.17:3000';
 
 export default function PressureScreen() {
-  const router = useRouter(); 
+  const router = useRouter();
+
+  // Estados para armazenar os valores que mudarão
+  const [systolic, setSystolic] = useState(120);
+  const [diastolic, setDiastolic] = useState(89);
+  
+  // O formato da data no banco de dados provavelmente é AAAA-MM-DD
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  /**
+   * Função para salvar o registro de pressão, agora conectada ao backend.
+   */
+  const handleSave = async () => {
+    // 1. Validação dos Dados no Frontend
+    if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
+      Alert.alert('Atenção', 'Por favor, insira valores de pressão válidos.');
+      return;
+    }
+
+    try {
+      // 2. Obtenção do Token de Autenticação
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Erro de Autenticação', 'Você não está logado. Por favor, faça o login novamente.');
+        // Opcional: redirecionar para a tela de login
+        // router.push('/login'); 
+        return;
+      }
+
+      // 3. Chamada fetch para o endpoint correto do backend
+      
+      const response = await fetch(`${API_URL}/api/pressao-arterial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Envia o token no cabeçalho Authorization, como o authMiddleware espera
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          // O corpo da requisição deve usar os nomes de campo que seu Controller espera.
+          // Estes são palpites baseados em um padrão comum. Ajuste se necessário.
+          sistolica: systolic,
+          diastolica: diastolic,
+          data_registro: date, 
+          hora_registro: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        }),
+      });
+
+
+      // 4. Tratamento da Resposta da API
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Usa a mensagem de erro do backend, se houver
+        throw new Error(result.message || 'O servidor retornou um erro ao salvar os dados.');
+      }
+
+      console.log('Dados salvos com sucesso no servidor:', result);
+
+      // Feedback de sucesso para o usuário
+      Alert.alert('Sucesso!', 'Sua pressão arterial foi salva.');
+      router.back(); // Volta para a tela anterior
+
+    } catch (error: any) {
+      // 5. Tratamento de Erro de Rede ou da API
+      console.error("Erro ao salvar medição:", error);
+      Alert.alert('Erro', error.message || 'Não foi possível conectar ao servidor. Tente novamente.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -17,56 +89,65 @@ export default function PressureScreen() {
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Pressão arterial</Text>
-            <Text style={styles.headerSubtitle}>8:45</Text>
+            <Text style={styles.headerSubtitle}>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
           </View>
-          {/* Espaço reservado para manter o título centralizado */}
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Card Sistólica */}
+        {/* --- Card Sistólica INTERATIVO --- */}
         <View style={styles.pressureCard}>
           <View style={styles.pressureHeader}>
             <Text style={styles.pressureHeaderText}>Sistólica</Text>
-            <Text style={styles.pressureHeaderValue}>120</Text>
+            <Text style={styles.pressureHeaderValue}>{systolic}</Text>
           </View>
           <View style={styles.pressureBody}>
-            <Text style={styles.pressureValueSecondary}>119</Text>
+            <TouchableOpacity style={styles.controlButton} onPress={() => setSystolic(prev => prev - 1)}>
+              <Feather name="minus-circle" size={32} color="#6c757d" />
+            </TouchableOpacity>
             <View style={styles.pressureValueContainer}>
-                <Text style={styles.pressureValueMain}>120</Text>
-                <Text style={styles.pressureUnit}>mmHg</Text>
+              <Text style={styles.pressureValueMain}>{systolic}</Text>
+              <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
-            <Text style={styles.pressureValueSecondary}>121</Text>
+            <TouchableOpacity style={styles.controlButton} onPress={() => setSystolic(prev => prev + 1)}>
+              <Feather name="plus-circle" size={32} color="#6c757d" />
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Card Diastólica */}
+        {/* --- Card Diastólica INTERATIVO --- */}
         <View style={styles.pressureCard}>
           <View style={styles.pressureHeader}>
             <Text style={styles.pressureHeaderText}>Diastólica</Text>
-            <Text style={styles.pressureHeaderValue}>120</Text>
+            <Text style={styles.pressureHeaderValue}>{diastolic}</Text>
           </View>
           <View style={styles.pressureBody}>
-            <Text style={styles.pressureValueSecondary}>88</Text>
+            <TouchableOpacity style={styles.controlButton} onPress={() => setDiastolic(prev => prev - 1)}>
+              <Feather name="minus-circle" size={32} color="#6c757d" />
+            </TouchableOpacity>
             <View style={styles.pressureValueContainer}>
-                <Text style={styles.pressureValueMain}>89</Text>
-                <Text style={styles.pressureUnit}>mmHg</Text>
+              <Text style={styles.pressureValueMain}>{diastolic}</Text>
+              <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
-            <Text style={styles.pressureValueSecondary}>90</Text>
+            <TouchableOpacity style={styles.controlButton} onPress={() => setDiastolic(prev => prev + 1)}>
+              <Feather name="plus-circle" size={32} color="#6c757d" />
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Data do Registro */}
+        {/* --- Data do Registro --- */}
         <View style={styles.dateContainer}>
           <Text style={styles.dateLabel}>Data do registro</Text>
           <TextInput
             style={styles.dateInput}
-            value="30 de outubro"
+            value={date}
+            onChangeText={setDate}
+            placeholder="AAAA-MM-DD"
             placeholderTextColor="#C7C7CD"
           />
         </View>
 
-        {/* Botão Salvar */}
-        <TouchableOpacity style={styles.saveButton}>
+        {/* --- Botão Salvar --- */}
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Salvar</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -74,10 +155,11 @@ export default function PressureScreen() {
   );
 }
 
+// ... (Estilos permanecem os mesmos)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F4F8', // Um cinza azulado claro, similar ao fundo da imagem
+    backgroundColor: '#F0F4F8',
   },
   scrollContainer: {
     padding: 20,
@@ -115,7 +197,7 @@ const styles = StyleSheet.create({
   pressureHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#B2EBF2', // Cor azul clara do header do card
+    backgroundColor: '#B2EBF2',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderTopLeftRadius: 15,
@@ -127,33 +209,36 @@ const styles = StyleSheet.create({
     color: '#004A61',
   },
   pressureHeaderValue: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#004A61',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#004A61',
   },
   pressureBody: {
-    padding: 25,
-    alignItems: 'center',
-  },
-  pressureValueContainer:{
+    paddingVertical: 15,
+    paddingHorizontal: 20,
     flexDirection: 'row',
-    alignItems: 'baseline', // Alinha a base do número e da unidade
-    marginVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  controlButton: {
+    padding: 10,
+  },
+  pressureValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   pressureValueMain: {
     fontSize: 60,
     fontWeight: 'bold',
     color: '#333',
+    textAlign: 'center',
+    minWidth: 90,
   },
   pressureUnit: {
     fontSize: 20,
     color: '#333',
     marginLeft: 8,
     fontWeight: '500',
-  },
-  pressureValueSecondary: {
-    fontSize: 18,
-    color: 'gray',
   },
   dateContainer: {
     marginTop: 20,
@@ -177,13 +262,15 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
   },
   saveButton: {
+    backgroundColor: '#004A61',
+    borderRadius: 15,
     alignItems: 'center',
     paddingVertical: 15,
+    elevation: 3,
   },
   saveButtonText: {
     fontSize: 18,
-    color: '#004A61',
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
 });
-

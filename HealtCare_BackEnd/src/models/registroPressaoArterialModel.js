@@ -10,13 +10,13 @@ class RegistroPressaoArterialModel {
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS registrosPressaoArterial (
         id INT AUTO_INCREMENT PRIMARY KEY, /* AUTO_INCREMENT é o mais comum para IDs */
-        perfil_id INT NOT NULL,
+        usuario_id INT NOT NULL,
         sistolica_mmhg INT NULL,
         diastolica_mmhg INT NULL,
         data_hora_medicao DATETIME NOT NULL,
-        CONSTRAINT fk_registrosPressaoArterial_perfil
-          FOREIGN KEY (perfil_id)
-          REFERENCES perfil (id)
+        CONSTRAINT fk_registrosPressaoArterial_usuario
+          FOREIGN KEY (usuario_id)
+          REFERENCES usuario (id)
           ON DELETE CASCADE  /* Alterado para CASCADE: se o perfil for deletado, os registros também */
           ON UPDATE CASCADE  /* Alterado para CASCADE: se o ID do perfil mudar, o registro é atualizado */
       ) ENGINE = InnoDB;
@@ -33,19 +33,19 @@ class RegistroPressaoArterialModel {
   /**
    * Cria um novo registro de pressão arterial.
    * @param {object} registroData - Dados do registro de pressão.
-   * @param {number} registroData.perfil_id - ID do perfil ao qual o registro pertence.
+   * @param {number} registroData.usuario_id - ID do perfil ao qual o registro pertence.
    * @param {number} [registroData.sistolica_mmhg] - Valor da pressão sistólica.
    * @param {number} [registroData.diastolica_mmhg] - Valor da pressão diastólica.
    * @param {string} registroData.data_hora_medicao - Data e hora da medição (formato DATETIME).
    * @returns {object} O registro criado com seu ID.
    */
   static async create(registroData) {
-    const { perfil_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao } = registroData;
+    const { usuario_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao } = registroData;
     const query = `
-      INSERT INTO registrosPressaoArterial (perfil_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao)
+      INSERT INTO registrosPressaoArterial (usuario_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao)
       VALUES (?, ?, ?, ?)
     `;
-    const values = [perfil_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao];
+    const values = [usuario_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao];
 
     try {
       const [result] = await pool.execute(query, values);
@@ -58,18 +58,18 @@ class RegistroPressaoArterialModel {
 
   /**
    * Encontra todos os registros de pressão arterial para um perfil específico.
-   * @param {number} perfilId - ID do perfil.
+   * @param {number} usuarioId - ID do perfil.
    * @returns {Array<object>} Uma lista de registros de pressão arterial.
    */
-  static async findByPerfilId(perfilId) {
+  static async findByUsuarioId(usuarioId) {
     const query = `
-      SELECT id, perfil_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao
+      SELECT id, usuario_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao
       FROM registrosPressaoArterial
-      WHERE perfil_id = ?
+      WHERE usuario_id = ?
       ORDER BY data_hora_medicao DESC
     `;
     try {
-      const [rows] = await pool.execute(query, [perfilId]);
+      const [rows] = await pool.execute(query, [usuarioId]);
       return rows;
     } catch (error) {
       console.error('Erro ao buscar registros de pressão arterial por ID de perfil:', error);
@@ -84,7 +84,7 @@ class RegistroPressaoArterialModel {
    */
   static async findById(registroId) {
     const query = `
-      SELECT id, perfil_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao
+      SELECT id, usuario_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao
       FROM registrosPressaoArterial
       WHERE id = ?
     `;

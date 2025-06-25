@@ -25,7 +25,7 @@ app.use(express.json());
 // Definição das rotas da API
 app.use('/api/users', userRoutes);
 app.use('/api/perfil', perfilRoutes);
-//app.use('/api/pressao-arterial', registroPressaoArterialRoutes); 
+app.use('/api/pressao-arterial', registroPressaoArterialRoutes); 
 
 // Rota de teste de saúde da API
 app.get('/api/health', (req, res) => {
