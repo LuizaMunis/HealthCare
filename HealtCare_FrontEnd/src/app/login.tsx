@@ -7,7 +7,7 @@ import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Aler
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Defina a URL base da sua API em um só lugar
-const API_URL = 'http://192.168.15.7:3000'; 
+const API_URL = 'http://192.168.10.17:3000'; 
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
