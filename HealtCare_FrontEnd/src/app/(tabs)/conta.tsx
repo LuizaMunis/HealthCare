@@ -59,7 +59,7 @@ export default function AccountScreen() {
         <View style={[styles.profileCard, { backgroundColor: themeColors.card }]}>
             {/* Usamos personalInfo.fullName, que já vem do hook useAccount */}
             <Text style={[styles.profileName, { color: themeColors.text }]}>Olá, {userName|| 'Usuário'}!</Text>
-            <Text style={[styles.profileSub, { color: themeColors.textSecondary }]}>Seja bem-vindo ao Olhealth.</Text>
+            <Text style={[styles.profileSub, { color: themeColors.textSecondary }]}>Seja bem-vindo ao HealthCare.</Text>
             <TouchableOpacity style={styles.profileAction} onPress={() => openModal('personalInfo')}>
                 <Feather name="user" size={16} color={themeColors.primary}/>
                 <Text style={[styles.profileActionText, { color: themeColors.primary }]}>Alterar perfil</Text>
