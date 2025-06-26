@@ -14,6 +14,7 @@ Health Care é um aplicativo móvel inovador voltado para o monitoramento contí
 Abra o terminal e digite:
 
 git clone https://github.com/LuizaMunis/HealthCare
+
 2. 💻 Instalar o Node.js
 Se ainda não tiver o Node.js instalado, faça o download e a instalação através do site oficial:
 
