@@ -9,21 +9,41 @@ Health Care é um aplicativo móvel inovador voltado para o monitoramento contí
 
 
 
-##primeira etapa para baixar o projeto: utilize o comando:
+🚀 Como Executar o Projeto
+1. 📥 Clonar o Repositório
+Abra o terminal e digite:
+
 git clone https://github.com/LuizaMunis/HealthCare
+2. 💻 Instalar o Node.js
+Se ainda não tiver o Node.js instalado, faça o download e a instalação através do site oficial:
 
-##em seguida baixe as tecnologias Node.js pelo link:
-https://nodejs.org/en/download
+🔗 https://nodejs.org/en/download
 
-e para o banco de dados o xampp:
-https://www.apachefriends.org/pt_br/download.html
+3. 🛠 Instalar o XAMPP (caso utilize banco de dados local)
+Baixe e instale o XAMPP para configurar um ambiente local com MySQL:
 
-##na pasta do projeto depois que tiver feito o git clone, abra o terminal CMD dentro da pasta HealthCare e digite o seguinte comando:
+🔗 https://www.apachefriends.org/pt_br/download.html
+
+4. 🧭 Instalar o Expo CLI (Interface de Linha de Comando do Expo)
+Dentro da pasta do projeto HealthCare, abra o terminal e execute:
+
 npm install -g expo-cli
+5. 📦 Instalar as Dependências do Projeto
+Ainda dentro da pasta do projeto (com o terminal aberto), execute:
 
-
-##quando o estiver no vscode e dentro da pasta HealthCare execute o comando no terminal:
 npm install
+6. ▶️ Iniciar o Projeto
+Para rodar o aplicativo:
+
+npx expo start
+O Expo abrirá uma interface no navegador. Você pode:
+
+Escanear o QR Code com o app Expo Go (disponível na Google Play ou App Store) para rodar no celular.
+
+Rodar no emulador Android/iOS (caso esteja configurado).
+
+📁 Organização do Projeto
+Este projeto está estruturado com foco em modularidade e escalabilidade, seguindo boas práticas de desenvolvimento mobile com React Native e Expo.
 
 
 
