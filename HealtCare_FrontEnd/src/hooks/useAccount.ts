@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import ApiService from '@/services/apiService'; // Presume-se que este serviço exista e esteja configurado
+import ApiService from '@/services/apiService';
 
 // --- Interfaces para garantir a tipagem dos dados ---
 interface PersonalInfo {
@@ -105,15 +105,14 @@ export function useAccount() {
   const openModal = (modalName: ModalType) => setActiveModal(modalName);
   const closeModal = () => setActiveModal(null);
 
-  // --- FUNÇÃO NOVA ---
   const handleSavePersonalInfo = async (newData: PersonalInfo) => {
     const payload = {
         nome_completo: newData.fullName,
         email: newData.email,
     };
-    const result = await ApiService.saveProfile(payload); // Chama o método para salvar no serviço de API
+    const result = await ApiService.saveProfile(payload); 
     if (result.success) {
-        await fetchUserData(); // Recarrega os dados para manter a UI consistente
+        await fetchUserData(); 
         Alert.alert('Sucesso', 'As suas informações foram atualizadas!');
         closeModal();
     } else {
@@ -140,7 +139,6 @@ export function useAccount() {
     }
   };
   
-  // --- FUNÇÃO IMPLEMENTADA ---
   const handleChangePassword = async (passwords: ChangePasswordData) => {
      if (passwords.new !== passwords.confirm) {
         Alert.alert('Erro', 'As novas senhas não coincidem.');
@@ -169,7 +167,7 @@ export function useAccount() {
     closeModal,
     personalInfo,
     additionalData,
-    handleSavePersonalInfo, // Exporta a nova função
+    handleSavePersonalInfo,
     handleSaveAdditionalData,
     handleChangePassword,
     handleLogout,

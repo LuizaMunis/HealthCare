@@ -20,7 +20,7 @@ export default function LoginScreen() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/users/login`, { 
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.LOGIN}`, { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
