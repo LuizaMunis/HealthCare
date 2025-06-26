@@ -37,3 +37,19 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# testing
+# Ignora o diretório de testes padrão do Jest
+__tests__/
+
+# Ignora qualquer arquivo de teste em qualquer pasta
+*.test.js
+*.test.jsx
+*.spec.js
+*.spec.jsx
+
+# Se estiver usando TypeScript
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
