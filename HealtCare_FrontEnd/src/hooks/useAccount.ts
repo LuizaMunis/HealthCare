@@ -74,7 +74,7 @@ export function useAccount() {
         });
       } else {
         Alert.alert('Sessão Expirada', 'Por favor, faça o login novamente.');
-        await handleLogout();
+        
         return;
       }
 
@@ -124,10 +124,10 @@ export function useAccount() {
     const payload = {
       data_nascimento: newData.birthDate || null,
       celular: newData.phone || null,
-      genero: genderToBackend(newData.gender),
+      genero: genderToBackend(newData.gender ?? ''),
       cpf: newData.cpf || null,
       peso: newData.weight ? parseFloat(newData.weight) : null,
-      altura: newData.height ? parseInt(newData.height, 10) : null,
+      altura: newData.height != null ? parseInt(newData.height, 10) : null,
     };
     const result = await ApiService.saveAdditionalProfile(payload);
     if (result.success) {
