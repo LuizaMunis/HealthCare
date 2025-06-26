@@ -23,16 +23,17 @@ api.interceptors.request.use(async (config) => {
 
 const ApiService = {
   // --- AUTH ---
-  register: async (userData) => {
+  register: async (userData: Record<string, any>) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.REGISTER, userData);
       return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Erro ao registar.' };
+    } catch (error: unknown) {
+      const errorMessage = (error as any)?.response?.data?.message || 'Erro ao registar.';
+      return { success: false, error: errorMessage };
     }
   },
 
-  login: async (credentials) => {
+  login: async (credentials: Record<string, any>) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.LOGIN, credentials);
       const { token } = response.data.data;
@@ -40,23 +41,25 @@ const ApiService = {
         await AsyncStorage.setItem(TOKEN_KEY, token);
       }
       return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Credenciais inválidas.' };
+    } catch (error: unknown) {
+      const errorMessage = (error as any)?.response?.data?.message || 'Credenciais inválidas.';
+      return { success: false, error: errorMessage };
     }
   },
 
-  /*logout: async () => {
+  logout: async () => {
     await AsyncStorage.removeItem(TOKEN_KEY);
     await AsyncStorage.removeItem('userInfo');
-  },*/
+  },
 
   // --- PROFILE & USER ---
   getProfile: async () => {
     try {
       const response = await api.get(ENDPOINTS.USERS.PROFILE);
       return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Sessão expirada.' };
+    } catch (error: unknown) {
+      const errorMessage = (error as any)?.response?.data?.message || 'Sessão expirada.';
+      return { success: false, error: errorMessage };
     }
   },
   
@@ -64,35 +67,39 @@ const ApiService = {
     try {
       const response = await api.get(ENDPOINTS.PROFILE.GET_SAVE);
       return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados adicionais.' };
+    } catch (error: unknown) {
+      const errorMessage = (error as any)?.response?.data?.message || 'Erro ao buscar dados adicionais.';
+      return { success: false, error: errorMessage };
     }
   },
 
-  saveProfile: async (profileData) => {
+  saveProfile: async (profileData: Record<string, any>) => {
     try {
       const response = await api.put(ENDPOINTS.USERS.PROFILE, profileData);
       return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Erro ao salvar perfil.' };
+    } catch (error: unknown) {
+      const errorMessage = (error as any)?.response?.data?.message || 'Erro ao salvar perfil.';
+      return { success: false, error: errorMessage };
     }
   },
   
-  saveAdditionalProfile: async (additionalData) => {
+  saveAdditionalProfile: async (additionalData: Record<string, any>) => {
     try {
       const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, additionalData);
       return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Erro ao salvar dados adicionais.' };
+    } catch (error: unknown) {
+      const errorMessage = (error as any)?.response?.data?.message || 'Erro ao salvar dados adicionais.';
+      return { success: false, error: errorMessage };
     }
   },
 
-  changePassword: async (passwordData) => {
+  changePassword: async (passwordData: Record<string, any>) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.CHANGE_PASSWORD, passwordData);
       return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Erro ao alterar a senha.' };
+    } catch (error: unknown) {
+      const errorMessage = (error as any)?.response?.data?.message || 'Erro ao alterar a senha.';
+      return { success: false, error: errorMessage };
     }
   },
 };
