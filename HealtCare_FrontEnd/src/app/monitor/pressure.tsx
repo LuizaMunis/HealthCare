@@ -3,11 +3,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Importe o AsyncStorage
 
 // Use a variável de ambiente para a URL da API para facilitar a manutenção
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.56.1:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.15.7:3000';
 
 export default function PressureScreen() {
   const router = useRouter();

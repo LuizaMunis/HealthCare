@@ -7,7 +7,7 @@ import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Aler
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Defina a URL base da sua API em um só lugar
-const API_URL = 'http://192.168.56.1:3000'; 
+const API_URL = 'http://192.168.15.7:3000'; 
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -38,7 +38,7 @@ export default function LoginScreen() {
 
         await AsyncStorage.setItem('userInfo', JSON.stringify(data.data.user));
 
-        router.replace('/(tabs)/');
+        router.replace('/(tabs)/home');
       } else {
         // Mostra a mensagem de erro vinda do backend
         Alert.alert('Falha no Login', data.message || 'Credenciais inválidas.');

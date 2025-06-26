@@ -31,7 +31,7 @@ export default function HomeScreen() {
           <View style={styles.welcomeStripe} />
           <View>
             <Text style={styles.welcomeTitle}>Olá, {userName || 'Usuário'}!</Text>
-            <Text style={styles.welcomeSubtitle}>Bem-vindo ao Olhealth.</Text>
+            <Text style={styles.welcomeSubtitle}>Bem-vindo ao HealthCare.</Text>
           </View>
         </View>
 
