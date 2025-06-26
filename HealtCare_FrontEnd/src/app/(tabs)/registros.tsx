@@ -33,7 +33,7 @@ export default function HomeScreen() {
             {/* --- LÓGICA ALTERADA --- */}
             {/* Exibe o nome do estado. Se estiver vazio, mostra 'Usuário'. */}
             <Text style={styles.welcomeTitle}>Olá, {userName || 'Usuário'}!</Text>
-            <Text style={styles.welcomeSubtitle}>Bem-vindo ao Olhealth.</Text>
+            <Text style={styles.welcomeSubtitle}>Bem-vindo ao HealthCare.</Text>
           </View>
         </View>
 
@@ -47,26 +47,39 @@ export default function HomeScreen() {
                 <Text style={styles.quickAccessTitle}>Pressão Arterial</Text>
           </TouchableOpacity>
             
-            <View style={styles.quickAccessCard}>
-                <Feather name="heart" size={32} color="#004A61" />
+            <TouchableOpacity 
+              style={styles.quickAccessCard} 
+              onPress={() => router.push('/monitor/frequencia')}
+            >
+              <Feather name="heart" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Frequência Cardíaca</Text>
-            </View>
+            </TouchableOpacity>
         </View>
         <View style={styles.quickAccessContainer}>
-          <View style={styles.quickAccessCard}>
+          <TouchableOpacity 
+              style={styles.quickAccessCard} 
+              onPress={() => router.push('/monitor/temperatura')}
+            >
               <Feather name="thermometer" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Tempetatura</Text>
-          </View>
-          <View style={styles.quickAccessCard}>
+            </TouchableOpacity>
+          
+          
+            <TouchableOpacity 
+              style={styles.quickAccessCard} 
+              onPress={() => router.push('/monitor/temperatura')}
+            > 
               <Feather name="loader" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Sintomas</Text>
-          </View>
+            </TouchableOpacity>
         </View>
+
         <View style={styles.quickAccessContainer}>
           <View style={styles.quickAccessCard}>
               <Feather name="droplet" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Glicemia</Text>
           </View>
+
           <View style={styles.quickAccessCard}>
               <Feather name="circle" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Medicamento</Text>

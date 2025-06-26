@@ -32,7 +32,7 @@ export default function HomeScreen() {
             {/* --- LÓGICA ALTERADA --- */}
             {/* Exibe o nome do estado. Se estiver vazio, mostra 'Usuário'. */}
             <Text style={styles.welcomeTitle}>Olá, {userName || 'Usuário'}!</Text>
-            <Text style={styles.welcomeSubtitle}>Bem-vindo ao Olhealth.</Text>
+            <Text style={styles.welcomeSubtitle}>Bem-vindo ao HealthCare.</Text>
           </View>
         </View>
 
