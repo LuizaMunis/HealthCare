@@ -29,14 +29,18 @@ Baixe e instale o XAMPP para configurar um ambiente local com MySQL:
 Dentro da pasta do projeto HealthCare, abra o terminal e execute:
 
 npm install -g expo-cli
+
+
 5. 📦 Instalar as Dependências do Projeto
 Ainda dentro da pasta do projeto (com o terminal aberto), execute:
 
 npm install
+
 6. ▶️ Iniciar o Projeto
 Para rodar o aplicativo:
 
 npx expo start
+
 O Expo abrirá uma interface no navegador. Você pode:
 
 Escanear o QR Code com o app Expo Go (disponível na Google Play ou App Store) para rodar no celular.
