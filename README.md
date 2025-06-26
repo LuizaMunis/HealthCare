@@ -7,6 +7,11 @@ Drive do projeto: https://drive.google.com/drive/folders/19zqyPYoBOdYRvkmEjRKoDL
 
 Health Care é um aplicativo móvel inovador voltado para o monitoramento contínuo da saúde de seus usuários. Desenvolvido para atender a qualquer pessoa interessada em acompanhar seu bem-estar, o app utiliza tecnologia avançada para fornecer uma análise detalhada de dados de saúde ao longo do tempo. A principal função do Health Care é gerar relatórios baseados em inteligência artificial (IA), que podem ser compartilhados com médicos, facilitando o rastreamento de condições de saúde e auxiliando no diagnóstico precoce de doenças. A plataforma oferece uma maneira prática e eficiente de monitorar a saúde, promovendo o cuidado preventivo e melhorando a qualidade de vida dos usuários.
 
+
+
+##primeira etapa para baixar o projeto: utilize o comando:
+git clone https://github.com/LuizaMunis/HealthCare
+
 ## Tecnologias Utilizadas
 
 - **Back-end**: Java script com node.js.
