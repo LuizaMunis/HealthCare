@@ -12,6 +12,19 @@ Health Care é um aplicativo móvel inovador voltado para o monitoramento contí
 ##primeira etapa para baixar o projeto: utilize o comando:
 git clone https://github.com/LuizaMunis/HealthCare
 
+##em seguida baixe as tecnologias Node.js pelo link:
+https://nodejs.org/en/download
+
+e para o banco de dados o xampp:
+https://www.apachefriends.org/pt_br/download.html
+
+##na pasta do projeto depois que tiver feito o git clone, abra o terminal CMD dentro da pasta HealthCare e digite o seguinte comando:
+npm install -g expo-cli
+
+
+
+
+
 ## Tecnologias Utilizadas
 
 - **Back-end**: Java script com node.js.
