@@ -3,10 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG } from '../../constants/api';
-
-// Reutilize a variável de ambiente
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.15.7:3000';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 // Defina a interface para o item de histórico
 interface PressureHistoryItem {
@@ -52,10 +49,8 @@ export default function PressureHistoryScreen() {
   const [diastolic, setDiastolic] = useState(0);
   const [date, setDate] = useState('');  
 
-  // Função para buscar o histórico de medições
   const fetchHistory = async () => {
       setLoading(true);
-      // Limpa erros anteriores ao tentar novamente
       setError(null); 
       
       try {
@@ -64,7 +59,7 @@ export default function PressureHistoryScreen() {
           throw new Error('Token de autenticação não encontrado.');
         }
 
-        const response = await fetch(`${API_URL}/api/pressao-arterial`, {
+        const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -125,7 +120,7 @@ export default function PressureHistoryScreen() {
             try {
               const token = await AsyncStorage.getItem('userToken');
 
-              const response = await fetch(`${API_URL}/api/pressao-arterial/${id}`, {
+              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json' 
@@ -177,7 +172,7 @@ export default function PressureHistoryScreen() {
 
     try {
       const token = await AsyncStorage.getItem('userToken');
-      const url = `${API_URL}/api/pressao-arterial/${editingRecord.id}`;
+      const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${editingRecord.id}`;
       const method = 'PUT';
 
       const response = await fetch(url, {

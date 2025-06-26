@@ -4,7 +4,7 @@
  */
 
 // A URL base completa do seu servidor.
-const API_URL_BASE = 'http://192.168.15.7:3000'; 
+const API_URL_BASE = 'http://192.168.12.187:3000'; 
 
 export const API_CONFIG = {
   BASE_URL: `${API_URL_BASE}/api`,
@@ -16,11 +16,11 @@ export const ENDPOINTS = {
   USERS: {
     REGISTER: '/users/register',
     LOGIN: '/users/login',
-    PROFILE: '/users/profile', // Usado para GET (buscar) e PUT (atualizar nome/email)
+    PROFILE: '/users/profile', 
     CHANGE_PASSWORD: '/users/change-password',
   },
   PROFILE: {
-    // Usado para GET (buscar dados adicionais) e POST (salvar dados adicionais)
     GET_SAVE: '/perfil',
   },
+  PRESSURE_RECORDS: '/pressao-arterial',
 };
