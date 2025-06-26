@@ -1,35 +1,26 @@
 // backend/src/controllers/registroPressaoArterialController.js
 const RegistroPressaoArterialModel = require('../models/registroPressaoArterialModel');
-const PerfilModel = require('../models/perfilModel'); // Precisamos do PerfilModel para obter o perfil_id
+// PerfilModel não é mais necessário aqui, pois a relação é direta com usuario_id
 
 class RegistroPressaoArterialController {
   /**
-   * Helper privado para obter o perfil_id do usuário autenticado.
-   * @param {number} usuarioId - ID do usuário autenticado.
-   * @returns {number|null} O perfil_id se encontrado, ou null.
-   */
-  static async _getPerfilIdFromUserId(usuarioId) {
-    const perfil = await PerfilModel.findByUsuarioId(usuarioId);
-    return perfil ? perfil.id : null;
-  }
-
-  /**
-   * Cria um novo registro de pressão arterial para o perfil do usuário autenticado.
+   * Cria um novo registro de pressão arterial para o usuário autenticado.
    * Requer autenticação (req.user.id).
    */
   static async createRegistro(req, res) {
     try {
-      const usuario_id = req.user.id; // ID do usuário autenticado pelo JWT
+      const usuario_id = req.user ? req.user.id : undefined; // Adiciona verificação para req.user
       const { sistolica_mmhg, diastolica_mmhg, data_hora_medicao } = req.body;
 
-      // 1. Obter o perfil_id do usuário autenticado
-      const perfil_id = await RegistroPressaoArterialController._getPerfilIdFromUserId(usuario_id);
-      if (!perfil_id) {
-        return res.status(404).json({
-          success: false,
-          message: 'Perfil não encontrado para o usuário autenticado. Crie um perfil primeiro.'
-        });
-      }
+      // --- LOGS ADICIONAIS PARA DEBUG ---
+      console.log('--- Debug: Dados de Entrada no createRegistro ---');
+      console.log('req.user:', req.user); // Verifique o objeto completo req.user
+      console.log('usuario_id (do token):', usuario_id, 'Tipo:', typeof usuario_id);
+      console.log('sistolica_mmhg (do body):', sistolica_mmhg, 'Tipo:', typeof sistolica_mmhg);
+      console.log('diastolica_mmhg (do body):', diastolica_mmhg, 'Tipo:', typeof diastolica_mmhg);
+      console.log('data_hora_medicao (do body):', data_hora_medicao, 'Tipo:', typeof data_hora_medicao);
+      console.log('--------------------------------------------');
+      // --- FIM DOS LOGS ADICIONAIS ---
 
       // Validação básica dos dados
       if (!data_hora_medicao) {
@@ -38,6 +29,12 @@ class RegistroPressaoArterialController {
           message: 'A data e hora da medição (data_hora_medicao) são obrigatórias.'
         });
       }
+      // Adicionei uma validação explícita para usuario_id
+      if (usuario_id === undefined || usuario_id === null) {
+        console.error('Erro de Autenticação: usuario_id não encontrado em req.user.id');
+        return res.status(401).json({ success: false, message: 'Não autorizado: ID do usuário não encontrado.' });
+      }
+
       if (sistolica_mmhg && (typeof sistolica_mmhg !== 'number' || sistolica_mmhg <= 0)) {
         return res.status(400).json({ success: false, message: 'Pressão sistólica inválida.' });
       }
@@ -49,90 +46,73 @@ class RegistroPressaoArterialController {
       }
 
       const newRegistroData = {
-        perfil_id,
+        usuario_id, // Usa o usuario_id diretamente do token JWT
         sistolica_mmhg: sistolica_mmhg || null,
         diastolica_mmhg: diastolica_mmhg || null,
-        data_hora_medicao: data_hora_medicao // Deveria ser um string em formato de DATETIME válido
+        data_hora_medicao: data_hora_medicao // Espera uma string em formato DATETIME válido
       };
 
       const newRegistro = await RegistroPressaoArterialModel.create(newRegistroData);
 
       res.status(201).json({
         success: true,
-        message: 'Registro de pressão arterial criado com sucesso!',
+        message: 'Registo de pressão arterial criado com sucesso!',
         data: newRegistro
       });
 
     } catch (error) {
-      console.error('Erro ao criar registro de pressão arterial:', error);
+      console.error('Erro detalhado ao criar registo de pressão arterial:', error);
       res.status(500).json({
         success: false,
-        message: 'Erro interno do servidor ao criar registro de pressão arterial.',
+        message: 'Erro interno do servidor ao criar registo de pressão arterial.',
         error: error.message
       });
     }
   }
 
   /**
-   * Obtém todos os registros de pressão arterial para o perfil do usuário autenticado.
+   * Obtém todos os registos de pressão arterial para o utilizador autenticado.
    * Requer autenticação (req.user.id).
    */
   static async getRegistros(req, res) {
     try {
-      const usuario_id = req.user.id;
+      const usuario_id = req.user.id; // Obtém o ID do utilizador autenticado
 
-      // 1. Obter o perfil_id do usuário autenticado
-      const perfil_id = await RegistroPressaoArterialController._getPerfilIdFromUserId(usuario_id);
-      if (!perfil_id) {
-        return res.status(404).json({
-          success: false,
-          message: 'Perfil não encontrado para o usuário autenticado.'
-        });
-      }
-
-      const registros = await RegistroPressaoArterialModel.findByPerfilId(perfil_id);
+      const registros = await RegistroPressaoArterialModel.findByUsuarioId(usuario_id);
 
       res.json({
         success: true,
-        message: 'Registros de pressão arterial obtidos com sucesso!',
+        message: 'Registos de pressão arterial obtidos com sucesso!',
         data: registros
       });
 
     } catch (error) {
-      console.error('Erro ao obter registros de pressão arterial:', error);
+      console.error('Erro ao obter registos de pressão arterial:', error);
       res.status(500).json({
         success: false,
-        message: 'Erro interno do servidor ao obter registros de pressão arterial.',
+        message: 'Erro interno do servidor ao obter registos de pressão arterial.',
         error: error.message
       });
     }
   }
 
   /**
-   * Atualiza um registro de pressão arterial específico para o perfil do usuário autenticado.
-   * Requer autenticação (req.user.id) e o ID do registro nos parâmetros da URL.
+   * Atualiza um registo de pressão arterial específico para o utilizador autenticado.
+   * Requer autenticação (req.user.id) e o ID do registo nos parâmetros da URL.
    */
   static async updateRegistro(req, res) {
     try {
-      const usuario_id = req.user.id;
-      const { id } = req.params; // ID do registro a ser atualizado
+      const usuario_id = req.user.id; // Obtém o ID do utilizador autenticado
+      const { id } = req.params; // ID do registo a ser atualizado
       const updateData = req.body;
 
-      // 1. Obter o perfil_id do usuário autenticado
-      const perfil_id = await RegistroPressaoArterialController._getPerfilIdFromUserId(usuario_id);
-      if (!perfil_id) {
-        return res.status(404).json({
-          success: false,
-          message: 'Perfil não encontrado para o usuário autenticado.'
-        });
-      }
-
-      // 2. Verificar se o registro existe e pertence ao perfil do usuário autenticado
+      // 1. Verificar se o registo existe e pertence ao utilizador autenticado
       const existingRegistro = await RegistroPressaoArterialModel.findById(id);
-      if (!existingRegistro || existingRegistro.perfil_id !== perfil_id) {
+      // Verifica se o registo existe E se o usuario_id do registo corresponde ao utilizador autenticado
+      if (!existingRegistro || existingRegistro.usuario_id !== usuario_id) {
         return res.status(404).json({
           success: false,
-          message: 'Registro de pressão arterial não encontrado ou não pertence a este perfil.'
+          message: 'Registo de pressão arterial não encontrado ou não pertence a este utilizador.'
         });
       }
 
@@ -147,13 +127,12 @@ class RegistroPressaoArterialController {
         return res.status(400).json({ success: false, message: 'Pressão sistólica não pode ser menor que a diastólica.' });
       }
 
-
       const updated = await RegistroPressaoArterialModel.update(id, updateData);
 
       if (!updated) {
         return res.status(400).json({
           success: false,
-          message: 'Nenhum dado para atualizar ou registro não encontrado.'
+          message: 'Nenhum dado para atualizar ou registo não encontrado.'
         });
       }
 
@@ -161,44 +140,35 @@ class RegistroPressaoArterialController {
 
       res.json({
         success: true,
-        message: 'Registro de pressão arterial atualizado com sucesso!',
+        message: 'Registo de pressão arterial atualizado com sucesso!',
         data: updatedRegistro
       });
 
     } catch (error) {
-      console.error('Erro ao atualizar registro de pressão arterial:', error);
+      console.error('Erro ao atualizar registo de pressão arterial:', error);
       res.status(500).json({
         success: false,
-        message: 'Erro interno do servidor ao atualizar registro de pressão arterial.',
+        message: 'Erro interno do servidor ao atualizar registo de pressão arterial.',
         error: error.message
       });
     }
   }
 
   /**
-   * Deleta um registro de pressão arterial específico para o perfil do usuário autenticado.
-   * Requer autenticação (req.user.id) e o ID do registro nos parâmetros da URL.
+   * Deleta um registo de pressão arterial específico para o utilizador autenticado.
+   * Requer autenticação (req.user.id) e o ID do registo nos parâmetros da URL.
    */
   static async deleteRegistro(req, res) {
     try {
-      const usuario_id = req.user.id;
-      const { id } = req.params; // ID do registro a ser deletado
+      const usuario_id = req.user.id; // Obtém o ID do utilizador autenticado
+      const { id } = req.params; // ID do registo a ser deletado
 
-      // 1. Obter o perfil_id do usuário autenticado
-      const perfil_id = await RegistroPressaoArterialController._getPerfilIdFromUserId(usuario_id);
-      if (!perfil_id) {
-        return res.status(404).json({
-          success: false,
-          message: 'Perfil não encontrado para o usuário autenticado.'
-        });
-      }
-
-      // 2. Verificar se o registro existe e pertence ao perfil do usuário autenticado
+      // 1. Verificar se o registo existe e pertence ao utilizador autenticado
       const existingRegistro = await RegistroPressaoArterialModel.findById(id);
-      if (!existingRegistro || existingRegistro.perfil_id !== perfil_id) {
+      if (!existingRegistro || existingRegistro.usuario_id !== usuario_id) {
         return res.status(404).json({
           success: false,
-          message: 'Registro de pressão arterial não encontrado ou não pertence a este perfil.'
+          message: 'Registo de pressão arterial não encontrado ou não pertence a este utilizador.'
         });
       }
 
@@ -207,20 +177,20 @@ class RegistroPressaoArterialController {
       if (!deleted) {
         return res.status(404).json({
           success: false,
-          message: 'Registro de pressão arterial não encontrado para exclusão.'
+          message: 'Registo de pressão arterial não encontrado para exclusão.'
         });
       }
 
       res.json({
         success: true,
-        message: 'Registro de pressão arterial deletado com sucesso!'
+        message: 'Registo de pressão arterial deletado com sucesso!'
       });
 
     } catch (error) {
-      console.error('Erro ao deletar registro de pressão arterial:', error);
+      console.error('Erro ao deletar registo de pressão arterial:', error);
       res.status(500).json({
         success: false,
-        message: 'Erro interno do servidor ao deletar registro de pressão arterial.',
+        message: 'Erro interno do servidor ao deletar registo de pressão arterial.',
         error: error.message
       });
     }
