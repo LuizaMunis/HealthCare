@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../../constants/api';
 
 // Reutilize a variável de ambiente
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.15.7:3000';

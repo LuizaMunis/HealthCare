@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 const API_URL = 'http://192.168.15.7:3000';
 

@@ -5,9 +5,7 @@ import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Defina a URL base da sua API em um só lugar
-const API_URL = 'http://192.168.15.7:3000'; 
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

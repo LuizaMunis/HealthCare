@@ -5,9 +5,7 @@ import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, Scro
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Importe o AsyncStorage
-
-// Use a variável de ambiente para a URL da API para facilitar a manutenção
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.15.7:3000';
+import { API_CONFIG } from '../../constants/api';
 
 export default function PressureScreen() {
   const router = useRouter();
@@ -44,9 +42,8 @@ export default function PressureScreen() {
       }
 
       const url = isEditMode
-        ? `${API_URL}/api/pressao-arterial/${params.id}` // URL para ATUALIZAR
-        : `${API_URL}/api/pressao-arterial`;             // URL para CRIAR
-
+        ? `${API_CONFIG.BASE_URL}/pressao-arterial/${params.id}` // URL para ATUALIZAR
+        : `${API_CONFIG.BASE_URL}/pressao-arterial`;  
       const method = isEditMode ? 'PUT' : 'POST'; // Método PUT para atualizar, POST para criar
 
       const response = await fetch(url, {
@@ -155,13 +152,6 @@ export default function PressureScreen() {
     </SafeAreaView>
   );
 }
-
-
-
-
-
-
-
 
 // ... (Estilos permanecem os mesmos)
 const styles = StyleSheet.create({
