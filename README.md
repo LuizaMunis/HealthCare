@@ -22,6 +22,10 @@ https://www.apachefriends.org/pt_br/download.html
 npm install -g expo-cli
 
 
+##quando o estiver no vscode e dentro da pasta HealthCare execute o comando no terminal:
+npm install
+
+
 
 
 
