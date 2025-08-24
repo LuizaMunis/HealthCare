@@ -3,6 +3,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import ApiService from '@/services/apiService';
 import {
   Alert,
   SafeAreaView,
@@ -15,7 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import { API_CONFIG, ENDPOINTS } from '@/constants/api';
+
 
 //const API_URL = API_CONFIG.BASE_URL;
 
@@ -26,41 +27,30 @@ export default function RegisterScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const router = useRouter();
 
-  const handleRegister = async () => {
-    if (!nomeCompleto.trim() || !email.trim() || !password.trim()) { 
+    const handleRegister = async () => {
+    if (!nomeCompleto.trim() || !email.trim() || !password.trim()) {
       Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
       return;
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.REGISTER}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nome_completo: nomeCompleto,
-          email: email,
-          password: password, 
-        }),
+      const result = await ApiService.register({
+        nome_completo: nomeCompleto,
+        email: email,
+        password: password
       });
 
-      const data = await response.json();
+      console.log('Resposta do registro:', result);
 
-      if (data.success) {
-        Alert.alert(
-          'Sucesso!',
-          'Sua conta foi criada. Agora você pode fazer o login.',
-          [
-            { text: 'OK', onPress: () => router.push('/login') },
-          ]
-        );
+      if (result.success) {
+        // Navegar diretamente para a tela de perfil
+        router.replace('/Perfil');
       } else {
-        Alert.alert('Erro no Cadastro', data.message || 'Não foi possível criar a conta.');
+        Alert.alert('Erro no Cadastro', result.error || 'Não foi possível criar a conta.');
       }
     } catch (error) {
       console.error("Erro de Rede:", error);
-      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Por favor, verifique o Guia de Depuração de Erros para ajuda.');
+      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Tente novamente.');
     }
   };
 

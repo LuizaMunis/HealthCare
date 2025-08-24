@@ -4,6 +4,13 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+// Verificar se as variáveis de ambiente estão carregadas
+console.log('🔧 Verificando variáveis de ambiente:');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Definido' : 'NÃO DEFINIDO');
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_NAME:', process.env.DB_NAME);
+console.log('PORT:', process.env.PORT);
+
 // Importa funções e modelos necessários
 const { testConnection } = require('./config/database');
 const UserModel = require('./models/userModel');

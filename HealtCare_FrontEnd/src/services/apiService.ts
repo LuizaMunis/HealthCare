@@ -16,6 +16,9 @@ api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log('🔑 Token enviado para:', config.url);
+  } else {
+    console.log('⚠️ Nenhum token encontrado para:', config.url);
   }
   return config;
 }, (error) => Promise.reject(error));
@@ -26,8 +29,19 @@ const ApiService = {
   register: async (userData) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.REGISTER, userData);
+      
+      // Verificar se a resposta tem a estrutura esperada
+      if (response.data.success && response.data.data && response.data.data.token) {
+        const token = response.data.data.token;
+        await AsyncStorage.setItem(TOKEN_KEY, token);
+        console.log('✅ Token salvo com sucesso');
+      } else {
+        console.log('❌ Estrutura da resposta não contém token');
+      }
+      
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('❌ Erro no registro:', error);
       return { success: false, error: error.response?.data?.message || 'Erro ao registar.' };
     }
   },

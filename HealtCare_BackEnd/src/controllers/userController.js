@@ -43,10 +43,35 @@ class UserController {
         senha_hash,
       });
 
+      // Verificar se JWT_SECRET está definido
+      if (!process.env.JWT_SECRET) {
+        console.error('JWT_SECRET não está definido!');
+        return res.status(500).json({
+          success: false,
+          message: 'Erro de configuração do servidor'
+        });
+      }
+
+      // Gerar token JWT após o registro
+      const token = jwt.sign(
+        { id: newUser.id, email: newUser.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      console.log('Token gerado com sucesso para usuário:', newUser.id);
+
       res.status(201).json({
         success: true,
         message: 'Usuário criado com sucesso',
-        data: newUser
+        data: {
+          user: {
+            id: newUser.id,
+            nome_completo: newUser.nome_completo,
+            email: newUser.email
+          },
+          token: token
+        }
       });
     } catch (error) {
       console.error('Erro no registro:', error);
@@ -82,6 +107,15 @@ class UserController {
         return res.status(401).json({
           success: false,
           message: 'Credenciais inválidas'
+        });
+      }
+
+      // Verificar se JWT_SECRET está definido
+      if (!process.env.JWT_SECRET) {
+        console.error('JWT_SECRET não está definido!');
+        return res.status(500).json({
+          success: false,
+          message: 'Erro de configuração do servidor'
         });
       }
 
