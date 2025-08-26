@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import ApiService from '@/services/apiService';
+import { formatNumberForDisplay, parseFormattedNumber } from '@/utils/formatters';
 
 // --- Interfaces para garantir a tipagem dos dados ---
 interface PersonalInfo {
@@ -85,7 +86,7 @@ export function useAccount() {
           phone: celular || '',
           gender: genderToFrontend(genero),
           cpf: cpf || '',
-          weight: peso ? String(peso) : '',
+          weight: peso ? formatNumberForDisplay(peso) : '',
           height: altura ? String(altura) : '',
         });
       }
@@ -126,8 +127,8 @@ export function useAccount() {
       celular: newData.phone || null,
       genero: genderToBackend(newData.gender ?? ''),
       cpf: newData.cpf || null,
-      peso: newData.weight ? parseFloat(newData.weight) : null,
-      altura: newData.height != null ? parseInt(newData.height, 10) : null,
+      peso: newData.weight ? parseFormattedNumber(newData.weight) : null,
+      altura: newData.height ? parseInt(newData.height, 10) : null,
     };
     const result = await ApiService.saveAdditionalProfile(payload);
     if (result.success) {

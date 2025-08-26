@@ -1,4 +1,4 @@
-// HealthCare_FrontEnd/src/app/AdditionalData.tsx
+// HealthCare_FrontEnd/src/app/Perfil.tsx
 
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -19,7 +19,7 @@ import {
   Modal
 } from 'react-native';
 
-export default function AdditionalDataScreen() {
+export default function PerfilScreen() {
   const [cpf, setCpf] = useState('');
   const [telefone, setTelefone] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
@@ -34,7 +34,7 @@ export default function AdditionalDataScreen() {
     const checkToken = async () => {
       try {
         const token = await AsyncStorage.getItem('healthcare_auth_token');
-        console.log('Token na tela AdditionalData:', token ? 'Presente' : 'Ausente');
+        console.log('Token na tela Perfil:', token ? 'Presente' : 'Ausente');
         if (token) {
           console.log('Token completo:', token.substring(0, 50) + '...');
         }
@@ -73,27 +73,30 @@ export default function AdditionalDataScreen() {
     return text;
   };
 
-  // Função para aplicar máscara de peso
+  // Função para aplicar máscara de peso com formatação automática
   const formatPeso = (text: string) => {
+    // Remove todos os caracteres não numéricos
     const numbers = text.replace(/\D/g, '');
-    if (numbers.length <= 4) {
+    
+    if (numbers.length === 0) {
+      return '';
+    }
+    
+    // Se tem 3 ou mais dígitos, formata automaticamente com vírgula
+    if (numbers.length >= 3) {
       const kg = numbers.slice(0, -2);
       const g = numbers.slice(-2);
-      if (g.length > 0) {
-        return `${kg || '0'},${g} Kg`;
-      }
-      return kg ? `${kg} Kg` : '';
+      return `${kg},${g}`;
     }
-    return text;
+    
+    // Se tem 1 ou 2 dígitos, retorna como está (será interpretado como gramas)
+    return numbers;
   };
 
-  // Função para aplicar máscara de altura
+  // Função para aplicar máscara de altura - apenas números
   const formatAltura = (text: string) => {
-    const numbers = text.replace(/\D/g, '');
-    if (numbers.length <= 3) {
-      return numbers ? `${numbers} CM` : '';
-    }
-    return text;
+    // Remove todos os caracteres não numéricos
+    return text.replace(/[^\d]/g, '');
   };
 
   const handleContinue = async () => {
@@ -122,11 +125,18 @@ export default function AdditionalDataScreen() {
         ? `${dataParts[2]}-${dataParts[1]}-${dataParts[0]}`
         : dataNascimento;
       
-      // Extrair peso (remover "Kg" e converter vírgula para ponto)
-      const pesoLimpo = peso.replace(/[^\d,]/g, '').replace(',', '.');
+      // Extrair peso (converter vírgula para ponto)
+      // Se o peso não tem vírgula, assume que são gramas e converte para kg
+      let pesoLimpo;
+      if (peso.includes(',')) {
+        pesoLimpo = peso.replace(',', '.');
+      } else {
+        // Se não tem vírgula, assume que são gramas (ex: "500" = 0.5 kg)
+        pesoLimpo = (parseFloat(peso) / 1000).toString();
+      }
       
-      // Extrair altura (remover "CM")
-      const alturaLimpa = altura.replace(/\D/g, '');
+      // Altura já está limpa (apenas números)
+      const alturaLimpa = altura;
       
       // Mapear gênero para o formato do backend - TESTE: usar nome completo
       const generoMapeado = genero === 'masculino' ? 'MASCULINO' : 
@@ -149,15 +159,15 @@ export default function AdditionalDataScreen() {
       console.log('Resposta da API:', result);
 
       if (result.success) {
-        console.log('✅ Perfil salvo com sucesso! Navegando para home...');
+        console.log('✅ Navegando para home...');
         setTimeout(() => {
           router.replace('/(tabs)/home');
         }, 100);
       } else {
-        Alert.alert('Erro', result.error || 'Erro ao salvar dados adicionais.');
+        Alert.alert('Erro', result.error || 'Erro ao salvar dados do perfil.');
       }
     } catch (error) {
-      console.error('Erro ao salvar dados adicionais:', error);
+      console.error('Erro ao salvar dados do perfil:', error);
       Alert.alert('Erro', 'Erro ao conectar com o servidor. Tente novamente.');
     }
   };
@@ -173,18 +183,19 @@ export default function AdditionalDataScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <Feather name="arrow-left" size={24} color="#004A61" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Dados adicionais</Text>
+            <Text style={styles.headerTitle}>Perfil</Text>
             <View style={{ width: 24 }} />
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.welcomeTitle}>Seja bem-vindo!</Text>
-            <Text style={styles.welcomeSubtitle}>Cadastre sua conta.</Text>
+            <Text style={styles.welcomeTitle}>Complete seu perfil!</Text>
+            <Text style={styles.welcomeSubtitle}>Adicione suas informações pessoais.</Text>
 
             <Text style={styles.label}>CPF</Text>
             <TextInput
               style={styles.input}
               placeholder="000.000.000-00"
+              placeholderTextColor="#CBD5E1"
               value={cpf}
               onChangeText={(text) => setCpf(formatCPF(text))}
               keyboardType="numeric"
@@ -195,6 +206,7 @@ export default function AdditionalDataScreen() {
             <TextInput
               style={styles.input}
               placeholder="(00) 90000-0000"
+              placeholderTextColor="#CBD5E1"
               value={telefone}
               onChangeText={(text) => setTelefone(formatTelefone(text))}
               keyboardType="numeric"
@@ -205,6 +217,7 @@ export default function AdditionalDataScreen() {
             <TextInput
               style={styles.input}
               placeholder="DD/MM/AAAA"
+              placeholderTextColor="#CBD5E1"
               value={dataNascimento}
               onChangeText={(text) => setDataNascimento(formatData(text))}
               keyboardType="numeric"
@@ -214,21 +227,23 @@ export default function AdditionalDataScreen() {
             <Text style={styles.label}>Peso (Kg)</Text>
             <TextInput
               style={styles.input}
-              placeholder="00,00 Kg"
+              placeholder="00,00"
+              placeholderTextColor="#CBD5E1"
               value={peso}
               onChangeText={(text) => setPeso(formatPeso(text))}
               keyboardType="numeric"
-              maxLength={8}
+              maxLength={6}
             />
 
             <Text style={styles.label}>Altura (CM)</Text>
             <TextInput
               style={styles.input}
-              placeholder="000 CM"
+              placeholder="000"
+              placeholderTextColor="#CBD5E1"
               value={altura}
               onChangeText={(text) => setAltura(formatAltura(text))}
               keyboardType="numeric"
-              maxLength={6}
+              maxLength={3}
             />
 
             <Text style={styles.label}>Gênero</Text>
@@ -245,7 +260,7 @@ export default function AdditionalDataScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.button} onPress={handleContinue}>
-              <Text style={styles.buttonText}>Continuar</Text>
+              <Text style={styles.buttonText}>Salvar Perfil</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

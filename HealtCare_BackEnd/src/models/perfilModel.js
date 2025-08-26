@@ -47,13 +47,35 @@ class PerfilModel {
     
     // Tratar peso e altura corretamente
     let pesoProcessado = null;
-    if (peso !== null && peso !== undefined) {
-      pesoProcessado = typeof peso === 'string' ? parseFloat(peso.replace(',', '.')) : parseFloat(peso);
+    if (peso !== null && peso !== undefined && peso !== '') {
+      const pesoString = String(peso).trim();
+      if (pesoString) {
+        // Remove caracteres não numéricos exceto vírgula e ponto
+        const cleanPeso = pesoString.replace(/[^\d,.]/g, '');
+        // Converte vírgula para ponto para parseFloat
+        const pesoComPonto = cleanPeso.replace(',', '.');
+        pesoProcessado = parseFloat(pesoComPonto);
+        
+        // Validação: peso deve estar entre 20 e 500 kg
+        if (isNaN(pesoProcessado) || pesoProcessado < 20 || pesoProcessado > 500) {
+          throw new Error('Peso deve estar entre 20 e 500 kg');
+        }
+      }
     }
     
     let alturaProcessada = null;
-    if (altura !== null && altura !== undefined) {
-      alturaProcessada = typeof altura === 'string' ? parseInt(altura.replace(/\D/g, '')) : parseInt(altura);
+    if (altura !== null && altura !== undefined && altura !== '') {
+      const alturaString = String(altura).trim();
+      if (alturaString) {
+        // Remove caracteres não numéricos
+        const cleanAltura = alturaString.replace(/[^\d]/g, '');
+        alturaProcessada = parseInt(cleanAltura);
+        
+        // Validação: altura deve estar entre 50 e 250 cm
+        if (isNaN(alturaProcessada) || alturaProcessada < 50 || alturaProcessada > 250) {
+          throw new Error('Altura deve estar entre 50 e 250 cm');
+        }
+      }
     }
     
     // Tratar gênero - usar nome completo
@@ -105,6 +127,12 @@ class PerfilModel {
       console.error('Erro no createOrUpdate:', error);
       throw error;
     }
+  }
+
+  static async delete(id) {
+    const query = 'DELETE FROM perfil WHERE id = ?';
+    const [result] = await pool.execute(query, [id]);
+    return result.affectedRows > 0;
   }
 }
 

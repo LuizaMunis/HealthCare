@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import NumericInput from '../ui/NumericInput';
 
 export default function AdditionalDataModal({ visible, onClose, data, onSave }) {
   const [cpf, setCpf] = useState(data.cpf);
@@ -63,11 +64,23 @@ export default function AdditionalDataModal({ visible, onClose, data, onSave }) 
             <Text style={styles.label}>Data de Nascimento</Text>
             <TextInput style={styles.input} value={birthDate} onChangeText={setBirthDate} placeholder="DD/MM/AAAA" />
 
-            <Text style={styles.label}>Peso</Text>
-            <TextInput style={styles.input} value={weight} onChangeText={setWeight} placeholder="70 Kg" />
+            <Text style={styles.label}>Peso (Kg)</Text>
+            <NumericInput 
+              value={weight} 
+              onChangeText={setWeight}
+              allowDecimal={true}
+              maxLength={6}
+              placeholder="70,5" 
+            />
 
-            <Text style={styles.label}>Altura</Text>
-            <TextInput style={styles.input} value={height} onChangeText={setHeight} placeholder="175 CM" />
+            <Text style={styles.label}>Altura (CM)</Text>
+            <NumericInput 
+              value={height} 
+              onChangeText={setHeight}
+              allowDecimal={false}
+              maxLength={3}
+              placeholder="175" 
+            />
 
             <Text style={styles.label}>Gênero</Text>
             <TextInput style={styles.input} value={gender} onChangeText={setGender} placeholder="Prefiro não dizer" />

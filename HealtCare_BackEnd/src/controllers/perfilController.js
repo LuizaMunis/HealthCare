@@ -1,51 +1,52 @@
-const PerfilModel = require('../models/perfilModel');
+const PerfilService = require('../services/perfilService');
 
 class PerfilController {
   static async getProfile(req, res) {
     try {
-      const perfil = await PerfilModel.findByUserId(req.user.id);
+      const perfil = await PerfilService.getPerfil(req.user.id);
       res.json({ success: true, data: perfil });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Erro ao obter dados do perfil.' });
+      console.error('Erro ao obter perfil:', error);
+      res.status(500).json({ success: false, message: error.message });
     }
   }
 
   static async saveProfile(req, res) {
     try {
-      console.log('Dados recebidos no saveProfile:', req.body);
-      console.log('Gênero recebido:', req.body.genero, 'Tipo:', typeof req.body.genero);
+      const dadosAdicionais = req.body;
       
-      // Validar CPF se fornecido
-      if (req.body.cpf) {
-        const cpfLimpo = req.body.cpf.replace(/\D/g, '');
+      // Validações específicas do controller (validações de formato)
+      if (dadosAdicionais.cpf) {
+        const cpfLimpo = dadosAdicionais.cpf.replace(/\D/g, '');
         if (cpfLimpo.length !== 11) {
           return res.status(400).json({ success: false, message: 'CPF deve ter 11 dígitos.' });
         }
-        req.body.cpf = cpfLimpo; // Usar CPF limpo
+        dadosAdicionais.cpf = cpfLimpo;
       }
       
-      // Validar celular se fornecido
-      if (req.body.celular) {
-        const celularLimpo = req.body.celular.replace(/\D/g, '');
+      if (dadosAdicionais.celular) {
+        const celularLimpo = dadosAdicionais.celular.replace(/\D/g, '');
         if (celularLimpo.length < 10 || celularLimpo.length > 11) {
           return res.status(400).json({ success: false, message: 'Celular deve ter 10 ou 11 dígitos.' });
         }
-        req.body.celular = celularLimpo; // Usar celular limpo
+        dadosAdicionais.celular = celularLimpo;
       }
       
-      // Validar gênero se fornecido
-      if (req.body.genero) {
-        console.log('Gênero antes do processamento:', req.body.genero);
-        req.body.genero = req.body.genero.toUpperCase();
-        console.log('Gênero após processamento:', req.body.genero);
+      if (dadosAdicionais.genero) {
+        dadosAdicionais.genero = dadosAdicionais.genero.toUpperCase();
       }
       
-      const savedProfile = await PerfilModel.createOrUpdate(req.user.id, req.body);
-      console.log('Perfil salvo:', savedProfile);
+      const savedProfile = await PerfilService.savePerfil(req.user.id, dadosAdicionais);
       res.status(200).json({ success: true, message: 'Perfil salvo com sucesso!', data: savedProfile });
     } catch (error) {
       console.error('Erro no saveProfile:', error);
-      res.status(400).json({ success: false, message: error.message });
+      
+      let statusCode = 500;
+      if (error.message.includes('obrigatório')) {
+        statusCode = 400;
+      }
+      
+      res.status(statusCode).json({ success: false, message: error.message });
     }
   }
 }

@@ -1,5 +1,5 @@
 // backend/src/middleware/authMiddleware.js
-const jwt = require('jsonwebtoken');
+const UserService = require('../services/userService');
 
 const authMiddleware = (req, res, next) => {
   try {
@@ -18,15 +18,7 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-    if (!process.env.JWT_SECRET) {
-      console.error('JWT_SECRET não está definido no middleware!');
-      return res.status(500).json({
-        success: false,
-        message: 'Erro de configuração do servidor'
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = UserService.verifyToken(token);
     console.log('Token decodificado com sucesso:', decoded);
     req.user = decoded;
     next();
