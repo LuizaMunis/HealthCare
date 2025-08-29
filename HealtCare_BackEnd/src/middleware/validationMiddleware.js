@@ -24,7 +24,16 @@ class ValidationMiddleware {
         .isLength({ min: 6 })
         .withMessage('Senha deve ter pelo menos 6 caracteres')
         .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-        .withMessage('Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número'),
+        .withMessage('Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número')
+        .custom((value) => {
+          // Permitir caracteres especiais comuns (opcional)
+          const specialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+          if (!specialChars.test(value)) {
+            // Aviso em vez de erro
+            console.warn('Senha não contém caracteres especiais - recomendado para maior segurança');
+          }
+          return true;
+        }),
       
       ValidationMiddleware.handleValidationErrors
     ];
@@ -322,3 +331,5 @@ class ValidationMiddleware {
 }
 
 module.exports = ValidationMiddleware;
+
+

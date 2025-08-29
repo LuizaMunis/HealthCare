@@ -3,7 +3,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import ApiService from '@/services/apiService';
 import {
   Alert,
   SafeAreaView,
@@ -16,7 +15,8 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
 //const API_URL = API_CONFIG.BASE_URL;
 
@@ -27,26 +27,59 @@ export default function RegisterScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const router = useRouter();
 
-    const handleRegister = async () => {
-    if (!nomeCompleto.trim() || !email.trim() || !password.trim()) {
+  const handleRegister = async () => {
+    if (!nomeCompleto.trim() || !email.trim() || !password.trim()) { 
       Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
       return;
     }
 
+    // Validação básica de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Email Inválido', 'Por favor, insira um email válido.');
+      return;
+    }
+
+    // Validação básica de senha
+    if (password.length < 6) {
+      Alert.alert('Senha Inválida', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
     try {
-      const result = await ApiService.register({
-        nome_completo: nomeCompleto,
-        email: email,
-        password: password
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nome_completo: nomeCompleto,
+          email: email,
+          password: password, 
+        }),
       });
 
-      console.log('Resposta do registro:', result);
+      const data = await response.json();
+      console.log('Resposta do servidor:', data);
 
-      if (result.success) {
-        // Navegar diretamente para a tela de perfil
-        router.replace('/Perfil');
+      if (data.success) {
+        Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/Perfil')
+          }
+        ]);
       } else {
-        Alert.alert('Erro no Cadastro', result.error || 'Não foi possível criar a conta.');
+        // Tratar erros específicos do backend
+        let errorMessage = data.message || 'Não foi possível criar a conta.';
+        
+        // Se há erros detalhados do backend
+        if (data.errors && Array.isArray(data.errors)) {
+          const fieldErrors = data.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+          errorMessage = `Erros de validação:\n${fieldErrors}`;
+        }
+        
+        Alert.alert('Erro no Cadastro', errorMessage);
       }
     } catch (error) {
       console.error("Erro de Rede:", error);
@@ -105,6 +138,8 @@ export default function RegisterScreen() {
                 <Feather name={isPasswordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
               </TouchableOpacity>
             </View>
+            
+            <PasswordStrengthIndicator password={password} />
 
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
               <Text style={styles.buttonText}>Cadastrar-me</Text>

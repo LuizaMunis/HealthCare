@@ -5,9 +5,9 @@ import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import ApiService from '@/services/apiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,6 +28,7 @@ export default function PerfilScreen() {
   const [genero, setGenero] = useState('');
   const [showGeneroModal, setShowGeneroModal] = useState(false);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Verificar token ao carregar a tela
   useEffect(() => {
@@ -155,7 +156,7 @@ export default function PerfilScreen() {
       };
 
       console.log('Enviando dados para API:', profileData);
-      const result = await ApiService.saveAdditionalProfile(profileData);
+      const result = await ApiService.savePerfilData(profileData);
       console.log('Resposta da API:', result);
 
       if (result.success) {
@@ -164,29 +165,49 @@ export default function PerfilScreen() {
           router.replace('/(tabs)/home');
         }, 100);
       } else {
-        Alert.alert('Erro', result.error || 'Erro ao salvar dados do perfil.');
+        // Mostrar mensagem específica do erro
+        const errorMessage = result.error || 'Erro ao salvar dados do perfil.';
+        console.log('❌ Erro retornado pela API:', errorMessage);
+        Alert.alert('Erro', errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar dados do perfil:', error);
-      Alert.alert('Erro', 'Erro ao conectar com o servidor. Tente novamente.');
+      
+      // Tentar extrair mensagem de erro mais específica
+      let errorMessage = 'Erro ao conectar com o servidor. Tente novamente.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Erro', errorMessage);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Feather name="arrow-left" size={24} color="#004A61" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Perfil</Text>
-            <View style={{ width: 24 }} />
-          </View>
+        {/* Header fixo */}
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color="#004A61" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Perfil</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
+        {/* ScrollView apenas para os campos */}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.form}>
             <Text style={styles.welcomeTitle}>Complete seu perfil!</Text>
             <Text style={styles.welcomeSubtitle}>Adicione suas informações pessoais.</Text>
@@ -258,12 +279,15 @@ export default function PerfilScreen() {
                  'Selecione o gênero'}
               </Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.button} onPress={handleContinue}>
-              <Text style={styles.buttonText}>Salvar Perfil</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
+
+        {/* Footer fixo com o botão */}
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
+          <TouchableOpacity style={styles.button} onPress={handleContinue}>
+            <Text style={styles.buttonText}>Salvar Perfil</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
 
       {/* Modal para seleção de gênero */}
@@ -316,7 +340,7 @@ export default function PerfilScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -325,9 +349,11 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: '#FFFFFF' 
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContainer: { 
-    flexGrow: 1, 
-    justifyContent: 'center' 
+    paddingBottom: 20, // Espaço para o footer
   },
   header: {
     flexDirection: 'row',
@@ -374,12 +400,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  footer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 25,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
+  },
   button: {
     backgroundColor: '#004A61',
     paddingVertical: 18,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 40,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,

@@ -24,9 +24,39 @@ api.interceptors.request.use(async (config) => {
 }, (error) => Promise.reject(error));
 
 
+interface UserData {
+  nome_completo: string;
+  email: string;
+  password: string;
+}
+
+interface Credentials {
+  email: string;
+  password: string;
+}
+
+interface ProfileData {
+  [key: string]: any;
+}
+
+interface PerfilData {
+  cpf: string;
+  celular: string;
+  data_nascimento: string;
+  peso: number;
+  altura: number;
+  genero: string;
+}
+
+interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 const ApiService = {
   // --- AUTH ---
-  register: async (userData) => {
+  register: async (userData: UserData) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.REGISTER, userData);
       
@@ -40,13 +70,13 @@ const ApiService = {
       }
       
       return { success: true, data: response.data };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro no registro:', error);
       return { success: false, error: error.response?.data?.message || 'Erro ao registar.' };
     }
   },
 
-  login: async (credentials) => {
+  login: async (credentials: Credentials) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.LOGIN, credentials);
       const { token } = response.data.data;
@@ -54,7 +84,7 @@ const ApiService = {
         await AsyncStorage.setItem(TOKEN_KEY, token);
       }
       return { success: true, data: response.data };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Credenciais inválidas.' };
     }
   },
@@ -69,7 +99,7 @@ const ApiService = {
     try {
       const response = await api.get(ENDPOINTS.USERS.PROFILE);
       return { success: true, data: response.data };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Sessão expirada.' };
     }
   },
@@ -78,34 +108,49 @@ const ApiService = {
     try {
       const response = await api.get(ENDPOINTS.PROFILE.GET_SAVE);
       return { success: true, data: response.data };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados adicionais.' };
     }
   },
 
-  saveProfile: async (profileData) => {
+  saveProfile: async (profileData: ProfileData) => {
     try {
       const response = await api.put(ENDPOINTS.USERS.PROFILE, profileData);
       return { success: true, data: response.data };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao salvar perfil.' };
     }
   },
   
-  saveAdditionalProfile: async (additionalData) => {
+  savePerfilData: async (perfilData: PerfilData) => {
     try {
-      const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, additionalData);
+      const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, perfilData);
       return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Erro ao salvar dados adicionais.' };
+    } catch (error: any) {
+      console.error('Erro no savePerfilData:', error);
+      
+      // Extrair mensagem de erro mais específica
+      let errorMessage = 'Erro ao salvar dados adicionais.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 409) {
+        errorMessage = 'Este CPF já está em uso por outro usuário.';
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Dados inválidos. Verifique as informações fornecidas.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Erro interno do servidor. Tente novamente.';
+      }
+      
+      return { success: false, error: errorMessage };
     }
   },
 
-  changePassword: async (passwordData) => {
+  changePassword: async (passwordData: PasswordData) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.CHANGE_PASSWORD, passwordData);
       return { success: true, data: response.data };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao alterar a senha.' };
     }
   },

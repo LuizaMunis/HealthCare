@@ -1,74 +1,105 @@
 // HealtCare_FrontEnd/src/utils/formatters.ts
 
 /**
- * Formata um número para exibição no formato brasileiro (vírgula como separador decimal)
+ * Formata um número para exibição com separadores de milhares
+ * @param value - O valor numérico a ser formatado
+ * @returns String formatada com separadores de milhares
  */
-export const formatNumberForDisplay = (value: number | string | null | undefined): string => {
+export function formatNumberForDisplay(value: number | string): string {
   if (value === null || value === undefined || value === '') {
     return '';
   }
   
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
   if (isNaN(numValue)) {
     return '';
   }
   
-  // Converte para string com ponto como separador decimal
-  const stringValue = numValue.toString();
-  
-  // Se tem parte decimal, formata com vírgula
-  if (stringValue.includes('.')) {
-    const [integerPart, decimalPart] = stringValue.split('.');
-    return `${integerPart},${decimalPart}`;
-  }
-  
-  return stringValue;
-};
+  return numValue.toLocaleString('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
 
 /**
- * Converte um valor formatado (com vírgula) para número
+ * Converte um número formatado de volta para um valor numérico
+ * @param formattedValue - O valor formatado como string
+ * @returns Número sem formatação
  */
-export const parseFormattedNumber = (value: string): number | null => {
-  if (!value || value.trim() === '') {
-    return null;
+export function parseFormattedNumber(formattedValue: string): number {
+  if (!formattedValue || typeof formattedValue !== 'string') {
+    return 0;
   }
   
-  // Remove caracteres não numéricos exceto vírgula e ponto
-  const cleanValue = value.replace(/[^\d,.]/g, '');
+  // Remove todos os caracteres não numéricos exceto ponto e vírgula
+  const cleanValue = formattedValue.replace(/[^\d.,]/g, '');
   
-  // Converte vírgula para ponto
+  // Substitui vírgula por ponto para conversão correta
   const normalizedValue = cleanValue.replace(',', '.');
   
-  const result = parseFloat(normalizedValue);
-  return isNaN(result) ? null : result;
-};
+  const parsedValue = parseFloat(normalizedValue);
+  
+  return isNaN(parsedValue) ? 0 : parsedValue;
+}
 
 /**
- * Valida se um peso está dentro do intervalo aceitável
+ * Formata um número de telefone brasileiro
+ * @param phone - O número de telefone
+ * @returns Telefone formatado
  */
-export const validateWeight = (weight: number): boolean => {
-  return weight >= 20 && weight <= 500;
-};
+export function formatPhoneNumber(phone: string): string {
+  if (!phone) return '';
+  
+  // Remove todos os caracteres não numéricos
+  const cleanPhone = phone.replace(/\D/g, '');
+  
+  // Aplica máscara baseada no tamanho
+  if (cleanPhone.length === 11) {
+    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}`;
+  } else if (cleanPhone.length === 10) {
+    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 6)}-${cleanPhone.slice(6)}`;
+  }
+  
+  return cleanPhone;
+}
 
 /**
- * Valida se uma altura está dentro do intervalo aceitável
+ * Formata CPF com máscara
+ * @param cpf - O CPF sem formatação
+ * @returns CPF formatado
  */
-export const validateHeight = (height: number): boolean => {
-  return height >= 50 && height <= 250;
-};
+export function formatCPF(cpf: string): string {
+  if (!cpf) return '';
+  
+  // Remove todos os caracteres não numéricos
+  const cleanCPF = cpf.replace(/\D/g, '');
+  
+  // Aplica máscara do CPF
+  if (cleanCPF.length <= 11) {
+    return cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  }
+  
+  return cleanCPF;
+}
 
 /**
- * Formata peso para exibição
+ * Formata data para exibição no formato brasileiro
+ * @param date - Data em formato ISO ou Date
+ * @returns Data formatada como DD/MM/YYYY
  */
-export const formatWeight = (weight: number | string | null | undefined): string => {
-  const formatted = formatNumberForDisplay(weight);
-  return formatted ? `${formatted} kg` : '';
-};
-
-/**
- * Formata altura para exibição
- */
-export const formatHeight = (height: number | string | null | undefined): string => {
-  const formatted = formatNumberForDisplay(height);
-  return formatted ? `${formatted} cm` : '';
-};
+export function formatDate(date: string | Date): string {
+  if (!date) return '';
+  
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    if (isNaN(dateObj.getTime())) {
+      return '';
+    }
+    
+    return dateObj.toLocaleDateString('pt-BR');
+  } catch (error) {
+    return '';
+  }
+}

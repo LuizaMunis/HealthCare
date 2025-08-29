@@ -282,3 +282,4 @@ class RegistroPressaoArterialService {
 }
 
 module.exports = RegistroPressaoArterialService;
+

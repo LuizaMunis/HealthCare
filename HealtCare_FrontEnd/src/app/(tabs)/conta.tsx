@@ -9,7 +9,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useUserData } from '@/hooks/useUserData';
 
 // Não precisamos do useUserData aqui, pois o useAccount já lida com a busca de dados.
-import AdditionalDataModal from '@/components/Account/AdditionalDataModal';
+import PerfilModal from '@/components/Account/PerfilModal';
 import ChangePasswordModal from '@/components/Account/ChangePasswordModal';
 import LogoutConfirmModal from '@/components/Account/LogoutConfirmModal';
 import PersonalInfoModal from '@/components/Account/PersonalInfoModal';
@@ -23,9 +23,9 @@ export default function AccountScreen() {
     openModal,
     closeModal,
     personalInfo, // Usamos estes dados para o nome e email.
-    additionalData,
+    perfilData,
     handleSavePersonalInfo,
-    handleSaveAdditionalData,
+    handleSavePerfilData,
     handleChangePassword,
     handleLogout,
   } = useAccount();
@@ -35,7 +35,7 @@ export default function AccountScreen() {
 
   const menuItems = [
     { key: 'personalInfo', icon: 'user', label: 'Informações pessoais' },
-    { key: 'additionalData', icon: 'clipboard', label: 'Dados adicionais' },
+    { key: 'perfil', icon: 'clipboard', label: 'Perfil' },
     { key: 'changePassword', icon: 'key', label: 'Alterar senha' },
     { key: 'logout', icon: 'log-out', label: 'Sair' },
   ];
@@ -86,11 +86,11 @@ export default function AccountScreen() {
         data={personalInfo}
         onSave={handleSavePersonalInfo}
       />
-      <AdditionalDataModal
-        visible={activeModal === 'additionalData'}
+      <PerfilModal
+        visible={activeModal === 'perfil'}
         onClose={closeModal}
-        data={{ ...personalInfo, ...additionalData }}
-        onSave={handleSaveAdditionalData}
+        data={{ ...personalInfo, ...perfilData }}
+        onSave={handleSavePerfilData}
       />
       <ChangePasswordModal
         visible={activeModal === 'changePassword'}

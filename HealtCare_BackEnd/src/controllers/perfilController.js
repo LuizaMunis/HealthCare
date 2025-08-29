@@ -15,21 +15,13 @@ class PerfilController {
     try {
       const dadosAdicionais = req.body;
       
-      // Validações específicas do controller (validações de formato)
+      // Processar dados antes de enviar para o serviço
       if (dadosAdicionais.cpf) {
-        const cpfLimpo = dadosAdicionais.cpf.replace(/\D/g, '');
-        if (cpfLimpo.length !== 11) {
-          return res.status(400).json({ success: false, message: 'CPF deve ter 11 dígitos.' });
-        }
-        dadosAdicionais.cpf = cpfLimpo;
+        dadosAdicionais.cpf = dadosAdicionais.cpf.replace(/\D/g, '');
       }
       
       if (dadosAdicionais.celular) {
-        const celularLimpo = dadosAdicionais.celular.replace(/\D/g, '');
-        if (celularLimpo.length < 10 || celularLimpo.length > 11) {
-          return res.status(400).json({ success: false, message: 'Celular deve ter 10 ou 11 dígitos.' });
-        }
-        dadosAdicionais.celular = celularLimpo;
+        dadosAdicionais.celular = dadosAdicionais.celular.replace(/\D/g, '');
       }
       
       if (dadosAdicionais.genero) {
@@ -42,11 +34,19 @@ class PerfilController {
       console.error('Erro no saveProfile:', error);
       
       let statusCode = 500;
+      let errorMessage = error.message;
+      
+      // Tratar erros específicos
       if (error.message.includes('obrigatório')) {
+        statusCode = 400;
+      } else if (error.message.includes('CPF já está em uso')) {
+        statusCode = 409; // Conflict
+        errorMessage = 'Este CPF já está em uso por outro usuário.';
+      } else if (error.message.includes('Peso deve estar entre') || error.message.includes('Altura deve estar entre')) {
         statusCode = 400;
       }
       
-      res.status(statusCode).json({ success: false, message: error.message });
+      res.status(statusCode).json({ success: false, message: errorMessage });
     }
   }
 }
