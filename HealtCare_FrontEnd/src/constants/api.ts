@@ -4,7 +4,7 @@
  */
 
 // A URL base completa do seu servidor.
-const API_URL_BASE = 'http://192.168.12.187:3000'; 
+const API_URL_BASE = 'http://192.168.10.12:3000'; 
 
 export const API_CONFIG = {
   BASE_URL: `${API_URL_BASE}/api`,

@@ -13,11 +13,15 @@ import {
 } from 'react-native';
 
 export default function ChangePasswordModal({ visible, onClose, onSave }) {
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isCurrentPasswordVisible, setIsCurrentPasswordVisible] = useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   const handleSave = () => {
-    onSave({ newPassword, confirmPassword });
+    onSave({ current: currentPassword, new: newPassword, confirm: confirmPassword });
   };
 
   return (
@@ -37,23 +41,47 @@ export default function ChangePasswordModal({ visible, onClose, onSave }) {
 
           {/* Conteúdo do Formulário */}
           <View style={styles.content}>
-            <Text style={styles.label}>Digite a nova senha</Text>
-            <TextInput
-              style={styles.input}
-              secureTextEntry
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="********"
-            />
+            <Text style={styles.label}>Senha atual</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!isCurrentPasswordVisible}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="********"
+              />
+              <TouchableOpacity onPress={() => setIsCurrentPasswordVisible(!isCurrentPasswordVisible)}>
+                <Feather name={isCurrentPasswordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.label}>Digite novamente a senha</Text>
-            <TextInput
-              style={styles.input}
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="********"
-            />
+            <Text style={styles.label}>Nova senha</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!isNewPasswordVisible}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="********"
+              />
+              <TouchableOpacity onPress={() => setIsNewPasswordVisible(!isNewPasswordVisible)}>
+                <Feather name={isNewPasswordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.label}>Confirmar nova senha</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!isConfirmPasswordVisible}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="********"
+              />
+              <TouchableOpacity onPress={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}>
+                <Feather name={isConfirmPasswordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Botão de Ação na parte inferior */}
@@ -75,7 +103,8 @@ const styles = StyleSheet.create({
   headerPlaceholder: { width: 24 },
   content: { flex: 1, paddingHorizontal: 20 },
   label: { fontSize: 16, color: 'gray', marginTop: 20, marginBottom: 8 },
-  input: { backgroundColor: '#F6F6F6', padding: 15, borderRadius: 10, fontSize: 16, borderWidth: 1, borderColor: '#E8E8E8' },
+  passwordContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F6F6F6', borderRadius: 10, borderWidth: 1, borderColor: '#E8E8E8' },
+  passwordInput: { flex: 1, padding: 15, fontSize: 16 },
   actionButton: { backgroundColor: '#004A61', margin: 20, padding: 18, borderRadius: 10, alignItems: 'center' },
   actionButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 });
