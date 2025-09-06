@@ -5,9 +5,7 @@ import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Defina a URL base da sua API em um só lugar
-const API_URL = 'http://192.168.56.1:3000'; 
+import ApiService from '@/services/apiService';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -22,33 +20,44 @@ export default function LoginScreen() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/users/login`, { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const result = await ApiService.login({ email, password });
 
-      const data = await response.json();
+      if (result.success) {
+        // Salvar informações do usuário
+        await AsyncStorage.setItem('userInfo', JSON.stringify(result.data.data.user));
 
-      if (data.success) {
-
-        await AsyncStorage.setItem('userToken', data.data.token);
-
-        await AsyncStorage.setItem('userInfo', JSON.stringify(data.data.user));
-
-        router.replace('/(tabs)/');
+        // Verificar se o perfil foi preenchido
+        const profileResult = await ApiService.getAdditionalProfile();
+        
+        if (profileResult.success && profileResult.data && profileResult.data.data) {
+          const profileData = profileResult.data.data;
+          
+          // Verificar se o perfil tem dados essenciais preenchidos
+          const hasEssentialData = profileData.cpf && 
+                                  profileData.celular && 
+                                  profileData.data_nascimento && 
+                                  profileData.peso && 
+                                  profileData.altura && 
+                                  profileData.genero;
+          
+          if (hasEssentialData) {
+            // Perfil completo, navegar para home
+            router.replace('/(tabs)/home');
+          } else {
+            // Perfil incompleto, navegar para perfil
+            router.replace('/Perfil');
+          }
+        } else {
+          // Erro ao buscar perfil ou perfil não existe, navegar para perfil
+          router.replace('/Perfil');
+        }
       } else {
-        // Mostra a mensagem de erro vinda do backend
-        Alert.alert('Falha no Login', data.message || 'Credenciais inválidas.');
+        Alert.alert('Falha no Login', result.error || 'Credenciais inválidas.');
       }
     } catch (error) {
-      // Erro de rede ou outro problema
       console.error('Erro ao fazer login:', error);
       Alert.alert('Erro', 'Não foi possível conectar ao servidor. Tente novamente mais tarde.');
     }
-    console.log('Logando com:', { email, password });
   };
 
   return (

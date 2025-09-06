@@ -1,36 +1,38 @@
 // HealthCare_FrontEnd/src/app/monitor/pressure.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Importe o AsyncStorage
-
-// Use a variável de ambiente para a URL da API para facilitar a manutenção
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.56.1:3000';
+import { API_CONFIG } from '../../constants/api';
 
 export default function PressureScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const isEditMode = !!params.id;
 
   // Estados para armazenar os valores que mudarão
-  const [systolic, setSystolic] = useState(120);
-  const [diastolic, setDiastolic] = useState(89);
-  
-  // O formato da data no banco de dados provavelmente é AAAA-MM-DD
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [systolic, setSystolic] = useState(
+    isEditMode ? Number(params.sistolica_mmhg) : 120
+  );
+  const [diastolic, setDiastolic] = useState(
+    isEditMode ? Number(params.diastolica_mmhg) : 89
+  );
+  const [date, setDate] = useState(
+    isEditMode ? new Date(params.data_hora_medicao as string).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+  );
 
   /**
    * Função para salvar o registro de pressão, agora conectada ao backend.
    */
   const handleSave = async () => {
-    // 1. Validação dos Dados no Frontend
     if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
       Alert.alert('Atenção', 'Por favor, insira valores de pressão válidos.');
       return;
     }
 
     try {
-      // 2. Obtenção do Token de Autenticação
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
         Alert.alert('Erro de Autenticação', 'Você não está logado. Por favor, faça o login novamente.');
@@ -39,32 +41,27 @@ export default function PressureScreen() {
         return;
       }
 
-      // 3. Chamada fetch para o endpoint correto do backend
-      
-      const response = await fetch(`${API_URL}/api/pressao-arterial`, {
-        method: 'POST',
+      const url = isEditMode
+        ? `${API_CONFIG.BASE_URL}/pressao-arterial/${params.id}` // URL para ATUALIZAR
+        : `${API_CONFIG.BASE_URL}/pressao-arterial`;  
+      const method = isEditMode ? 'PUT' : 'POST'; // Método PUT para atualizar, POST para criar
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
-          // Envia o token no cabeçalho Authorization, como o authMiddleware espera
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          // O corpo da requisição deve usar os nomes de campo que seu Controller espera.
-          // Estes são palpites baseados em um padrão comum. Ajuste se necessário.
-          //correção da data e hora "`${date} ${new Date().toTimeString().slice(0, 5)}`"
           sistolica_mmhg: systolic,
           diastolica_mmhg: diastolic,
-          data_registro: date, 
-          data_hora_medicao: `${date} ${new Date().toTimeString().slice(0, 5)}`
+          data_hora_medicao: `${date} ${new Date().toTimeString().slice(0, 8)}` // Envia a hora atual
         }),
       });
 
-
-      // 4. Tratamento da Resposta da API
       const result = await response.json();
 
       if (!response.ok) {
-        // Usa a mensagem de erro do backend, se houver
         throw new Error(result.message || 'O servidor retornou um erro ao salvar os dados.');
       }
 
@@ -155,13 +152,6 @@ export default function PressureScreen() {
     </SafeAreaView>
   );
 }
-
-
-
-
-
-
-
 
 // ... (Estilos permanecem os mesmos)
 const styles = StyleSheet.create({

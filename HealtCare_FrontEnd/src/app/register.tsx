@@ -15,8 +15,10 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
-const API_URL = 'http://192.168.56.1:3000';
+//const API_URL = API_CONFIG.BASE_URL;
 
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');
@@ -31,8 +33,21 @@ export default function RegisterScreen() {
       return;
     }
 
+    // Validação básica de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Email Inválido', 'Por favor, insira um email válido.');
+      return;
+    }
+
+    // Validação básica de senha
+    if (password.length < 6) {
+      Alert.alert('Senha Inválida', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_URL}/api/users/register`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,21 +60,30 @@ export default function RegisterScreen() {
       });
 
       const data = await response.json();
+      console.log('Resposta do servidor:', data);
 
       if (data.success) {
-        Alert.alert(
-          'Sucesso!',
-          'Sua conta foi criada. Agora você pode fazer o login.',
-          [
-            { text: 'OK', onPress: () => router.push('/login') },
-          ]
-        );
+        Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/Perfil')
+          }
+        ]);
       } else {
-        Alert.alert('Erro no Cadastro', data.message || 'Não foi possível criar a conta.');
+        // Tratar erros específicos do backend
+        let errorMessage = data.message || 'Não foi possível criar a conta.';
+        
+        // Se há erros detalhados do backend
+        if (data.errors && Array.isArray(data.errors)) {
+          const fieldErrors = data.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+          errorMessage = `Erros de validação:\n${fieldErrors}`;
+        }
+        
+        Alert.alert('Erro no Cadastro', errorMessage);
       }
     } catch (error) {
       console.error("Erro de Rede:", error);
-      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Por favor, verifique o Guia de Depuração de Erros para ajuda.');
+      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Tente novamente.');
     }
   };
 
@@ -114,6 +138,8 @@ export default function RegisterScreen() {
                 <Feather name={isPasswordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
               </TouchableOpacity>
             </View>
+            
+            <PasswordStrengthIndicator password={password} />
 
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
               <Text style={styles.buttonText}>Cadastrar-me</Text>

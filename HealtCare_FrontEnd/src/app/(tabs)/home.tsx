@@ -1,24 +1,29 @@
 // HealthCare_FrontEnd/src/app/(tabs)/index.tsx
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import { useUserData } from '@/hooks/useUserData';
-import { useRouter } from 'expo-router';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
+
 
 export default function HomeScreen() {
-   const { userName, loading } = useUserData();
-   const router = useRouter();
- 
-   if (loading) {
-     return (
-       <View style={styles.loaderContainer}>
-         <ActivityIndicator size="large" color="#004A61" />
-       </View>
-     );
-   }
+  
+  const { userName, loading } = useUserData();
+
+  const colorScheme = useColorScheme() ?? 'light';
+  const themeColors = Colors[colorScheme];
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#004A61" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -35,56 +40,35 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <Text style={styles.sectionTitle}>Seus próximos eventos</Text>
+
+        <View style={styles.eventCard}>
+          <View style={styles.eventStripe} />
+          <View style={styles.eventTextContainer}>
+            <Text style={styles.eventTitle}>Reumatologista</Text>
+            <Text style={styles.eventSubtitle}>3 de novembro</Text>
+          </View>
+          <Feather name="info" size={24} color="#FFFFFF" />
+        </View>
+
+        <View style={styles.eventCard}>
+          <View style={styles.eventStripe} />
+          <View style={styles.eventTextContainer}>
+            <Text style={styles.eventTitle}>Medicamento 1</Text>
+            <Text style={styles.eventSubtitle}>18:30</Text>
+          </View>
+        </View>
+
         <Text style={styles.sectionTitle}>Acesso rápido</Text>
         <View style={styles.quickAccessContainer}>
-          <TouchableOpacity 
-              style={styles.quickAccessCard} 
-              onPress={() => router.push('/monitor/pressure')}
-            >
-                <Feather name="activity" size={32} color="#004A61" />
-                <Text style={styles.quickAccessTitle}>Pressão Arterial</Text>
-          </TouchableOpacity>
-            
-          <TouchableOpacity 
-              style={styles.quickAccessCard} 
-              onPress={() => router.push('/monitor/heart-rate')}
-            >
-                <Feather name="heart" size={32} color="#004A61" />
-                <Text style={styles.quickAccessTitle}>Frequência Cardíaca</Text>
-          </TouchableOpacity>
-
-        </View>
-        <View style={styles.quickAccessContainer}>
-          <TouchableOpacity 
-              style={styles.quickAccessCard} 
-              onPress={() => router.push('/monitor/temperature')}
-            >
-              <Feather name="thermometer" size={32} color="#004A61" />
-              <Text style={styles.quickAccessTitle}>Tempetatura</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-              style={styles.quickAccessCard} 
-              onPress={() => router.push('/monitor/symptoms')}
-            >
-              <Feather name="loader" size={32} color="#004A61" />
-              <Text style={styles.quickAccessTitle}>Sintomas</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.quickAccessContainer}>
-          <TouchableOpacity 
-              style={styles.quickAccessCard} 
-              onPress={() => router.push('/monitor/blood-sugar')}
-            >
-              <Feather name="droplet" size={32} color="#004A61" />
-              <Text style={styles.quickAccessTitle}>Glicemia</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-              style={styles.quickAccessCard} 
-              onPress={() => router.push('/monitor/medication')}
-            >
-              <Feather name="circle" size={32} color="#004A61" />
-              <Text style={styles.quickAccessTitle}>Medicamento</Text>
-          </TouchableOpacity>
+            <View style={styles.quickAccessCard}>
+                <Feather name="bell" size={32} color="#004A61" />
+                <Text style={styles.quickAccessTitle}>Consultas</Text>
+            </View>
+            <View style={styles.quickAccessCard}>
+                <Feather name="bell" size={32} color="#004A61" />
+                <Text style={styles.quickAccessTitle}>Notificações</Text>
+            </View>
         </View>
       </ScrollView>
     </SafeAreaView>
