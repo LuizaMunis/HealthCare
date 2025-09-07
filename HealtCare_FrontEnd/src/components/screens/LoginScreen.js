@@ -1,3 +1,8 @@
+/**
+ * @file Tela de Login.
+ * Apresenta os campos para email e senha, permitindo que o usuário acesse sua conta.
+ * Inclui funcionalidades como "Lembrar-me" e links para recuperação de senha e cadastro.
+ */
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -9,16 +14,21 @@ import {
   Platform,
   Switch,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather'; // Ou outro pacote de ícones de sua preferência, como MaterialCommunityIcons
+import Icon from 'react-native-vector-icons/Feather';
 
 const LoginScreen = () => {
+  // Estado para armazenar o email digitado pelo usuário.
   const [email, setEmail] = useState('');
+  // Estado para armazenar a senha digitada pelo usuário.
   const [password, setPassword] = useState('');
+  // Estado para controlar a visibilidade da senha (mostrar/ocultar).
   const [showPassword, setShowPassword] = useState(false);
+  // Estado para a opção "Lembrar-me".
   const [rememberMe, setRememberMe] = useState(false);
 
+  // Função chamada ao pressionar o botão de login.
   const handleLogin = () => {
-    // Lógica de login aqui (você conectará com o UserViewModel e apiService depois)
+    // A lógica de autenticação será implementada aqui.
     console.log('Email:', email);
     console.log('Senha:', password);
     console.log('Lembrar-me:', rememberMe);
@@ -26,23 +36,28 @@ const LoginScreen = () => {
   };
 
   return (
+    // KeyboardAvoidingView ajusta a tela para que o teclado não cubra os inputs.
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Botão para retornar à tela anterior */}
       <TouchableOpacity style={styles.backButton} onPress={() => console.log('Voltar')}>
         <Icon name="arrow-left" size={24} color="#000" />
       </TouchableOpacity>
 
+      {/* Cabeçalho da tela */}
       <View style={styles.header}>
         <Icon name="plus" size={30} color="#fff" style={styles.headerIcon} />
         <Text style={styles.headerText}>Login</Text>
       </View>
 
+      {/* Conteúdo principal com o formulário */}
       <View style={styles.content}>
         <Text style={styles.welcomeText}>Seja bem-vindo de volta!</Text>
         <Text style={styles.subtitleText}>Faça o login na sua conta.</Text>
 
+        {/* Campo de Email */}
         <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
@@ -54,13 +69,14 @@ const LoginScreen = () => {
           onChangeText={setEmail}
         />
 
+        {/* Campo de Senha com ícone para mostrar/ocultar */}
         <Text style={styles.label}>Senha</Text>
         <View style={styles.passwordInputContainer}>
           <TextInput
             style={styles.passwordInput}
             placeholder="********"
             placeholderTextColor="#A0A0A0"
-            secureTextEntry={!showPassword}
+            secureTextEntry={!showPassword} // A senha fica segura (oculta) se showPassword for false.
             value={password}
             onChangeText={setPassword}
           />
@@ -69,6 +85,7 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Opções de "Lembrar-me" e "Esqueceu a senha?" */}
         <View style={styles.optionsContainer}>
           <View style={styles.rememberMeContainer}>
             <Switch
@@ -86,10 +103,12 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Botão de Login */}
         <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
 
+        {/* Link para a tela de Cadastro */}
         <View style={styles.signupContainer}>
           <Text style={styles.signupText}>Não tem um conta?</Text>
           <TouchableOpacity onPress={() => console.log('Cadastre-se')}>
@@ -101,6 +120,7 @@ const LoginScreen = () => {
   );
 };
 
+// Estilos
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,4 +1,8 @@
-// HealtCare_FrontEnd/src/components/ui/NumericInput.tsx
+/**
+ * @file Componente de input de texto customizado que aceita apenas valores numéricos.
+ * Ele encapsula o TextInput padrão do React Native e adiciona lógica para filtrar
+ * a entrada do usuário em tempo real.
+ */
 
 import React from 'react';
 import { TextInput, TextInputProps, StyleSheet } from 'react-native';
@@ -6,7 +10,7 @@ import { TextInput, TextInputProps, StyleSheet } from 'react-native';
 interface NumericInputProps extends Omit<TextInputProps, 'onChangeText'> {
   value: string;
   onChangeText: (text: string) => void;
-  allowDecimal?: boolean;
+  allowDecimal?: boolean; // Prop para permitir ou não números decimais.
   maxLength?: number;
   placeholder?: string;
   style?: any;
@@ -21,33 +25,31 @@ export default function NumericInput({
   style,
   ...props
 }: NumericInputProps) {
+  // Função que manipula a mudança de texto no input.
   const handleChangeText = (text: string) => {
     let cleanText = text;
     
     if (allowDecimal) {
-      // Remove caracteres não numéricos exceto vírgula e ponto
+      // Se decimais são permitidos, remove tudo exceto dígitos, vírgula e ponto.
       cleanText = text.replace(/[^\d,.]/g, '');
       
-      // Permite apenas uma vírgula ou ponto
+      // Lógica para permitir apenas um separador decimal (vírgula ou ponto).
       const parts = cleanText.split(/[,.]/);
       if (parts.length > 2) {
-        return; // Não permite múltiplos separadores decimais
+        return; // Impede a digitação de múltiplos separadores.
       }
       
-      // Se tem mais de uma parte, verifica se a parte decimal tem no máximo 2 dígitos
-      if (parts.length === 2 && parts[1].length > 2) {
-        return;
-      }
     } else {
-      // Remove todos os caracteres não numéricos
+      // Se decimais não são permitidos, remove tudo exceto dígitos.
       cleanText = text.replace(/[^\d]/g, '');
     }
     
-    // Aplica limite de comprimento se especificado
+    // Aplica o limite de caracteres, se definido.
     if (maxLength && cleanText.length > maxLength) {
       return;
     }
     
+    // Chama a função onChangeText original com o texto já filtrado.
     onChangeText(cleanText);
   };
 
@@ -55,7 +57,7 @@ export default function NumericInput({
     <TextInput
       value={value}
       onChangeText={handleChangeText}
-      keyboardType="numeric"
+      keyboardType="numeric" // Exibe o teclado numérico no celular.
       placeholder={placeholder}
       style={[styles.input, style]}
       {...props}
@@ -73,6 +75,3 @@ const styles = StyleSheet.create({
     borderColor: '#E8E8E8',
   },
 });
-
-
-

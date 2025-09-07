@@ -1,3 +1,9 @@
+/**
+ * @file Modal para edição de informações pessoais básicas do usuário (nome e email).
+ * Este componente é reutilizável e gerencia seu próprio estado interno,
+ * comunicando a ação de salvar através da prop `onSave`.
+ */
+
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -13,10 +19,14 @@ import {
 } from 'react-native';
 
 export default function PersonalInfoModal({ visible, onClose, data, onSave }) {
+  // Estados locais para controlar os valores dos inputs do formulário.
   const [name, setName] = useState(data.fullName);
   const [email, setEmail] = useState(data.email);
 
-  // Reseta os dados para o original sempre que o modal é aberto
+  // Reseta os dados para o original sempre que o modal é aberto 
+  // Hook useEffect para resetar o estado do formulário para os valores originais (`data`)
+  // sempre que o modal se torna visível. Isso garante que dados não salvos de
+  // uma abertura anterior não persistam.
   useEffect(() => {
     if (visible) {
       setName(data.fullName);
@@ -24,6 +34,8 @@ export default function PersonalInfoModal({ visible, onClose, data, onSave }) {
     }
   }, [visible, data]);
 
+  // Função chamada quando o usuário clica em "Salvar".
+  // Ela invoca a função `onSave` passada via props com os novos dados.
   const handleSave = () => {
     onSave({ fullName: name, email });
   };

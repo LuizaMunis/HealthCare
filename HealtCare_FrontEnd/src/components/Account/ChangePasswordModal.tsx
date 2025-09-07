@@ -1,3 +1,8 @@
+/**
+ * @file Modal para alteração de senha do usuário.
+ * Permite que o usuário insira a senha atual e defina uma nova.
+ */
+
 import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {

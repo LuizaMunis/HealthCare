@@ -96,9 +96,11 @@ export default function LoginScreen() {
         
         <View style={styles.optionsContainer}>
             <Text>Lembre-me</Text>
-            <TouchableOpacity>
-                <Text style={styles.linkText}>Esqueceu a sua senha?</Text>
-            </TouchableOpacity>
+            <Link href="/forgot-password" asChild>
+                <TouchableOpacity>
+                    <Text style={styles.linkText}>Esqueceu a sua senha?</Text>
+                </TouchableOpacity>
+            </Link>
         </View>
 
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
