@@ -17,8 +17,6 @@ import {
 } from 'react-native';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
-//const API_URL = API_CONFIG.BASE_URL;
-
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [email, setEmail] = useState('');
@@ -33,7 +31,7 @@ export default function RegisterScreen() {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.REGISTER}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
