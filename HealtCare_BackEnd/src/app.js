@@ -4,6 +4,13 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+// Verificar se as variáveis de ambiente estão carregadas
+console.log('🔧 Verificando variáveis de ambiente:');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Definido' : 'NÃO DEFINIDO');
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_NAME:', process.env.DB_NAME);
+console.log('PORT:', process.env.PORT);
+
 // Importa funções e modelos necessários
 const { testConnection } = require('./config/database');
 const UserModel = require('./models/userModel');
@@ -13,14 +20,24 @@ const RegistroPressaoArterialModel = require('./models/registroPressaoArterialMo
 // Importa as rotas da aplicação
 const userRoutes = require('./routes/userRoutes');
 const perfilRoutes = require('./routes/perfilRoutes');
-const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // NOVO: Importa as rotas de registros
+const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes');
+
+// Importa middlewares de erro
+const ErrorMiddleware = require('./middleware/errorMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares globais da aplicação
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+
+// Middlewares de segurança e validação
+app.use(ErrorMiddleware.sanitizeHeaders);
+app.use(ErrorMiddleware.validateContentType);
+app.use(ErrorMiddleware.limitBodySize);
+app.use(ErrorMiddleware.logRequest);
+app.use(ErrorMiddleware.handleTimeout);
 
 // Definição das rotas da API
 app.use('/api/users', userRoutes);
@@ -66,6 +83,14 @@ const startServer = async () => {
     console.log('📦 Verificando/criando tabela de registros de pressão arterial...');
     await RegistroPressaoArterialModel.createTable(); // NOVO: Chama a criação da tabela de registros
 
+
+    // Middlewares de tratamento de erro (devem ser os últimos)
+    app.use(ErrorMiddleware.handleSyntaxError);
+    app.use(ErrorMiddleware.handleValidationError);
+    app.use(ErrorMiddleware.handleDatabaseError);
+    app.use(ErrorMiddleware.handleJWTError);
+    app.use(ErrorMiddleware.handleNotFound);
+    app.use(ErrorMiddleware.handleGenericError);
 
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);

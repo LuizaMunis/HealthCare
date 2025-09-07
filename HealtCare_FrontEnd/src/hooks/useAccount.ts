@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import ApiService from '@/services/apiService';
+import { formatNumberForDisplay, parseFormattedNumber } from '@/utils/formatters';
+import { useApiErrorHandler } from '@/hooks/useErrorHandler';
+import { captureError } from '@/services/errorMonitoringService';
 
 // --- Interfaces para garantir a tipagem dos dados ---
 interface PersonalInfo {
@@ -11,7 +14,7 @@ interface PersonalInfo {
   email: string;
 }
 
-interface AdditionalData {
+interface PerfilData {
   birthDate: string;
   phone: string;
   gender: 'Masculino' | 'Feminino' | 'Outro' | '';
@@ -26,7 +29,7 @@ interface ChangePasswordData {
     confirm: string;
 }
 
-type ModalType = 'personalInfo' | 'additionalData' | 'changePassword' | 'logout' | null;
+type ModalType = 'personalInfo' | 'perfil' | 'changePassword' | 'logout' | null;
 
 // --- Funções auxiliares para conversão de dados ---
 const genderToBackend = (gender: string): 'M' | 'F' | 'O' | null => {
@@ -48,11 +51,12 @@ const genderToFrontend = (genderChar: 'M' | 'F' | 'O' | null): 'Masculino' | 'Fe
 
 export function useAccount() {
   const router = useRouter();
+  const { handleError, clearError } = useApiErrorHandler();
   const [isLoading, setIsLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({ fullName: 'A carregar...', email: 'A carregar...' });
-  const [additionalData, setAdditionalData] = useState<AdditionalData>({ birthDate: '', phone: '', gender: '', cpf: '', weight: '', height: '' });
+  const [perfilData, setPerfilData] = useState<PerfilData>({ birthDate: '', phone: '', gender: '', cpf: '', weight: '', height: '' });
 
   const handleLogout = useCallback(async () => {
     await ApiService.logout();
@@ -80,19 +84,20 @@ export function useAccount() {
 
       if (profileResult.success && profileResult.data.data) {
         const { data_nascimento, celular, genero, cpf, peso, altura } = profileResult.data.data;
-        setAdditionalData({
+        setPerfilData({
           birthDate: data_nascimento ? new Date(data_nascimento).toISOString().split('T')[0] : '',
           phone: celular || '',
           gender: genderToFrontend(genero),
           cpf: cpf || '',
-          weight: peso ? String(peso) : '',
+          weight: peso ? formatNumberForDisplay(peso) : '',
           height: altura ? String(altura) : '',
         });
       }
       
     } catch (error) {
       console.error('Erro ao buscar dados completos do utilizador:', error);
-      Alert.alert('Erro', 'Ocorreu um erro ao carregar os seus dados.');
+      handleError(error as Error, 'fetchUserData');
+      await captureError(error as Error, { context: 'fetchUserData' });
     } finally {
       setIsLoading(false);
     }
@@ -116,26 +121,30 @@ export function useAccount() {
         Alert.alert('Sucesso', 'As suas informações foram atualizadas!');
         closeModal();
     } else {
-        Alert.alert('Erro', result.error || 'Não foi possível salvar os dados.');
+        const error = new Error(result.error || 'Não foi possível salvar os dados.');
+        handleError(error, 'handleSavePersonalInfo');
+        await captureError(error, { context: 'handleSavePersonalInfo' });
     }
   };
 
-  const handleSaveAdditionalData = async (newData: Partial<AdditionalData>) => {
+  const handleSavePerfilData = async (newData: Partial<PerfilData>) => {
     const payload = {
       data_nascimento: newData.birthDate || null,
       celular: newData.phone || null,
       genero: genderToBackend(newData.gender ?? ''),
       cpf: newData.cpf || null,
-      peso: newData.weight ? parseFloat(newData.weight) : null,
-      altura: newData.height != null ? parseInt(newData.height, 10) : null,
+      peso: newData.weight ? parseFormattedNumber(newData.weight) : null,
+      altura: newData.height ? parseInt(newData.height, 10) : null,
     };
-    const result = await ApiService.saveAdditionalProfile(payload);
+    const result = await ApiService.savePerfilData(payload);
     if (result.success) {
       await fetchUserData();
       Alert.alert('Sucesso', 'Os seus dados foram salvos!');
       closeModal();
     } else {
-      Alert.alert("Erro", result.error || 'Não foi possível salvar os dados.');
+      const error = new Error(result.error || 'Não foi possível salvar os dados.');
+      handleError(error, 'handleSavePerfilData');
+      await captureError(error, { context: 'handleSavePerfilData' });
     }
   };
   
@@ -156,20 +165,22 @@ export function useAccount() {
         Alert.alert('Sucesso', 'A sua senha foi alterada!');
         closeModal();
      } else {
-        Alert.alert('Erro', result.error || 'Não foi possível alterar a senha.');
+        const error = new Error(result.error || 'Não foi possível alterar a senha.');
+        handleError(error, 'handleChangePassword');
+        await captureError(error, { context: 'handleChangePassword' });
      }
   };
 
-  return {
-    isLoading,
-    activeModal,
-    openModal,
-    closeModal,
-    personalInfo,
-    additionalData,
-    handleSavePersonalInfo,
-    handleSaveAdditionalData,
-    handleChangePassword,
-    handleLogout,
-  };
+      return {
+      isLoading,
+      activeModal,
+      openModal,
+      closeModal,
+      personalInfo,
+      perfilData,
+      handleSavePersonalInfo,
+      handleSavePerfilData,
+      handleChangePassword,
+      handleLogout,
+    };
 }
