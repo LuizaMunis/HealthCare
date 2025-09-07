@@ -1,19 +1,23 @@
 # Dependências
 node_modules/
+.vscode/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # Backend
-backend/.env
-backend/dist/
-backend/build/
+HealtCare_BackEnd/.expo/
+HealtCare_BackEnd/.env
+HealtCare_BackEnd/dist/
+HealtCare_BackEnd/build/
 
 # Frontend/React Native
-frontend/.expo/
-frontend/dist/
-frontend/tmp/
-frontend/web-build/
+HealtCare_FrontEnd/.expo/
+HealtCare_FrontEnd/.vscode/
+HealtCare_FrontEnd/node_modules/
+HealtCare_FrontEnd/dist/
+HealtCare_FrontEnd/tmp/
+HealtCare_FrontEnd/web-build/
 
 # Logs
 *.log
