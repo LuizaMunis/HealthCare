@@ -15,8 +15,11 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
+import { useNavigation } from '@/hooks/useNavigation';
+import { navigateToProfileWeb } from '@/utils/webNavigation';
 
 //const API_URL = API_CONFIG.BASE_URL;
 
@@ -26,6 +29,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState(''); 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const router = useRouter();
+  const { navigateToProfile } = useNavigation();
 
   const handleRegister = async () => {
     if (!nomeCompleto.trim() || !email.trim() || !password.trim()) { 
@@ -47,6 +51,9 @@ export default function RegisterScreen() {
     }
 
     try {
+      console.log('🚀 Iniciando cadastro...');
+      console.log('📡 URL da API:', `${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`);
+      
       const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`, {
         method: 'POST',
         headers: {
@@ -59,31 +66,91 @@ export default function RegisterScreen() {
         }),
       });
 
+      console.log('📊 Status da resposta:', response.status);
       const data = await response.json();
-      console.log('Resposta do servidor:', data);
+      console.log('📋 Resposta completa do servidor:', JSON.stringify(data, null, 2));
 
       if (data.success) {
-        Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/Perfil')
+        // Salvar token e dados do usuário no AsyncStorage
+        if (data.data && data.data.token) {
+          await AsyncStorage.setItem('healthcare_auth_token', data.data.token);
+          console.log('✅ Token salvo com sucesso');
+        }
+        
+        // Salvar informações do usuário
+        if (data.data && data.data.user) {
+          await AsyncStorage.setItem('userInfo', JSON.stringify(data.data.user));
+          console.log('✅ Dados do usuário salvos');
+        }
+
+        // Navegação usando hook personalizado
+        console.log('🔄 Navegando para tela de perfil...');
+        console.log('📍 Tentando navegar para: /Perfil');
+        console.log('🌐 Plataforma:', Platform.OS);
+        
+        // Navegar diretamente sem Alert para web
+        if (Platform.OS === 'web') {
+          console.log('🌐 Navegação específica para web');
+          
+          // Usar função específica para web
+          const success = navigateToProfileWeb();
+          if (!success) {
+            console.error('❌ Navegação específica para web falhou, tentando método padrão');
+            
+            // Fallback para método padrão
+            setTimeout(() => {
+              const success2 = navigateToProfile();
+              if (!success2) {
+                console.error('❌ Método padrão também falhou, mostrando Alert');
+                
+                // Último recurso: Alert
+                Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      setTimeout(() => {
+                        navigateToProfileWeb();
+                      }, 200);
+                    }
+                  }
+                ]);
+              }
+            }, 300);
           }
-        ]);
+        } else {
+          // Para mobile, usar Alert normal
+          Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
+            {
+              text: 'OK',
+              onPress: () => {
+                setTimeout(() => {
+                  navigateToProfile();
+                }, 200);
+              }
+            }
+          ]);
+        }
       } else {
         // Tratar erros específicos do backend
         let errorMessage = data.message || 'Não foi possível criar a conta.';
         
         // Se há erros detalhados do backend
         if (data.errors && Array.isArray(data.errors)) {
-          const fieldErrors = data.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+          const fieldErrors = data.errors.map((err: any) => `${err.field}: ${err.message}`).join('\n');
           errorMessage = `Erros de validação:\n${fieldErrors}`;
         }
         
         Alert.alert('Erro no Cadastro', errorMessage);
       }
-    } catch (error) {
-      console.error("Erro de Rede:", error);
-      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Tente novamente.');
+    } catch (error: any) {
+      console.error("❌ Erro de Rede:", error);
+      
+      // Verificar se é erro de rede ou de parsing
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
+      } else {
+        Alert.alert('Erro', 'Ocorreu um erro inesperado. Tente novamente.');
+      }
     }
   };
 
