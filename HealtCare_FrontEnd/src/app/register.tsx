@@ -18,8 +18,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
-import { useNavigation } from '@/hooks/useNavigation';
-import { navigateToProfileWeb } from '@/utils/webNavigation';
+import NavigationDebug from '@/components/NavigationDebug';
 
 //const API_URL = API_CONFIG.BASE_URL;
 
@@ -29,7 +28,6 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState(''); 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const router = useRouter();
-  const { navigateToProfile } = useNavigation();
 
   const handleRegister = async () => {
     if (!nomeCompleto.trim() || !email.trim() || !password.trim()) { 
@@ -83,52 +81,37 @@ export default function RegisterScreen() {
           console.log('✅ Dados do usuário salvos');
         }
 
-        // Navegação usando hook personalizado
+        // Navegação simplificada para teste
         console.log('🔄 Navegando para tela de perfil...');
         console.log('📍 Tentando navegar para: /Perfil');
         console.log('🌐 Plataforma:', Platform.OS);
         
-        // Navegar diretamente sem Alert para web
+        // Teste: Navegação direta sem Alert
         if (Platform.OS === 'web') {
-          console.log('🌐 Navegação específica para web');
-          
-          // Usar função específica para web
-          const success = navigateToProfileWeb();
-          if (!success) {
-            console.error('❌ Navegação específica para web falhou, tentando método padrão');
-            
-            // Fallback para método padrão
-            setTimeout(() => {
-              const success2 = navigateToProfile();
-              if (!success2) {
-                console.error('❌ Método padrão também falhou, mostrando Alert');
-                
-                // Último recurso: Alert
-                Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
-                  {
-                    text: 'OK',
-                    onPress: () => {
-                      setTimeout(() => {
-                        navigateToProfileWeb();
-                      }, 200);
-                    }
-                  }
-                ]);
-              }
-            }, 300);
+          console.log('🌐 Navegação web - tentando window.location.href diretamente');
+          try {
+            window.location.href = '/Perfil';
+            console.log('✅ window.location.href executado');
+          } catch (error) {
+            console.error('❌ window.location.href falhou:', error);
+            // Fallback
+            try {
+              router.replace('/Perfil');
+              console.log('✅ router.replace fallback executado');
+            } catch (error2) {
+              console.error('❌ router.replace fallback falhou:', error2);
+              Alert.alert('Sucesso!', 'Conta criada com sucesso!');
+            }
           }
         } else {
-          // Para mobile, usar Alert normal
-          Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
-            {
-              text: 'OK',
-              onPress: () => {
-                setTimeout(() => {
-                  navigateToProfile();
-                }, 200);
-              }
-            }
-          ]);
+          // Para mobile, usar router.replace diretamente
+          try {
+            router.replace('/Perfil');
+            console.log('✅ Mobile: router.replace executado');
+          } catch (error) {
+            console.error('❌ Mobile: router.replace falhou:', error);
+            Alert.alert('Sucesso!', 'Conta criada com sucesso!');
+          }
         }
       } else {
         // Tratar erros específicos do backend
@@ -211,6 +194,9 @@ export default function RegisterScreen() {
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
               <Text style={styles.buttonText}>Cadastrar-me</Text>
             </TouchableOpacity>
+
+            {/* Componente de debug temporário */}
+            <NavigationDebug />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Já tem uma conta? </Text>
