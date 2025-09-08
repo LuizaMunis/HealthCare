@@ -96,7 +96,7 @@ export default function LoginScreen() {
         
         <View style={styles.optionsContainer}>
             <Text>Lembre-me</Text>
-            <Link href="/forgot-password" asChild>
+            <Link href="/forgot-password/forgot-password" asChild>
                 <TouchableOpacity>
                     <Text style={styles.linkText}>Esqueceu a sua senha?</Text>
                 </TouchableOpacity>
