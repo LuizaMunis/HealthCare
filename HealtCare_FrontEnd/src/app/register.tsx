@@ -15,10 +15,8 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import { API_CONFIG, ENDPOINTS } from '@/constants/api';
+import ApiService from '@/services/apiService';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
-
-//const API_URL = API_CONFIG.BASE_URL;
 
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');
@@ -47,39 +45,30 @@ export default function RegisterScreen() {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nome_completo: nomeCompleto,
-          email: email,
-          password: password, 
-        }),
+      const result = await ApiService.register({
+        nome_completo: nomeCompleto,
+        email: email,
+        password: password
       });
 
-      const data = await response.json();
-      console.log('Resposta do servidor:', data);
-
-      if (data.success) {
+      if (result.success) {
         Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
           {
             text: 'OK',
-            onPress: () => router.replace('/Perfil')
+            onPress: () => {
+              console.log('🚀 Navegando para /Perfil...');
+              router.replace('/Perfil');
+            }
           }
         ]);
+        
+        // Fallback: navegar automaticamente após 2 segundos se o usuário não clicar
+        setTimeout(() => {
+          console.log('⏰ Fallback: Navegando automaticamente para /Perfil...');
+          router.replace('/Perfil');
+        }, 2000);
       } else {
-        // Tratar erros específicos do backend
-        let errorMessage = data.message || 'Não foi possível criar a conta.';
-        
-        // Se há erros detalhados do backend
-        if (data.errors && Array.isArray(data.errors)) {
-          const fieldErrors = data.errors.map(err => `${err.field}: ${err.message}`).join('\n');
-          errorMessage = `Erros de validação:\n${fieldErrors}`;
-        }
-        
-        Alert.alert('Erro no Cadastro', errorMessage);
+        Alert.alert('Erro no Cadastro', result.error || 'Não foi possível criar a conta.');
       }
     } catch (error) {
       console.error("Erro de Rede:", error);

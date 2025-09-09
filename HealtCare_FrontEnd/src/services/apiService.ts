@@ -89,10 +89,10 @@ const ApiService = {
     }
   },
 
-  /*logout: async () => {
+  logout: async () => {
     await AsyncStorage.removeItem(TOKEN_KEY);
     await AsyncStorage.removeItem('userInfo');
-  },*/
+  },
 
   // --- PROFILE & USER ---
   getProfile: async () => {
