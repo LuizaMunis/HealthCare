@@ -100,14 +100,14 @@ export default function PressureScreen() {
           </View>
           <View style={styles.pressureBody}>
             <TouchableOpacity style={styles.controlButton} onPress={() => setSystolic(prev => prev - 1)}>
-              <Feather name="minus-circle" size={32} color="#6c757d" />
+              <Feather name="minus-circle" size={32} color="#004A61" />
             </TouchableOpacity>
             <View style={styles.pressureValueContainer}>
               <Text style={styles.pressureValueMain}>{systolic}</Text>
               <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
             <TouchableOpacity style={styles.controlButton} onPress={() => setSystolic(prev => prev + 1)}>
-              <Feather name="plus-circle" size={32} color="#6c757d" />
+              <Feather name="plus-circle" size={32} color="#004A61" />
             </TouchableOpacity>
           </View>
         </View>
@@ -120,14 +120,14 @@ export default function PressureScreen() {
           </View>
           <View style={styles.pressureBody}>
             <TouchableOpacity style={styles.controlButton} onPress={() => setDiastolic(prev => prev - 1)}>
-              <Feather name="minus-circle" size={32} color="#6c757d" />
+              <Feather name="minus-circle" size={32} color="#004A61" />
             </TouchableOpacity>
             <View style={styles.pressureValueContainer}>
               <Text style={styles.pressureValueMain}>{diastolic}</Text>
               <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
             <TouchableOpacity style={styles.controlButton} onPress={() => setDiastolic(prev => prev + 1)}>
-              <Feather name="plus-circle" size={32} color="#6c757d" />
+              <Feather name="plus-circle" size={32} color="#004A61" />
             </TouchableOpacity>
           </View>
         </View>
@@ -228,13 +228,13 @@ const styles = StyleSheet.create({
   pressureValueMain: {
     fontSize: 60,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#004A61',
     textAlign: 'center',
     minWidth: 90,
   },
   pressureUnit: {
     fontSize: 20,
-    color: '#333',
+    color: '#004A61',
     marginLeft: 8,
     fontWeight: '500',
   },

@@ -73,7 +73,7 @@ export default function HomeScreen() {
         <View style={styles.quickAccessContainer}>
           <TouchableOpacity 
               style={styles.quickAccessCard} 
-              onPress={() => router.push('/monitor/blood-sugar')}
+              onPress={() => router.push('/monitor/glicemia')}
             >
               <Feather name="droplet" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Glicemia</Text>
