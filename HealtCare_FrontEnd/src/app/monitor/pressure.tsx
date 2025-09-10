@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router'; 
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Importe o AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../../constants/api';
+import DatePickerInput from '../../components/DatePickerInput';
 
 export default function PressureScreen() {
   const router = useRouter();
@@ -20,7 +21,9 @@ export default function PressureScreen() {
     isEditMode ? Number(params.diastolica_mmhg) : 89
   );
   const [date, setDate] = useState(
-    isEditMode ? new Date(params.data_hora_medicao as string).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    isEditMode 
+      ? new Date(params.data_hora_medicao as string).toISOString().split('T')[0] 
+      : new Date().toISOString().split('T')[0]
   );
 
   /**
@@ -42,9 +45,9 @@ export default function PressureScreen() {
       }
 
       const url = isEditMode
-        ? `${API_CONFIG.BASE_URL}/pressao-arterial/${params.id}` // URL para ATUALIZAR
+        ? `${API_CONFIG.BASE_URL}/pressao-arterial/${params.id}` 
         : `${API_CONFIG.BASE_URL}/pressao-arterial`;  
-      const method = isEditMode ? 'PUT' : 'POST'; // Método PUT para atualizar, POST para criar
+      const method = isEditMode ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method: method,
@@ -60,7 +63,6 @@ export default function PressureScreen() {
       });
 
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.message || 'O servidor retornou um erro ao salvar os dados.');
       }
@@ -133,16 +135,12 @@ export default function PressureScreen() {
         </View>
 
         {/* --- Data do Registro --- */}
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateLabel}>Data do registro</Text>
-          <TextInput
-            style={styles.dateInput}
-            value={date}
-            onChangeText={setDate}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor="#C7C7CD"
-          />
-        </View>
+        <DatePickerInput
+          label="Data do registro"
+          initialValue={date}
+          onDateChange={setDate} // Passamos a função 'setDate' para que o componente filho possa atualizar o estado pai
+          containerStyle={{ marginTop: 20, marginBottom: 40 }}
+        />
 
         {/* --- Botão Salvar --- */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
