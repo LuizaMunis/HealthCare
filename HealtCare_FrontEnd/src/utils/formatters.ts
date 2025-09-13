@@ -56,7 +56,7 @@ export function formatPhoneNumber(phone: string): string {
   
   // Aplica máscara baseada no tamanho
   if (cleanPhone.length === 11) {
-    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}`;
+    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 3)} ${cleanPhone.slice(3, 7)}-${cleanPhone.slice(7)}`;
   } else if (cleanPhone.length === 10) {
     return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 6)}-${cleanPhone.slice(6)}`;
   }

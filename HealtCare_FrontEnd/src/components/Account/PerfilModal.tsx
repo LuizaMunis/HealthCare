@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,11 +12,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
-  Dimensions,
 } from 'react-native';
-import NumericInput from '../ui/NumericInput';
-import { formatCPF, formatPhoneNumber } from '@/utils/formatters';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface PerfilData {
   cpf: string;
@@ -35,96 +33,122 @@ interface PerfilModalProps {
 
 export default function PerfilModal({ visible, onClose, data, onSave }: PerfilModalProps) {
   const [cpf, setCpf] = useState(data.cpf);
-  const [phone, setPhone] = useState(data.phone);
-  const [birthDate, setBirthDate] = useState(data.birthDate);
-  const [weight, setWeight] = useState(data.weight);
-  const [height, setHeight] = useState(data.height);
-  const [gender, setGender] = useState(data.gender);
-  const [cpfError, setCpfError] = useState('');
+  const [telefone, setTelefone] = useState(data.phone);
+  const [dataNascimento, setDataNascimento] = useState(data.birthDate);
+  const [peso, setPeso] = useState(data.weight);
+  const [altura, setAltura] = useState(data.height);
+  const [genero, setGenero] = useState(data.gender);
+  const [showGeneroModal, setShowGeneroModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Calcular altura da tela para espaçamento dinâmico
-  const screenHeight = Dimensions.get('window').height;
-  const dynamicSpacing = Math.max(screenHeight * 0.15, 150); // 15% da tela ou mínimo 150px
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
       setCpf(data.cpf);
-      setPhone(data.phone);
-      setBirthDate(data.birthDate);
-      setWeight(data.weight);
-      setHeight(data.height);
-      setGender(data.gender);
-      setCpfError('');
+      setTelefone(data.phone);
+      setDataNascimento(data.birthDate);
+      setPeso(data.weight);
+      setAltura(data.height);
+      setGenero(data.gender);
     }
   }, [visible, data]);
 
-  // Formatação automática de CPF
-  const handleCpfChange = (text: string) => {
-    const formattedCpf = formatCPF(text);
-    setCpf(formattedCpf);
-    setCpfError(''); // Limpa erro quando usuário digita
+  // Função para aplicar máscara de CPF
+  const formatCPF = (text: string) => {
+    const numbers = text.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    return text;
   };
 
-  // Formatação automática de telefone
-  const handlePhoneChange = (text: string) => {
-    const formattedPhone = formatPhoneNumber(text);
-    setPhone(formattedPhone);
+  // Função para aplicar máscara de telefone
+  const formatTelefone = (text: string) => {
+    const numbers = text.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+    return text;
   };
 
-  // Formatação automática de data
-  const handleDateChange = (text: string) => {
+  // Função para aplicar máscara de data
+  const formatData = (text: string) => {
     const numbers = text.replace(/\D/g, '');
     if (numbers.length <= 8) {
-      const formatted = numbers.replace(/(\d{2})(\d{2})(\d{4})/, '$1/$2/$3');
-      setBirthDate(formatted);
-    } else {
-      setBirthDate(text);
+      return numbers.replace(/(\d{2})(\d{2})(\d{4})/, '$1/$2/$3');
     }
+    return text;
   };
 
-  const validateForm = () => {
-    // Validar CPF
-    if (cpf && cpf.replace(/\D/g, '').length !== 11) {
-      setCpfError('CPF deve ter 11 dígitos');
-      return false;
+  // Função para aplicar máscara de peso com formatação automática
+  const formatPeso = (text: string) => {
+    // Remove todos os caracteres não numéricos
+    const numbers = text.replace(/\D/g, '');
+    
+    if (numbers.length === 0) {
+      return '';
     }
-
-    // Validar telefone
-    if (phone && phone.replace(/\D/g, '').length < 10) {
-      Alert.alert('Erro', 'Telefone deve ter pelo menos 10 dígitos');
-      return false;
+    
+    // Se tem 3 ou mais dígitos, formata automaticamente com vírgula
+    if (numbers.length >= 3) {
+      const kg = numbers.slice(0, -2);
+      const g = numbers.slice(-2);
+      return `${kg},${g}`;
     }
+    
+    // Se tem 1 ou 2 dígitos, retorna como está (será interpretado como gramas)
+    return numbers;
+  };
 
-    // Validar data de nascimento
-    if (birthDate && birthDate.replace(/\D/g, '').length !== 8) {
-      Alert.alert('Erro', 'Data de nascimento deve ter 8 dígitos (DD/MM/AAAA)');
-      return false;
-    }
-
-    // Validar peso
-    if (weight && (parseFloat(weight.replace(',', '.')) < 20 || parseFloat(weight.replace(',', '.')) > 500)) {
-      Alert.alert('Erro', 'Peso deve estar entre 20 e 500 kg');
-      return false;
-    }
-
-    // Validar altura
-    if (height && (parseInt(height) < 50 || parseInt(height) > 250)) {
-      Alert.alert('Erro', 'Altura deve estar entre 50 e 250 cm');
-      return false;
-    }
-
-    return true;
+  // Função para aplicar máscara de altura - apenas números
+  const formatAltura = (text: string) => {
+    // Remove todos os caracteres não numéricos
+    return text.replace(/[^\d]/g, '');
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
+    if (!cpf.trim() || !telefone.trim() || 
+        !dataNascimento.trim() || !peso.trim() || !altura.trim() || !genero) {
+      Alert.alert('Atenção', 'Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
     setIsLoading(true);
     try {
-      await onSave({ cpf, phone, birthDate, weight, height, gender });
+      // Processar dados no mesmo formato que Perfil.tsx
+      const cpfLimpo = cpf.replace(/\D/g, '');
+      const telefoneLimpo = telefone.replace(/\D/g, '');
+      
+      // Converter data de DD/MM/AAAA para AAAA-MM-DD
+      const dataParts = dataNascimento.split('/');
+      const dataFormatada = dataParts.length === 3 
+        ? `${dataParts[2]}-${dataParts[1]}-${dataParts[0]}`
+        : dataNascimento;
+      
+      // Extrair peso (converter vírgula para ponto)
+      let pesoLimpo;
+      if (peso.includes(',')) {
+        pesoLimpo = peso.replace(',', '.');
+      } else {
+        // Se não tem vírgula, assume que são kg (não gramas)
+        pesoLimpo = peso;
+      }
+      
+      // Altura já está limpa (apenas números)
+      const alturaLimpa = altura;
+      
+      // Mapear gênero para o formato do backend (igual ao Perfil.tsx)
+      const generoMapeado = genero === 'masculino' ? 'MASCULINO' : 
+                           genero === 'feminino' ? 'FEMININO' : 'OUTRO';
+
+      await onSave({ 
+        cpf: cpfLimpo, 
+        phone: telefoneLimpo, 
+        birthDate: dataFormatada, 
+        weight: pesoLimpo, 
+        height: alturaLimpa, 
+        gender: generoMapeado 
+      });
     } catch (error) {
       console.error('Erro ao salvar dados:', error);
     } finally {
@@ -134,220 +158,286 @@ export default function PerfilModal({ visible, onClose, data, onSave }: PerfilMo
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.safeArea}>
-                 <KeyboardAvoidingView
-           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-           style={styles.keyboardAvoidingContainer}
-           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-          
-          {/* Header Padronizado */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose}>
+      <View style={styles.container}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          {/* Header fixo */}
+          <View style={[styles.header, { paddingTop: insets.top }]}>
+            <TouchableOpacity onPress={onClose} style={styles.backButton}>
               <Feather name="arrow-left" size={24} color="#004A61" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Dados do Perfil</Text>
-            <View style={styles.headerPlaceholder} />
+            <View style={{ width: 24 }} />
           </View>
 
-                     {/* ScrollView para os campos */}
-           <ScrollView 
-             style={styles.scrollView}
-             contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
-             showsVerticalScrollIndicator={false}
-             keyboardShouldPersistTaps="handled">
-            
-            <Text style={styles.label}>CPF</Text>
-            <TextInput 
-              style={[styles.input, cpfError ? styles.inputError : null]} 
-              value={cpf} 
-              onChangeText={handleCpfChange} 
-              placeholder="000.000.000-00"
-              keyboardType="numeric"
-              maxLength={14}
-            />
-            {cpfError ? <Text style={styles.errorText}>{cpfError}</Text> : null}
+          {/* ScrollView apenas para os campos */}
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.form}>
+              <Text style={styles.label}>CPF</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="000.000.000-00"
+                placeholderTextColor="#CBD5E1"
+                value={cpf}
+                onChangeText={(text) => setCpf(formatCPF(text))}
+                keyboardType="numeric"
+                maxLength={14}
+              />
 
-            <Text style={styles.label}>Telefone</Text>
-            <TextInput 
-              style={styles.input} 
-              value={phone} 
-              onChangeText={handlePhoneChange} 
-              placeholder="(00) 90000-0000"
-              keyboardType="numeric"
-              maxLength={15}
-            />
-            
-            <Text style={styles.label}>Data de Nascimento</Text>
-            <TextInput 
-              style={styles.input} 
-              value={birthDate} 
-              onChangeText={handleDateChange} 
-              placeholder="DD/MM/AAAA"
-              keyboardType="numeric"
-              maxLength={10}
-            />
+              <Text style={styles.label}>Telefone</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="(00) 90000-0000"
+                placeholderTextColor="#CBD5E1"
+                value={telefone}
+                onChangeText={(text) => setTelefone(formatTelefone(text))}
+                keyboardType="numeric"
+                maxLength={15}
+              />
 
-            <Text style={styles.label}>Peso (Kg)</Text>
-            <NumericInput 
-              value={weight} 
-              onChangeText={setWeight}
-              allowDecimal={true}
-              maxLength={6}
-              placeholder="70,5" 
-            />
+              <Text style={styles.label}>Data de Nascimento</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="DD/MM/AAAA"
+                placeholderTextColor="#CBD5E1"
+                value={dataNascimento}
+                onChangeText={(text) => setDataNascimento(formatData(text))}
+                keyboardType="numeric"
+                maxLength={10}
+              />
 
-            <Text style={styles.label}>Altura (CM)</Text>
-            <NumericInput 
-              value={height} 
-              onChangeText={setHeight}
-              allowDecimal={false}
-              maxLength={3}
-              placeholder="170" 
-            />
+              <Text style={styles.label}>Peso (Kg)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="00,00"
+                placeholderTextColor="#CBD5E1"
+                value={peso}
+                onChangeText={(text) => setPeso(formatPeso(text))}
+                keyboardType="numeric"
+                maxLength={6}
+              />
 
-            <Text style={styles.label}>Gênero</Text>
-            <View style={styles.genderContainer}>
-              {['Masculino', 'Feminino', 'Outro'].map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.genderOption,
-                    gender === option && styles.genderOptionSelected
-                  ]}
-                  onPress={() => setGender(option)}
-                >
-                  <Text style={[
-                    styles.genderOptionText,
-                    gender === option && styles.genderOptionTextSelected
-                  ]}>
-                    {option}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <Text style={styles.label}>Altura (CM)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="000"
+                placeholderTextColor="#CBD5E1"
+                value={altura}
+                onChangeText={(text) => setAltura(formatAltura(text))}
+                keyboardType="numeric"
+                maxLength={3}
+              />
+
+              <Text style={styles.label}>Gênero</Text>
+              <TouchableOpacity 
+                style={styles.input} 
+                onPress={() => setShowGeneroModal(true)}
+              >
+                <Text style={genero ? { color: '#334155' } : { color: '#64748B' }}>
+                  {genero === 'masculino' ? 'Masculino' : 
+                   genero === 'feminino' ? 'Feminino' : 
+                   genero === 'nao_informado' ? 'Prefiro não dizer' : 
+                   'Selecione o gênero'}
+                </Text>
+              </TouchableOpacity>
             </View>
-            
-                         {/* Botão de Ação dentro do ScrollView */}
-             <TouchableOpacity 
-               style={[styles.actionButton, isLoading && styles.actionButtonDisabled]} 
-               onPress={handleSave}
-               disabled={isLoading}
-             >
-               <Text style={styles.actionButtonText}>
-                 {isLoading ? 'Salvando...' : 'Salvar perfil'}
-               </Text>
-             </TouchableOpacity>
-             
-             {/* Espaço extra no final para garantir que o botão não fique colado */}
-             <View style={[styles.finalSpacer, { height: dynamicSpacing }]} />
           </ScrollView>
+
+          {/* Footer fixo com o botão */}
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
+            <TouchableOpacity 
+              style={[styles.button, isLoading && styles.buttonDisabled]} 
+              onPress={handleSave}
+              disabled={isLoading}
+            >
+              <Text style={styles.buttonText}>
+                {isLoading ? 'Salvando...' : 'Salvar Perfil'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+
+        {/* Modal para seleção de gênero */}
+        <Modal
+          visible={showGeneroModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowGeneroModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Selecione o gênero</Text>
+              
+              <TouchableOpacity 
+                style={styles.modalOption} 
+                onPress={() => {
+                  setGenero('masculino');
+                  setShowGeneroModal(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>Masculino</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalOption} 
+                onPress={() => {
+                  setGenero('feminino');
+                  setShowGeneroModal(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>Feminino</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalOption} 
+                onPress={() => {
+                  setGenero('nao_informado');
+                  setShowGeneroModal(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>Prefiro não dizer</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalCancel} 
+                onPress={() => setShowGeneroModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
     </Modal>
   );
 }
 
-// Estilos Padronizados
 const styles = StyleSheet.create({
-  safeArea: { 
+  container: { 
     flex: 1, 
-    backgroundColor: 'white',
-  },
-  keyboardAvoidingContainer: { 
-    flex: 1 
-  },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    padding: 20, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#f0f0f0' 
-  },
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    color: '#004A61' 
-  },
-  headerPlaceholder: { 
-    width: 24 
+    backgroundColor: '#FFFFFF' 
   },
   scrollView: {
     flex: 1,
   },
-  scrollContent: { 
-    paddingHorizontal: 20, 
-    paddingTop: 20,
-    paddingBottom: 40, // Padding adequado para o conteúdo
+  scrollContainer: { 
+    paddingBottom: 20, // Espaço para o footer
   },
-  label: { 
-    fontSize: 16, 
-    color: 'gray', 
-    marginTop: 20, 
-    marginBottom: 8 
-  },
-  input: { 
-    backgroundColor: '#F6F6F6', 
-    padding: 15, 
-    borderRadius: 10, 
-    fontSize: 16, 
-    borderWidth: 1, 
-    borderColor: '#E8E8E8' 
-  },
-  inputError: { 
-    borderColor: '#ff6b6b' 
-  },
-  errorText: { 
-    color: '#ff6b6b', 
-    fontSize: 12, 
-    marginTop: 4 
-  },
-  genderContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginTop: 10 
-  },
-  genderOption: { 
-    flex: 1, 
-    padding: 12, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#E8E8E8', 
-    marginHorizontal: 4,
-    alignItems: 'center'
-  },
-  genderOptionSelected: { 
-    backgroundColor: '#004A61', 
-    borderColor: '#004A61' 
-  },
-  genderOptionText: { 
-    color: 'gray', 
-    fontSize: 14 
-  },
-  genderOptionTextSelected: { 
-    color: 'white', 
-    fontWeight: 'bold' 
-  },
-  actionButton: { 
-    backgroundColor: '#004A61', 
-    padding: 18, 
-    borderRadius: 15,
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 20,
-    elevation: 3,
-    shadowColor: '#000',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    width: '100%',
+  },
+  backButton: {},
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#004A61',
+  },
+  form: {
+    flex: 1,
+    paddingHorizontal: 25,
+    paddingTop: 10,
+  },
+  label: {
+    fontSize: 16,
+    color: '#334155',
+    marginBottom: 8,
+    marginTop: 15,
+  },
+  input: {
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 15,
+    paddingVertical: 18,
+    borderRadius: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  footer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 25,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: 3,
+    elevation: 5,
   },
-  finalSpacer: {
-    // Altura será definida dinamicamente baseada na altura da tela
+  button: {
+    backgroundColor: '#004A61',
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  actionButtonDisabled: { 
-    backgroundColor: '#ccc' 
+  buttonDisabled: {
+    backgroundColor: '#ccc',
   },
-  actionButtonText: { 
-    color: 'white', 
-    fontWeight: 'bold', 
-    fontSize: 16 
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#004A61',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalOption: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#334155',
+    textAlign: 'center',
+  },
+  modalCancel: {
+    paddingVertical: 15,
+    marginTop: 10,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
   },
 });

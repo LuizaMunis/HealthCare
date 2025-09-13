@@ -6,10 +6,11 @@
 // A URL base completa do seu servidor.
 //const API_URL_BASE = 'http://192.168.0.20:3000'; 
 //const API_URL_BASE = 'http://10.65.72.211:3000'; 
+//const API_URL_BASE = 'http://10.65.19.95:3000'; 
 
 export const API_CONFIG = {
   BASE_URL: `${API_URL_BASE}/api`,
-  TIMEOUT: 10000, // 10 segundos
+  TIMEOUT: 30000, // 30 segundos
 };
 
 // Endpoints da API para evitar erros de digitação e facilitar a manutenção.

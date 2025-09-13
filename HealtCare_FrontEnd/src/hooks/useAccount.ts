@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import ApiService from '@/services/apiService';
-import { formatNumberForDisplay, parseFormattedNumber } from '@/utils/formatters';
+import { formatNumberForDisplay, parseFormattedNumber, formatCPF, formatPhoneNumber, formatDate } from '@/utils/formatters';
 import { useApiErrorHandler } from '@/hooks/useErrorHandler';
 import { captureError } from '@/services/errorMonitoringService';
 
@@ -85,10 +85,10 @@ export function useAccount() {
       if (profileResult.success && profileResult.data.data) {
         const { data_nascimento, celular, genero, cpf, peso, altura } = profileResult.data.data;
         setPerfilData({
-          birthDate: data_nascimento ? new Date(data_nascimento).toISOString().split('T')[0] : '',
-          phone: celular || '',
+          birthDate: data_nascimento ? formatDate(data_nascimento) : '',
+          phone: celular ? formatPhoneNumber(celular) : '',
           gender: genderToFrontend(genero),
-          cpf: cpf || '',
+          cpf: cpf ? formatCPF(cpf) : '',
           weight: peso ? formatNumberForDisplay(peso) : '',
           height: altura ? String(altura) : '',
         });
@@ -128,11 +128,24 @@ export function useAccount() {
   };
 
   const handleSavePerfilData = async (newData: Partial<PerfilData>) => {
+    // Remover formatação dos dados antes de enviar para o backend
+    const cleanCPF = newData.cpf ? newData.cpf.replace(/\D/g, '') : null;
+    const cleanPhone = newData.phone ? newData.phone.replace(/\D/g, '') : null;
+    
+    // Converter data de DD/MM/YYYY para YYYY-MM-DD
+    let cleanBirthDate = null;
+    if (newData.birthDate) {
+      const dateParts = newData.birthDate.split('/');
+      if (dateParts.length === 3) {
+        cleanBirthDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+      }
+    }
+    
     const payload = {
-      data_nascimento: newData.birthDate || null,
-      celular: newData.phone || null,
+      data_nascimento: cleanBirthDate,
+      celular: cleanPhone,
       genero: genderToBackend(newData.gender ?? ''),
-      cpf: newData.cpf || null,
+      cpf: cleanCPF,
       peso: newData.weight ? parseFormattedNumber(newData.weight) : null,
       altura: newData.height ? parseInt(newData.height, 10) : null,
     };
