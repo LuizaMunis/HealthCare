@@ -30,6 +30,9 @@ export default function PerfilScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  // Log para verificar se a tela está sendo carregada
+  console.log('🎯 Tela de Perfil carregada com sucesso!');
+
   // Verificar token ao carregar a tela
   useEffect(() => {
     const checkToken = async () => {
