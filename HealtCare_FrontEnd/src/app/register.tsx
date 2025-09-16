@@ -5,7 +5,6 @@ import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +18,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '@/services/apiService';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 import NavigationDebug from '@/components/NavigationDebug';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');
@@ -50,14 +51,13 @@ export default function RegisterScreen() {
       console.log('🚀 Iniciando cadastro...');
       console.log('📡 URL da API:', `${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`);
       
-      const result = await ApiService.register({
+      const response = await ApiService.register({
         nome_completo: nomeCompleto,
         email: email,
         password: password
       });
 
-      console.log('📊 Status da resposta:', response.status);
-      const data = await response.json();
+      const data = response;
       console.log('📋 Resposta completa do servidor:', JSON.stringify(data, null, 2));
 
       if (data.success) {

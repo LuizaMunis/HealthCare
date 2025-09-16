@@ -56,9 +56,9 @@ class PerfilModel {
         const pesoComPonto = cleanPeso.replace(',', '.');
         pesoProcessado = parseFloat(pesoComPonto);
         
-        // Validação: peso deve estar entre 20 e 500 kg
-        if (isNaN(pesoProcessado) || pesoProcessado < 20 || pesoProcessado > 500) {
-          throw new Error('Peso deve estar entre 20 e 500 kg');
+        // Validação: peso deve estar entre 2 e 500 kg
+        if (isNaN(pesoProcessado) || pesoProcessado < 2 || pesoProcessado > 500) {
+          throw new Error('Peso deve estar entre 2 e 500 kg');
         }
       }
     }

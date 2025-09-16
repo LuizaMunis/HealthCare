@@ -103,3 +103,30 @@ export function formatDate(date: string | Date): string {
     return '';
   }
 }
+
+/**
+ * Formata o peso com máscara, adicionando vírgula para as casas decimais.
+ * @param text - O valor do peso
+ * @returns Peso formatado (ex: "85,50")
+ */
+export function formatPeso(text: string): string {
+  const numbers = text.replace(/\D/g, '');
+  if (numbers.length === 0) {
+    return '';
+  }
+  if (numbers.length >= 3) {
+    const kg = numbers.slice(0, -2);
+    const g = numbers.slice(-2);
+    return `${kg},${g}`;
+  }
+  return numbers;
+}
+
+/**
+ * Formata a altura, permitindo apenas números.
+ * @param text - O valor da altura
+ * @returns Altura formatada (apenas dígitos)
+ */
+export function formatAltura(text: string): string {
+  return text.replace(/[^\d]/g, '');
+}
