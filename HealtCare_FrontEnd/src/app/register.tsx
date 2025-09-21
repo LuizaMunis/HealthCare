@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import ApiService from '@/services/apiService';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
-import NavigationDebug from '@/components/NavigationDebug';
 
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');
@@ -140,9 +139,6 @@ export default function RegisterScreen() {
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
               <Text style={styles.buttonText}>Cadastrar-me</Text>
             </TouchableOpacity>
-
-            {/* Componente de debug temporário */}
-            <NavigationDebug />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Já tem uma conta? </Text>
