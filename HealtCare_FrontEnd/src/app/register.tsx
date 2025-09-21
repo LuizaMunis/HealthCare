@@ -15,12 +15,9 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG, ENDPOINTS } from '@/constants/api';
+import ApiService from '@/services/apiService';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 import NavigationDebug from '@/components/NavigationDebug';
-
-//const API_URL = API_CONFIG.BASE_URL;
 
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');
@@ -49,81 +46,30 @@ export default function RegisterScreen() {
     }
 
     try {
-      console.log('🚀 Iniciando cadastro...');
-      console.log('📡 URL da API:', `${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`);
-      
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nome_completo: nomeCompleto,
-          email: email,
-          password: password, 
-        }),
+      const result = await ApiService.register({
+        nome_completo: nomeCompleto,
+        email: email,
+        password: password
       });
 
-      console.log('📊 Status da resposta:', response.status);
-      const data = await response.json();
-      console.log('📋 Resposta completa do servidor:', JSON.stringify(data, null, 2));
-
-      if (data.success) {
-        // Salvar token e dados do usuário no AsyncStorage
-        if (data.data && data.data.token) {
-          await AsyncStorage.setItem('healthcare_auth_token', data.data.token);
-          console.log('✅ Token salvo com sucesso');
-        }
-        
-        // Salvar informações do usuário
-        if (data.data && data.data.user) {
-          await AsyncStorage.setItem('userInfo', JSON.stringify(data.data.user));
-          console.log('✅ Dados do usuário salvos');
-        }
-
-        // Navegação simplificada para teste
-        console.log('🔄 Navegando para tela de perfil...');
-        console.log('📍 Tentando navegar para: /Perfil');
-        console.log('🌐 Plataforma:', Platform.OS);
-        
-        // Teste: Navegação direta sem Alert
-        if (Platform.OS === 'web') {
-          console.log('🌐 Navegação web - tentando window.location.href diretamente');
-          try {
-            window.location.href = '/Perfil';
-            console.log('✅ window.location.href executado');
-          } catch (error) {
-            console.error('❌ window.location.href falhou:', error);
-            // Fallback
-            try {
+      if (result.success) {
+        Alert.alert('Sucesso!', 'Conta criada com sucesso!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              console.log('🚀 Navegando para /Perfil...');
               router.replace('/Perfil');
-              console.log('✅ router.replace fallback executado');
-            } catch (error2) {
-              console.error('❌ router.replace fallback falhou:', error2);
-              Alert.alert('Sucesso!', 'Conta criada com sucesso!');
             }
           }
-        } else {
-          // Para mobile, usar router.replace diretamente
-          try {
-            router.replace('/Perfil');
-            console.log('✅ Mobile: router.replace executado');
-          } catch (error) {
-            console.error('❌ Mobile: router.replace falhou:', error);
-            Alert.alert('Sucesso!', 'Conta criada com sucesso!');
-          }
-        }
+        ]);
+        
+        // Fallback: navegar automaticamente após 2 segundos se o usuário não clicar
+        setTimeout(() => {
+          console.log('⏰ Fallback: Navegando automaticamente para /Perfil...');
+          router.replace('/Perfil');
+        }, 2000);
       } else {
-        // Tratar erros específicos do backend
-        let errorMessage = data.message || 'Não foi possível criar a conta.';
-        
-        // Se há erros detalhados do backend
-        if (data.errors && Array.isArray(data.errors)) {
-          const fieldErrors = data.errors.map((err: any) => `${err.field}: ${err.message}`).join('\n');
-          errorMessage = `Erros de validação:\n${fieldErrors}`;
-        }
-        
-        Alert.alert('Erro no Cadastro', errorMessage);
+        Alert.alert('Erro no Cadastro', result.error || 'Não foi possível criar a conta.');
       }
     } catch (error: any) {
       console.error("❌ Erro de Rede:", error);
