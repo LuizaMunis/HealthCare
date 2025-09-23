@@ -7,7 +7,7 @@ class PerfilModel {
     const query = `
       CREATE TABLE IF NOT EXISTS perfil (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        usuario_id INT NOT NULL UNIQUE,
+        usuario_id INT NOT NULL,
         data_nascimento DATE NULL,
         celular VARCHAR(20) NULL,
         genero VARCHAR(20) NULL,
