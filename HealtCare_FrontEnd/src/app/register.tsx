@@ -17,37 +17,34 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '@/services/apiService';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
-import NavigationDebug from '@/components/NavigationDebug';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 export default function RegisterScreen() {
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); 
+  const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const router = useRouter();
 
   const handleRegister = async () => {
-    if (!nomeCompleto.trim() || !email.trim() || !password.trim()) { 
+    // Validações de cliente (permanecem as mesmas)
+    if (!nomeCompleto.trim() || !email.trim() || !password.trim()) {
       Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
       return;
     }
-
-    // Validação básica de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Email Inválido', 'Por favor, insira um email válido.');
       return;
     }
-
-    // Validação básica de senha
     if (password.length < 6) {
       Alert.alert('Senha Inválida', 'A senha deve ter pelo menos 6 caracteres.');
       return;
     }
 
     try {
+      // Seus logs de debug (mantidos)
       console.log('🚀 Iniciando cadastro...');
       console.log('📡 URL da API:', `${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.REGISTER}`);
       
@@ -57,75 +54,39 @@ export default function RegisterScreen() {
         password: password
       });
 
-      const data = response;
-      console.log('📋 Resposta completa do servidor:', JSON.stringify(data, null, 2));
+      console.log('📋 Resposta completa do servidor:', JSON.stringify(response, null, 2));
 
-      if (data.success) {
-        // Salvar token e dados do usuário no AsyncStorage
-        if (data.data && data.data.token) {
-          await AsyncStorage.setItem('healthcare_auth_token', data.data.token);
+      if (response.success) {
+        // ---- LÓGICA DE SUCESSO ----
+        const user = response.data?.data?.user;
+        const token = response.data?.data?.token;
+
+        if (token) {
+          await AsyncStorage.setItem('healthcare_auth_token', token);
           console.log('✅ Token salvo com sucesso');
         }
-        
-        // Salvar informações do usuário
-        if (data.data && data.data.user) {
-          await AsyncStorage.setItem('userInfo', JSON.stringify(data.data.user));
+        if (user) {
+          await AsyncStorage.setItem('userInfo', JSON.stringify(user));
           console.log('✅ Dados do usuário salvos');
         }
+        
+        // Alerta de sucesso que redireciona o usuário ao pressionar OK
+        Alert.alert(
+          'Sucesso!', 
+          'Sua conta foi criada com sucesso. Agora, complete seu perfil.', 
+          [{ text: 'OK', onPress: () => router.replace('/Perfil') }]
+        );
 
-        // Navegação simplificada para teste
-        console.log('🔄 Navegando para tela de perfil...');
-        console.log('📍 Tentando navegar para: /Perfil');
-        console.log('🌐 Plataforma:', Platform.OS);
-        
-        // Teste: Navegação direta sem Alert
-        if (Platform.OS === 'web') {
-          console.log('🌐 Navegação web - tentando window.location.href diretamente');
-          try {
-            window.location.href = '/Perfil';
-            console.log('✅ window.location.href executado');
-          } catch (error) {
-            console.error('❌ window.location.href falhou:', error);
-            // Fallback
-            try {
-              router.replace('/Perfil');
-              console.log('✅ router.replace fallback executado');
-            } catch (error2) {
-              console.error('❌ router.replace fallback falhou:', error2);
-              Alert.alert('Sucesso!', 'Conta criada com sucesso!');
-            }
-          }
-        } else {
-          // Para mobile, usar router.replace diretamente
-          try {
-            router.replace('/Perfil');
-            console.log('✅ Mobile: router.replace executado');
-          } catch (error) {
-            console.error('❌ Mobile: router.replace falhou:', error);
-            Alert.alert('Sucesso!', 'Conta criada com sucesso!');
-          }
-        }
       } else {
-        // Tratar erros específicos do backend
-        let errorMessage = data.message || 'Não foi possível criar a conta.';
-        
-        // Se há erros detalhados do backend
-        if (data.errors && Array.isArray(data.errors)) {
-          const fieldErrors = data.errors.map((err: any) => `${err.field}: ${err.message}`).join('\n');
-          errorMessage = `Erros de validação:\n${fieldErrors}`;
-        }
-        
+        // ---- LÓGICA PARA ERROS DE NEGÓCIO (EX: EMAIL JÁ EXISTE) ----
+        // Lê a mensagem da propriedade 'response.error'.
+        const errorMessage = response.error || 'Não foi possível criar a conta.';
         Alert.alert('Erro no Cadastro', errorMessage);
       }
     } catch (error: any) {
-      console.error("❌ Erro de Rede:", error);
-      
-      // Verificar se é erro de rede ou de parsing
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
-      } else {
-        Alert.alert('Erro', 'Ocorreu um erro inesperado. Tente novamente.');
-      }
+      // ---- LÓGICA PARA ERROS DE CONEXÃO OU INESPERADOS ----
+      console.error("❌ Erro inesperado na tela de cadastro:", error);
+      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.');
     }
   };
 
@@ -172,8 +133,8 @@ export default function RegisterScreen() {
               <TextInput
                 style={styles.passwordInput}
                 placeholder="********"
-                value={password} 
-                onChangeText={setPassword} 
+                value={password}
+                onChangeText={setPassword}
                 secureTextEntry={!isPasswordVisible}
               />
               <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
@@ -186,9 +147,6 @@ export default function RegisterScreen() {
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
               <Text style={styles.buttonText}>Cadastrar-me</Text>
             </TouchableOpacity>
-
-            {/* Componente de debug temporário */}
-            <NavigationDebug />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Já tem uma conta? </Text>
@@ -205,7 +163,7 @@ export default function RegisterScreen() {
   );
 }
 
-// Estilos (sem alterações)
+// Estilos
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   scrollContainer: { flexGrow: 1, justifyContent: 'center' },

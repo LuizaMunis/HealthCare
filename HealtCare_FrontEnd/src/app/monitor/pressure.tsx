@@ -1,7 +1,7 @@
 // HealthCare_FrontEnd/src/app/monitor/pressure.tsx
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -101,16 +101,12 @@ export default function PressureScreen() {
             <Text style={styles.pressureHeaderValue}>{systolic}</Text>
           </View>
           <View style={styles.pressureBody}>
-            <TouchableOpacity style={styles.controlButton} onPress={() => setSystolic(prev => prev - 1)}>
-              <Feather name="minus-circle" size={32} color="#004A61" />
-            </TouchableOpacity>
+            <Text style={styles.pressureValueSecondary}>119</Text>
             <View style={styles.pressureValueContainer}>
               <Text style={styles.pressureValueMain}>{systolic}</Text>
               <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
-            <TouchableOpacity style={styles.controlButton} onPress={() => setSystolic(prev => prev + 1)}>
-              <Feather name="plus-circle" size={32} color="#004A61" />
-            </TouchableOpacity>
+            <Text style={styles.pressureValueSecondary}>121</Text>
           </View>
         </View>
 
@@ -121,16 +117,12 @@ export default function PressureScreen() {
             <Text style={styles.pressureHeaderValue}>{diastolic}</Text>
           </View>
           <View style={styles.pressureBody}>
-            <TouchableOpacity style={styles.controlButton} onPress={() => setDiastolic(prev => prev - 1)}>
-              <Feather name="minus-circle" size={32} color="#004A61" />
-            </TouchableOpacity>
+            <Text style={styles.pressureValueSecondary}>88</Text>
             <View style={styles.pressureValueContainer}>
               <Text style={styles.pressureValueMain}>{diastolic}</Text>
               <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
-            <TouchableOpacity style={styles.controlButton} onPress={() => setDiastolic(prev => prev + 1)}>
-              <Feather name="plus-circle" size={32} color="#004A61" />
-            </TouchableOpacity>
+            <Text style={styles.pressureValueSecondary}>90</Text>
           </View>
         </View>
 
@@ -226,9 +218,7 @@ const styles = StyleSheet.create({
   pressureValueMain: {
     fontSize: 60,
     fontWeight: 'bold',
-    color: '#004A61',
-    textAlign: 'center',
-    minWidth: 90,
+    color: '#333',
   },
   pressureUnit: {
     fontSize: 20,
@@ -270,3 +260,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+

@@ -1,3 +1,6 @@
+// --- Componente DatePickerInput.tsx ---
+// HealtCare_FrontEnd/src/components/DatePickerInput.tsx
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 

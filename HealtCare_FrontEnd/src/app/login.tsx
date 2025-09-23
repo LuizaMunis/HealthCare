@@ -3,7 +3,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '@/services/apiService';
 
@@ -23,6 +24,8 @@ export default function LoginScreen() {
       const result = await ApiService.login({ email, password });
 
       if (result.success) {
+        console.log('Resposta completa da API:', JSON.stringify(result, null, 2));
+
         // Salvar informações do usuário
         await AsyncStorage.setItem('userInfo', JSON.stringify(result.data.data.user));
 
