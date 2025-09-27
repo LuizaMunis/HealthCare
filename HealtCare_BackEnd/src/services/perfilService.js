@@ -262,6 +262,19 @@ class PerfilService {
       }
     };
   }
+
+  /**
+   * Busca todos os perfis de um usuário
+   * @param {number} usuario_id - ID do usuário
+   * @returns {Array} Lista de perfis do usuário
+   */
+  static async getAllPerfis(usuario_id) {
+    if (!usuario_id) {
+      throw new Error('ID do usuário é obrigatório');
+    }
+    const perfis = await PerfilModel.findAllByUserId(usuario_id);
+    return perfis;
+  }
 }
 
 module.exports = PerfilService;

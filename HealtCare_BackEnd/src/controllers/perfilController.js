@@ -49,6 +49,16 @@ class PerfilController {
       res.status(statusCode).json({ success: false, message: errorMessage });
     }
   }
+
+  static async getAllProfiles(req, res) {
+    try {
+      const perfis = await PerfilService.getAllPerfis(req.user.id);
+      res.json({ success: true, data: { data: perfis } });
+    } catch (error) {
+      console.error('Erro ao obter todos os perfis:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
 }
 
 module.exports = PerfilController;

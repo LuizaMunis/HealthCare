@@ -4,10 +4,9 @@
  */
 
 // A URL base completa do seu servidor.
-//const API_URL_BASE = 'http://192.168.0.20:3000'; 
-//const API_URL_BASE = 'http://10.65.72.211:3000'; 
-//const API_URL_BASE = 'http://10.65.19.95:3000'; 
-//const API_URL_BASE = 'http://10.65.232.155:3000'; 
+//const API_URL_BASE = 'http://0.0.0.0:3000'; // Substitua pelo IP do seu servidor
+
+// Configuração da API, incluindo a URL base e timeout.
 
 export const API_CONFIG = {
   BASE_URL: `${API_URL_BASE}/api`,
@@ -25,5 +24,5 @@ export const ENDPOINTS = {
   PROFILE: {
     GET_SAVE: '/perfil',
   },
-  PRESSURE_RECORDS: '/pressao-arterial',
+  PRESSURE_RECORDS: '/registros-pressao',
 };

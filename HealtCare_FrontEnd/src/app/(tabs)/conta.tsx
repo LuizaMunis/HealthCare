@@ -1,33 +1,39 @@
 // HealthCare_FrontEnd/src/app/(tabs)/conta.tsx
 
-import { useAccount } from '@/hooks/useAccount'; // <-- Apenas este hook é necessário
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useUserData } from '@/hooks/useUserData';
+import { useAccount } from '@/hooks/useAccount';
 
-// Não precisamos do useUserData aqui, pois o useAccount já lida com a busca de dados.
+// Importação de todos os modais
 import PerfilModal from '@/components/Account/PerfilModal';
 import ChangePasswordModal from '@/components/Account/ChangePasswordModal';
 import LogoutConfirmModal from '@/components/Account/LogoutConfirmModal';
 import PersonalInfoModal from '@/components/Account/PersonalInfoModal';
+import ChangeProfileModal from '@/components/Account/changeProfileModal';
 
 export default function AccountScreen() {
-  // Chamamos apenas o useAccount, que já contém toda a lógica para este ecrã.
-  const { userName, loading } = useUserData();
+  // Chamamos apenas o hook/useAccount, que já contém toda a lógica para este ecrã.
+  //const { userName, loading } = useUserData();
   const {
     isLoading, // Usamos este estado de loading único.
+    isAwaitingInitialProfileSelection,
     activeModal,
     openModal,
     closeModal,
     personalInfo, // Usamos estes dados para o nome e email.
     perfilData,
+    profiles, 
+    activeProfile, 
     handleSavePersonalInfo,
     handleSavePerfilData,
     handleChangePassword,
     handleLogout,
+    handleSelectProfile, 
+    handleAddProfile,    
   } = useAccount();
 
   const colorScheme = useColorScheme() ?? 'light';
@@ -41,7 +47,7 @@ export default function AccountScreen() {
   ];
 
   // Apenas uma verificação de loading é necessária.
-  if (isLoading) {
+  if (isLoading || isAwaitingInitialProfileSelection) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: themeColors.background }]}>
         <ActivityIndicator size="large" color={themeColors.primary} />
@@ -57,12 +63,12 @@ export default function AccountScreen() {
         </View>
 
         <View style={[styles.profileCard, { backgroundColor: themeColors.card }]}>
-            {/* Usamos personalInfo.fullName, que já vem do hook useAccount */}
-            <Text style={[styles.profileName, { color: themeColors.text }]}>Olá, {userName|| 'Usuário'}!</Text>
+            {/* Exibe o nome do perfil ativo */}
+            <Text style={[styles.profileName, { color: themeColors.text }]}>Olá, {activeProfile?.name || 'Usuário'}!</Text>
             <Text style={[styles.profileSub, { color: themeColors.textSecondary }]}>Seja bem-vindo ao HealthCare.</Text>
-            <TouchableOpacity style={styles.profileAction} onPress={() => openModal('personalInfo')}>
-                <Feather name="user" size={16} color={themeColors.primary}/>
-                <Text style={[styles.profileActionText, { color: themeColors.primary }]}>Alterar perfil</Text>
+            <TouchableOpacity style={styles.profileAction} onPress={() => openModal('changeProfile')}>
+                <Feather name="users" size={16} color={themeColors.primary}/>
+                <Text style={[styles.profileActionText, { color: themeColors.primary }]}>Mudar perfil</Text>
             </TouchableOpacity>
         </View>
         
@@ -101,6 +107,14 @@ export default function AccountScreen() {
         visible={activeModal === 'logout'}
         onClose={closeModal}
         onConfirm={handleLogout}
+      />
+      <ChangeProfileModal
+        visible={activeModal === 'changeProfile'}
+        onClose={closeModal}
+        profiles={profiles}
+        activeProfileId={activeProfile?.id}
+        onSelectProfile={handleSelectProfile}
+        onAddProfile={handleAddProfile}
       />
     </SafeAreaView>
   );

@@ -1,3 +1,5 @@
+// HealtCare_FrontEnd/src/services/apiService.ts
+
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
@@ -110,6 +112,33 @@ const ApiService = {
       return { success: true, data: response.data };
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados adicionais.' };
+    }
+  },
+
+  /**
+   * Busca a lista de todos os perfis associados à conta do usuário.
+   * Presume a existência de um endpoint GET /api/perfil/all no backend.
+   */
+  getAllProfiles: async () => {
+    try {
+      // O endpoint para buscar todos os perfis deve ser adicionado ao seu backend
+      const response = await api.get(`${ENDPOINTS.PROFILE.GET_SAVE}/all`); 
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao buscar perfis.' };
+    }
+  },
+  
+  /**
+   * Busca os dados detalhados de um perfil específico pelo seu ID.
+   * Presume a existência de um endpoint GET /api/perfil/:id no backend.
+   */
+  getProfileById: async (profileId: string) => {
+    try {
+      const response = await api.get(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`);
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados do perfil.' };
     }
   },
 

@@ -1,20 +1,27 @@
 // HealtCare_FrontEnd/src/hooks/useAccount.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '@/services/apiService';
-import { formatNumberForDisplay, parseFormattedNumber, formatCPF, formatPhoneNumber, formatDate } from '@/utils/formatters';
-import { useApiErrorHandler } from '@/hooks/useErrorHandler';
+import { formatCPF, formatPhoneNumber, formatDate, parseFormattedNumber } from '@/utils/formatters';
 import { captureError } from '@/services/errorMonitoringService';
 
-// --- Interfaces para garantir a tipagem dos dados ---
-interface PersonalInfo {
+// --- Tipos de Dados e Interfaces ---
+
+export type Profile = {
+  id: string;
+  name: string;
+  relationship: string;
+};
+
+export type PersonalInfo = {
   fullName: string;
   email: string;
-}
+};
 
-interface PerfilData {
+export interface PerfilData {
   birthDate: string;
   phone: string;
   gender: 'Masculino' | 'Feminino' | 'Outro' | '';
@@ -23,15 +30,18 @@ interface PerfilData {
   height: string;
 }
 
-interface ChangePasswordData {
+export interface ChangePasswordData {
     current: string;
     new: string;
     confirm: string;
 }
 
-type ModalType = 'personalInfo' | 'perfil' | 'changePassword' | 'logout' | null;
+type ModalType = 'personalInfo' | 'perfil' | 'changePassword' | 'logout' | 'changeProfile' | null;
 
-// --- Funções auxiliares para conversão de dados ---
+// --- Chave de Armazenamento Local ---
+const ACTIVE_PROFILE_KEY = 'healthcare_active_profile_id';
+
+// --- Funções Auxiliares de Conversão ---
 const genderToBackend = (gender: string): 'M' | 'F' | 'O' | null => {
   if (!gender) return null;
   const lowerGender = gender.toLowerCase();
@@ -49,115 +59,177 @@ const genderToFrontend = (genderChar: 'M' | 'F' | 'O' | null): 'Masculino' | 'Fe
   return '';
 };
 
-export function useAccount() {
+/**
+ * Hook customizado para gerenciar toda a lógica da tela de Conta,
+ * incluindo múltiplos perfis e manipulação de dados.
+ */
+export const useAccount = () => {
   const router = useRouter();
-  const { handleError, clearError } = useApiErrorHandler();
+  
+  // --- Estados do Hook ---
   const [isLoading, setIsLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+
+  // Controla se a tela está aguardando a seleção inicial do perfil.
+  const [isAwaitingInitialProfileSelection, setIsAwaitingInitialProfileSelection] = useState(true);
   
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({ fullName: 'A carregar...', email: 'A carregar...' });
+  // Dados da conta principal
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({ fullName: '', email: '' });
+  
+  // Dados do perfil ATIVO
   const [perfilData, setPerfilData] = useState<PerfilData>({ birthDate: '', phone: '', gender: '', cpf: '', weight: '', height: '' });
+  
+  // Gerenciamento de múltiplos perfis
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
 
   const handleLogout = useCallback(async () => {
     await ApiService.logout();
     router.replace('/login');
   }, [router]);
 
-  const fetchUserData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [userResult, profileResult] = await Promise.all([
-        ApiService.getProfile(),
-        ApiService.getAdditionalProfile(),
+  const handleError = useCallback(async (error: Error, context: string) => {
+    console.error(`[${context}] Erro:`, error);
+    await captureError(error, { context }); // Envia o erro para o serviço de monitoramento
+    
+    // Lógica para logout em caso de erro de autenticação
+    if (error.message.includes('expirada') || error.message.includes('401')) {
+      Alert.alert('Sessão Expirada', 'Por favor, faça o login novamente.', [
+        { text: 'OK', onPress: handleLogout }
       ]);
-      
-      if (userResult.success && userResult.data?.data) {
-        setPersonalInfo({
-          fullName: userResult.data.data.nome_completo,
-          email: userResult.data.data.email,
-        });
-      } else {
-        Alert.alert('Sessão Expirada', 'Por favor, faça o login novamente.');
-        
-        return;
-      }
-
-      if (profileResult.success && profileResult.data.data) {
-        const { data_nascimento, celular, genero, cpf, peso, altura } = profileResult.data.data;
-        setPerfilData({
-          birthDate: data_nascimento ? formatDate(data_nascimento) : '',
-          phone: celular ? formatPhoneNumber(celular) : '',
-          gender: genderToFrontend(genero),
-          cpf: cpf ? formatCPF(cpf) : '',
-          weight: peso ? formatNumberForDisplay(peso) : '',
-          height: altura ? String(altura) : '',
-        });
-      }
-      
-    } catch (error) {
-      console.error('Erro ao buscar dados completos do utilizador:', error);
-      handleError(error as Error, 'fetchUserData');
-      await captureError(error as Error, { context: 'fetchUserData' });
-    } finally {
-      setIsLoading(false);
+    } else {
+      Alert.alert('Erro', error.message || 'Ocorreu um erro inesperado.');
     }
   }, [handleLogout]);
 
-  useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
+  /**
+   * Função principal para buscar todos os dados da conta e dos perfis.
+   */
+  const fetchData = useCallback(async (isInitialLoad = false) => {
+    setIsLoading(true);
+    try {
+      // 1. Busca as informações da conta principal (nome, email)
+      const personalInfoResult = await ApiService.getProfile();
+      if (!personalInfoResult.success || !personalInfoResult.data?.data) {
+        throw new Error('Falha ao buscar informações da conta. Sua sessão pode ter expirado.');
+      }
+      const { nome_completo, email } = personalInfoResult.data.data;
+      setPersonalInfo({ fullName: nome_completo, email });
+
+      // 2. Busca a lista de todos os perfis associados a esta conta
+      const profilesResult = await ApiService.getAllProfiles();
+      if (!profilesResult.success || !profilesResult.data?.data) {
+        throw new Error('Falha ao buscar a lista de perfis.');
+      }
+      
+      const fetchedProfiles: Profile[] = profilesResult.data.data.map(p => ({
+          id: p.id.toString(),
+          name: p.nome_completo || nome_completo,
+          relationship: p.parentesco || 'Principal'
+      }));
+      setProfiles(fetchedProfiles);
+
+      // 3. Define o perfil ativo
+      const storedActiveProfileId = await AsyncStorage.getItem(ACTIVE_PROFILE_KEY);
+      const active = fetchedProfiles.find(p => p.id === storedActiveProfileId) || fetchedProfiles[0];
+      
+      if (active) {
+        setActiveProfile(active);
+        // 4. Busca os dados detalhados (CPF, etc.) do perfil que está ativo
+        const activePerfilDataResult = await ApiService.getProfileById(active.id);
+        if (activePerfilDataResult.success && activePerfilDataResult.data?.data) {
+            const { data_nascimento, celular, genero, cpf, peso, altura } = activePerfilDataResult.data.data;
+            setPerfilData({
+                birthDate: data_nascimento ? formatDate(data_nascimento) : '',
+                phone: celular ? formatPhoneNumber(celular) : '',
+                gender: genderToFrontend(genero),
+                cpf: cpf ? formatCPF(cpf) : '',
+                weight: peso ? String(peso) : '',
+                height: altura ? String(altura) : '',
+            });
+        }
+      } else {
+        // Se não houver perfis, limpa os dados
+        setActiveProfile(null);
+        setPerfilData({ birthDate: '', phone: '', gender: '', cpf: '', weight: '', height: '' });
+      }
+
+      if (isInitialLoad && fetchedProfiles.length > 0) {
+        openModal('changeProfile');
+      } else if (fetchedProfiles.length === 0) {
+        // Se não houver perfis, não precisa esperar a seleção.
+        setIsAwaitingInitialProfileSelection(false);
+      }
+
+    } catch (error: any) {
+      handleError(error, 'fetchData');
+      Alert.alert("Erro ao Carregar", error.message || "Não foi possível carregar os dados da sua conta.");
+      setIsAwaitingInitialProfileSelection(false); // Libera a tela em caso de erro
+      if (error.message.includes('expirada')) {
+        handleLogout();
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleError, handleLogout]);
+
+  // Recarrega os dados sempre que a tela entra em foco
+  useFocusEffect(
+    useCallback(() => {
+      fetchData(true);
+    }, []) // A dependência vazia garante que rode apenas uma vez quando a tela focar
+  );
+  // --- Funções de Manipulação ---
 
   const openModal = (modalName: ModalType) => setActiveModal(modalName);
   const closeModal = () => setActiveModal(null);
 
+  const handleSelectProfile = async (profileId: string) => {
+    setIsAwaitingInitialProfileSelection(false); 
+    const selectedProfile = profiles.find(p => p.id === profileId);
+    if (selectedProfile) {
+      await AsyncStorage.setItem(ACTIVE_PROFILE_KEY, profileId);
+      //setActiveProfile(selectedProfile);
+      // Recarrega os dados para refletir o novo perfil ativo
+      await fetchData(false);
+    }
+  };
+
+  const handleAddProfile = () => router.push('/addProfile');
+  
   const handleSavePersonalInfo = async (newData: PersonalInfo) => {
-    const payload = {
-        nome_completo: newData.fullName,
-        email: newData.email,
-    };
-    const result = await ApiService.saveProfile(payload); 
+    const result = await ApiService.saveProfile({ nome_completo: newData.fullName, email: newData.email }); 
     if (result.success) {
-        await fetchUserData(); 
+        await fetchData(); 
         Alert.alert('Sucesso', 'As suas informações foram atualizadas!');
         closeModal();
     } else {
-        const error = new Error(result.error || 'Não foi possível salvar os dados.');
-        handleError(error, 'handleSavePersonalInfo');
-        await captureError(error, { context: 'handleSavePersonalInfo' });
+        handleError(new Error(result.error), 'handleSavePersonalInfo');
     }
   };
 
   const handleSavePerfilData = async (newData: Partial<PerfilData>) => {
-    // Remover formatação dos dados antes de enviar para o backend
-    const cleanCPF = newData.cpf ? newData.cpf.replace(/\D/g, '') : null;
-    const cleanPhone = newData.phone ? newData.phone.replace(/\D/g, '') : null;
-    
-    // Converter data de DD/MM/YYYY para YYYY-MM-DD
-    let cleanBirthDate = null;
-    if (newData.birthDate) {
-      const dateParts = newData.birthDate.split('/');
-      if (dateParts.length === 3) {
-        cleanBirthDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-      }
+    if (!activeProfile) {
+        Alert.alert('Erro', 'Nenhum perfil ativo selecionado.');
+        return;
     }
-    
+    // Lógica de limpeza e formatação dos dados
     const payload = {
-      data_nascimento: cleanBirthDate,
-      celular: cleanPhone,
+      data_nascimento: newData.birthDate ? `${newData.birthDate.split('/')[2]}-${newData.birthDate.split('/')[1]}-${newData.birthDate.split('/')[0]}` : null,
+      celular: newData.phone ? newData.phone.replace(/\D/g, '') : null,
       genero: genderToBackend(newData.gender ?? ''),
-      cpf: cleanCPF,
+      cpf: newData.cpf ? newData.cpf.replace(/\D/g, '') : null,
       peso: newData.weight ? parseFormattedNumber(newData.weight) : null,
       altura: newData.height ? parseInt(newData.height, 10) : null,
     };
-    const result = await ApiService.savePerfilData(payload);
+    // A função savePerfilData precisa do ID do perfil
+    const result = await ApiService.savePerfilData(activeProfile.id, payload);
     if (result.success) {
-      await fetchUserData();
+      await fetchData();
       Alert.alert('Sucesso', 'Os seus dados foram salvos!');
       closeModal();
     } else {
-      const error = new Error(result.error || 'Não foi possível salvar os dados.');
-      handleError(error, 'handleSavePerfilData');
-      await captureError(error, { context: 'handleSavePerfilData' });
+      handleError(new Error(result.error), 'handleSavePerfilData');
     }
   };
   
@@ -166,34 +238,20 @@ export function useAccount() {
         Alert.alert('Erro', 'As novas senhas não coincidem.');
         return;
      }
-     if (passwords.new.length < 6) {
-        Alert.alert('Erro', 'A nova senha deve ter pelo menos 6 caracteres.');
-        return;
-     }
-     const result = await ApiService.changePassword({
-        senha_atual: passwords.current,
-        nova_senha: passwords.new,
-     });
+     const result = await ApiService.changePassword({ senha_atual: passwords.current, nova_senha: passwords.new });
      if (result.success) {
         Alert.alert('Sucesso', 'A sua senha foi alterada!');
         closeModal();
      } else {
-        const error = new Error(result.error || 'Não foi possível alterar a senha.');
-        handleError(error, 'handleChangePassword');
-        await captureError(error, { context: 'handleChangePassword' });
+        handleError(new Error(result.error), 'handleChangePassword');
      }
   };
 
-      return {
-      isLoading,
-      activeModal,
-      openModal,
-      closeModal,
-      personalInfo,
-      perfilData,
-      handleSavePersonalInfo,
-      handleSavePerfilData,
-      handleChangePassword,
-      handleLogout,
-    };
-}
+  return {
+    isLoading, isAwaitingInitialProfileSelection, activeModal, openModal, closeModal,
+    personalInfo, perfilData, profiles, activeProfile,
+    handleSavePersonalInfo, handleSavePerfilData, handleChangePassword,
+    handleLogout, handleSelectProfile, handleAddProfile,
+  };
+};
+

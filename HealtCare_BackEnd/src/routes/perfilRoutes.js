@@ -7,6 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const ValidationMiddleware = require('../middleware/validationMiddleware');
 
 router.get('/', authMiddleware, PerfilController.getProfile);
+router.get('/all', authMiddleware, PerfilController.getAllProfiles);
 
 router.post('/', 
   authMiddleware,

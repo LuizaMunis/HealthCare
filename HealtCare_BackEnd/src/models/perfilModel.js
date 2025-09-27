@@ -8,6 +8,8 @@ class PerfilModel {
       CREATE TABLE IF NOT EXISTS perfil (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         usuario_id INT NOT NULL,
+        nome_perfil VARCHAR(255) NOT NULL,
+        parentesco VARCHAR(50) NULL, -- Ex: "Filho", "Pai", "Mãe", "Eu mesmo"
         data_nascimento DATE NULL,
         celular VARCHAR(20) NULL,
         genero VARCHAR(20) NULL,
@@ -43,7 +45,7 @@ class PerfilModel {
   }
 
   static async createOrUpdate(usuario_id, data) {
-    const { data_nascimento, celular, genero, cpf, peso, altura } = data;
+    const { nome_perfil, data_nascimento, celular, genero, cpf, peso, altura } = data;
     
     // Tratar peso e altura corretamente
     let pesoProcessado = null;
@@ -103,20 +105,20 @@ class PerfilModel {
         // UPDATE - perfil já existe
         const updateQuery = `
           UPDATE perfil 
-          SET data_nascimento = ?, celular = ?, genero = ?, cpf = ?, peso = ?, altura = ?
+          SET nome_perfil = ?, data_nascimento = ?, celular = ?, genero = ?, cpf = ?, peso = ?, altura = ?
           WHERE usuario_id = ?
         `;
-        const updateValues = [data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada, usuario_id];
+        const updateValues = [nome_perfil, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada, usuario_id];
         
         console.log('Executando UPDATE com valores:', updateValues);
         await pool.execute(updateQuery, updateValues);
       } else {
         // INSERT - perfil não existe
         const insertQuery = `
-          INSERT INTO perfil (usuario_id, data_nascimento, celular, genero, cpf, peso, altura)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO perfil (usuario_id, nome_perfil, data_nascimento, celular, genero, cpf, peso, altura)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        const insertValues = [usuario_id, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada];
+        const insertValues = [usuario_id, nome_perfil, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada];
         
         console.log('Executando INSERT com valores:', insertValues);
         await pool.execute(insertQuery, insertValues);
@@ -133,6 +135,12 @@ class PerfilModel {
     const query = 'DELETE FROM perfil WHERE id = ?';
     const [result] = await pool.execute(query, [id]);
     return result.affectedRows > 0;
+  }
+
+  static async findAllByUserId(usuario_id) {
+    const query = 'SELECT * FROM perfil WHERE usuario_id = ?';
+    const [rows] = await pool.execute(query, [usuario_id]);
+    return rows; // Retorna o array completo, não apenas rows[0]
   }
 }
 

@@ -68,6 +68,14 @@ class ValidationMiddleware {
    */
   static validateProfileData() {
     return [
+
+      body('nome_perfil')
+        .trim()
+        .notEmpty()
+        .withMessage('O nome do perfil é obrigatório.')
+        .isLength({ min: 2, max: 100 })
+        .withMessage('O nome do perfil deve ter entre 2 e 100 caracteres'),
+      
       body('cpf')
         .optional()
         .isLength({ min: 11, max: 14 })

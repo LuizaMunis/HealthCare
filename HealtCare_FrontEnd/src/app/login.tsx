@@ -48,11 +48,11 @@ export default function LoginScreen() {
             router.replace('/(tabs)/home');
           } else {
             // Perfil incompleto, navegar para perfil
-            router.replace('/Perfil');
+            router.replace('/CompletarPerfilInicial');
           }
         } else {
           // Erro ao buscar perfil ou perfil não existe, navegar para perfil
-          router.replace('/Perfil');
+          router.replace('/CompletarPerfilInicial');
         }
       } else {
         Alert.alert('Falha no Login', result.error || 'Credenciais inválidas.');
