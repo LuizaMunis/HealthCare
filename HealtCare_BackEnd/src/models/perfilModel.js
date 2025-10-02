@@ -13,9 +13,10 @@ class PerfilModel {
         data_nascimento DATE NULL,
         celular VARCHAR(20) NULL,
         genero VARCHAR(20) NULL,
-        cpf VARCHAR(14) NULL UNIQUE,
+        cpf VARCHAR(14) NULL,
         peso DECIMAL(5, 2) NULL,
         altura INT NULL,
+        CONSTRAINT uq_usuario_cpf UNIQUE (usuario_id, cpf),
         CONSTRAINT fk_perfil_usuario
           FOREIGN KEY (usuario_id)
           REFERENCES usuario (id) -- --- MESCLADO: Garante consistência com a tabela 'usuario'

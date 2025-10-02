@@ -71,7 +71,7 @@ const ApiService = {
         console.log('❌ Estrutura da resposta não contém token');
       }
       
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       console.error('❌ Erro no registro:', error);
       return { success: false, error: error.response?.data?.message || 'Erro ao registar.' };
@@ -85,7 +85,7 @@ const ApiService = {
       if (token) {
         await AsyncStorage.setItem(TOKEN_KEY, token);
       }
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Credenciais inválidas.' };
     }
@@ -100,7 +100,7 @@ const ApiService = {
   getProfile: async () => {
     try {
       const response = await api.get(ENDPOINTS.USERS.PROFILE);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Sessão expirada.' };
     }
@@ -109,7 +109,7 @@ const ApiService = {
   getAdditionalProfile: async () => {
     try {
       const response = await api.get(ENDPOINTS.PROFILE.GET_SAVE);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados adicionais.' };
     }
@@ -123,7 +123,7 @@ const ApiService = {
     try {
       // O endpoint para buscar todos os perfis deve ser adicionado ao seu backend
       const response = await api.get(`${ENDPOINTS.PROFILE.GET_SAVE}/all`); 
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao buscar perfis.' };
     }
@@ -136,7 +136,7 @@ const ApiService = {
   getProfileById: async (profileId: string) => {
     try {
       const response = await api.get(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados do perfil.' };
     }
@@ -145,7 +145,7 @@ const ApiService = {
   saveProfile: async (profileData: ProfileData) => {
     try {
       const response = await api.put(ENDPOINTS.USERS.PROFILE, profileData);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao salvar perfil.' };
     }
@@ -154,7 +154,7 @@ const ApiService = {
   savePerfilData: async (perfilData: PerfilData) => {
     try {
       const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, perfilData);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       console.error('Erro no savePerfilData:', error);
       
@@ -178,7 +178,7 @@ const ApiService = {
   changePassword: async (passwordData: PasswordData) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.CHANGE_PASSWORD, passwordData);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao alterar a senha.' };
     }

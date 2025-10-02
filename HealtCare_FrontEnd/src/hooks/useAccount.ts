@@ -5,10 +5,15 @@ import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '@/services/apiService';
-import { formatCPF, formatPhoneNumber, formatDate, parseFormattedNumber } from '@/utils/formatters';
+import { formatCPF, formatCelular, formatDateForInput, formatDateForDisplay, unmaskDate, parseFormattedNumber } from '@/utils/formatters';
 import { captureError } from '@/services/errorMonitoringService';
 
 // --- Tipos de Dados e Interfaces ---
+type BackendProfile = {
+  id: number;
+  nome_perfil: string;
+  parentesco?: string | null; // Pode ser nulo no banco de dados
+};
 
 export type Profile = {
   id: string;
@@ -110,10 +115,10 @@ export const useAccount = () => {
     try {
       // 1. Busca as informações da conta principal (nome, email)
       const personalInfoResult = await ApiService.getProfile();
-      if (!personalInfoResult.success || !personalInfoResult.data?.data) {
+      if (!personalInfoResult.success || !personalInfoResult.data) { 
         throw new Error('Falha ao buscar informações da conta. Sua sessão pode ter expirado.');
       }
-      const { nome_completo, email } = personalInfoResult.data.data;
+      const { nome_completo, email } = personalInfoResult.data;
       setPersonalInfo({ fullName: nome_completo, email });
 
       // 2. Busca a lista de todos os perfis associados a esta conta
@@ -122,9 +127,11 @@ export const useAccount = () => {
         throw new Error('Falha ao buscar a lista de perfis.');
       }
       
-      const fetchedProfiles: Profile[] = profilesResult.data.data.map(p => ({
+      const profilesArray = profilesResult.data.data || []; 
+
+      const fetchedProfiles: Profile[] = profilesArray.map((p: BackendProfile) => ({
           id: p.id.toString(),
-          name: p.nome_completo || nome_completo,
+          name: p.nome_perfil || nome_completo, // Usando `nome_perfil` conforme a tabela
           relationship: p.parentesco || 'Principal'
       }));
       setProfiles(fetchedProfiles);
@@ -140,8 +147,8 @@ export const useAccount = () => {
         if (activePerfilDataResult.success && activePerfilDataResult.data?.data) {
             const { data_nascimento, celular, genero, cpf, peso, altura } = activePerfilDataResult.data.data;
             setPerfilData({
-                birthDate: data_nascimento ? formatDate(data_nascimento) : '',
-                phone: celular ? formatPhoneNumber(celular) : '',
+                birthDate: data_nascimento ? formatDateForDisplay(data_nascimento) : '',
+                phone: celular ? formatCelular(celular) : '',
                 gender: genderToFrontend(genero),
                 cpf: cpf ? formatCPF(cpf) : '',
                 weight: peso ? String(peso) : '',
@@ -176,8 +183,12 @@ export const useAccount = () => {
   // Recarrega os dados sempre que a tela entra em foco
   useFocusEffect(
     useCallback(() => {
-      fetchData(true);
-    }, []) // A dependência vazia garante que rode apenas uma vez quando a tela focar
+      // Busca os dados mais recentes toda vez que a tela é focada
+      fetchData();
+      
+      // Abre o modal de seleção de perfil toda vez que a aba 'Conta' é acessada
+      openModal('changeProfile');
+    }, [])
   );
   // --- Funções de Manipulação ---
 
@@ -195,7 +206,7 @@ export const useAccount = () => {
     }
   };
 
-  const handleAddProfile = () => router.push('/addProfile');
+  const handleAddProfile = () => router.push('/GerenciarPerfil');
   
   const handleSavePersonalInfo = async (newData: PersonalInfo) => {
     const result = await ApiService.saveProfile({ nome_completo: newData.fullName, email: newData.email }); 

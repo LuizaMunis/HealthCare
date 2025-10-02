@@ -3,9 +3,10 @@
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useUserData } from '@/hooks/useUserData';
+import {useUserData} from '@/hooks/useUserData';
 import { useAccount } from '@/hooks/useAccount';
 
 // Importação de todos os modais
@@ -16,8 +17,10 @@ import PersonalInfoModal from '@/components/Account/PersonalInfoModal';
 import ChangeProfileModal from '@/components/Account/changeProfileModal';
 
 export default function AccountScreen() {
-  // Chamamos apenas o hook/useAccount, que já contém toda a lógica para este ecrã.
-  //const { userName, loading } = useUserData();
+  const params = useLocalSearchParams();
+  console.log(params); // ou use params.id, params.nome, etc.
+  
+  const { userName, loading } = useUserData();
   const {
     isLoading, // Usamos este estado de loading único.
     isAwaitingInitialProfileSelection,

@@ -1,6 +1,5 @@
 // HealthCare_FrontEnd/src/app/CompletarPerfilInicial.tsx
 
-import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import ApiService from '@/services/apiService';
@@ -19,14 +18,15 @@ import {
   ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { formatCPF, unmaskCPF, formatCelular, unmaskCelular, formatDateForInput, unmaskDate, formatPeso, unmaskPeso, formatAltura, unmaskAltura } from '@/utils/formatters';
 
 // Tela para o usuário completar seu próprio perfil pela primeira vez.
 export default function CompletarPerfilInicialScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-
   const [isLoading, setIsLoading] = useState(false);
+
   const [nomePerfil, setNomePerfil] = useState('');
   const [parentesco] = useState('Eu mesmo'); // Fixo e não editável.
   const [cpf, setCpf] = useState('');
@@ -35,23 +35,8 @@ export default function CompletarPerfilInicialScreen() {
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [genero, setGenero] = useState('');
-  const [showGeneroModal, setShowGeneroModal] = useState(false);
 
-  // --- Funções de Formatação (Máscaras) ---
-  const formatCPF = (text: string) => text.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2').slice(0, 14);
-  const formatTelefone = (text: string) => text.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 15);
-  const formatData = (text: string) => text.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2').replace(/(\d{2})(\d)/, '$1/$2').slice(0, 10);
-  const formatPeso = (text: string) => {
-    const numbers = text.replace(/\D/g, '');
-    if (numbers.length === 0) return '';
-    if (numbers.length >= 3) {
-      const kg = numbers.slice(0, -2);
-      const g = numbers.slice(-2);
-      return `${kg},${g}`;
-    }
-    return numbers;
-  };
-  const formatAltura = (text: string) => text.replace(/\D/g, '').slice(0, 3);
+  const [showGeneroModal, setShowGeneroModal] = useState(false);
 
   // Crie um useEffect para carregar o nome do usuário dinamicamente
   useEffect(() => {
@@ -92,19 +77,17 @@ export default function CompletarPerfilInicialScreen() {
     }
     setIsLoading(true);
     try {
-      const dataParts = dataNascimento.split('/');
-      const dataFormatada = dataParts.length === 3 ? `${dataParts[2]}-${dataParts[1]}-${dataParts[0]}` : null;
       const generoMapeado = genero === 'Masculino' ? 'MASCULINO' : genero === 'Feminino' ? 'FEMININO' : 'OUTRO';
       
       const profileData = {
         nome_perfil: nomePerfil.trim(),
         parentesco: parentesco,
-        cpf: cpf.replace(/\D/g, '') || null,
-        celular: telefone.replace(/\D/g, '') || null,
-        data_nascimento: dataFormatada,
-        peso: peso ? parseFloat(peso.replace(',', '.')) : null,
-        altura: altura ? parseInt(altura) : null,
-        genero: genero ? generoMapeado : null,
+        cpf: unmaskCPF(cpf) || '', 
+        celular: unmaskCelular(telefone) || '',
+        data_nascimento: unmaskDate(dataNascimento) || '',
+        peso: peso ? String(parseFloat(unmaskPeso(peso))) : 0,
+        altura: altura ? String(parseInt(unmaskAltura(altura))) : 0,
+        genero: genero ? generoMapeado : '',
       };
 
       const result = await ApiService.savePerfilData(profileData);
@@ -149,10 +132,10 @@ export default function CompletarPerfilInicialScreen() {
             <TextInput style={styles.input} placeholder="000.000.000-00" value={cpf} onChangeText={text => setCpf(formatCPF(text))} keyboardType="numeric" />
 
             <Text style={styles.label}>Telefone</Text>
-            <TextInput style={styles.input} placeholder="(00) 90000-0000" value={telefone} onChangeText={text => setTelefone(formatTelefone(text))} keyboardType="numeric" />
+            <TextInput style={styles.input} placeholder="(00) 90000-0000" value={telefone} onChangeText={text => setTelefone(formatCelular(text))} keyboardType="numeric" />
 
             <Text style={styles.label}>Data de Nascimento</Text>
-            <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={dataNascimento} onChangeText={text => setDataNascimento(formatData(text))} keyboardType="numeric" />
+            <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={dataNascimento} onChangeText={text => setDataNascimento(formatDateForInput(text))} keyboardType="numeric" />
 
             <Text style={styles.label}>Peso (Kg)</Text>
             <TextInput style={styles.input} placeholder="00,00" value={peso} onChangeText={text => setPeso(formatPeso(text))} keyboardType="decimal-pad" />

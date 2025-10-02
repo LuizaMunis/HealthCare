@@ -1,7 +1,7 @@
 // HealthCare_FrontEnd/src/app/monitor/pressure.tsx
 
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -36,18 +36,24 @@ export default function PressureScreen() {
     }
 
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) {
         Alert.alert('Erro de Autenticação', 'Você não está logado. Por favor, faça o login novamente.');
         // Opcional: redirecionar para a tela de login
-        // router.push('/login'); 
+        router.push('/login'); 
         return;
       }
 
       const url = isEditMode
-        ? `${API_CONFIG.BASE_URL}/pressao-arterial/${params.id}` 
-        : `${API_CONFIG.BASE_URL}/pressao-arterial`;  
+        ? `${API_CONFIG.BASE_URL}/registros-pressao/${params.id}` 
+        : `${API_CONFIG.BASE_URL}/registros-pressao`;  
       const method = isEditMode ? 'PUT' : 'POST';
+
+      const now = new Date();
+      // Combina a data do seletor com a hora atual
+      const measurementDateTime = new Date(
+        `${date}T${now.toTimeString().slice(0, 8)}`
+      );
 
       const response = await fetch(url, {
         method: method,
@@ -58,7 +64,7 @@ export default function PressureScreen() {
         body: JSON.stringify({
           sistolica_mmhg: systolic,
           diastolica_mmhg: diastolic,
-          data_hora_medicao: `${date} ${new Date().toTimeString().slice(0, 8)}` // Envia a hora atual
+          data_hora_medicao: measurementDateTime.toISOString()
         }),
       });
 
@@ -143,7 +149,7 @@ export default function PressureScreen() {
   );
 }
 
-// ... (Estilos permanecem os mesmos)
+// (Estilos)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
