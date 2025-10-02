@@ -26,9 +26,16 @@ export default function WelcomeScreen() {
             <Text style={styles.primaryButtonText}>Cadastre-se</Text>
           </TouchableOpacity>
         </Link>
+
         <Link href="/login" asChild>
           <TouchableOpacity style={styles.secondaryButton}>
             <Text style={styles.secondaryButtonText}>Faça login</Text>
+          </TouchableOpacity>
+        </Link>
+
+        <Link href="/home" asChild>
+          <TouchableOpacity style={styles.tertiaryButton}>
+            <Text style={styles.tertiaryButtonText}>Comece agora</Text>
           </TouchableOpacity>
         </Link>
       </View>
@@ -93,8 +100,20 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
+    marginBottom: 15,
   },
   secondaryButtonText: {
+    color: '#004A61',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },  
+  tertiaryButton: {
+    backgroundColor: '#81C5D8',
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  tertiaryButtonText: {
     color: '#004A61',
     fontSize: 16,
     fontWeight: 'bold',

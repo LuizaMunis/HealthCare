@@ -20,10 +20,7 @@ export default function AccountScreen() {
   const params = useLocalSearchParams();
   console.log(params); // ou use params.id, params.nome, etc.
   
-  const { userName, loading } = useUserData();
   const {
-    isLoading, // Usamos este estado de loading único.
-    isAwaitingInitialProfileSelection,
     activeModal,
     openModal,
     closeModal,
@@ -48,15 +45,6 @@ export default function AccountScreen() {
     { key: 'changePassword', icon: 'key', label: 'Alterar senha' },
     { key: 'logout', icon: 'log-out', label: 'Sair' },
   ];
-
-  // Apenas uma verificação de loading é necessária.
-  if (isLoading || isAwaitingInitialProfileSelection) {
-    return (
-      <View style={[styles.container, styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={themeColors.primary} />
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
