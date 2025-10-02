@@ -26,6 +26,12 @@ type Profile = {
   relationship: string;
 };
 
+interface ProfileItemProps {
+  profile: Profile;
+  isActive: boolean;
+  onSelect: () => void;
+}
+
 // Define as propriedades que o componente Modal espera receber
 interface ChangeProfileModalProps {
   visible: boolean;
@@ -37,7 +43,7 @@ interface ChangeProfileModalProps {
 }
 
 // --- Componente de Item de Perfil (usado na lista) ---
-const ProfileItem = ({ profile, isActive, onSelect }) => (
+const ProfileItem = ({ profile, isActive, onSelect }: ProfileItemProps) => (
   <TouchableOpacity
     style={[styles.profileButton, isActive && styles.profileButtonActive]}
     onPress={onSelect}>

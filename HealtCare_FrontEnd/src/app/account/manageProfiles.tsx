@@ -1,4 +1,4 @@
-// HealthCare_FrontEnd/src/components/Account/GerenciarPerfil.tsx
+// HealthCare_FrontEnd/src/components/Account/manageProfiles.tsx
 
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';

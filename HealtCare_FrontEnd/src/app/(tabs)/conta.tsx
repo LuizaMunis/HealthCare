@@ -6,7 +6,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Act
 import { useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import {useUserData} from '@/hooks/useUserData';
+//import {useUserData} from '@/hooks/useUserData';
 import { useAccount } from '@/hooks/useAccount';
 
 // Importação de todos os modais
@@ -20,6 +20,7 @@ export default function AccountScreen() {
   const params = useLocalSearchParams();
   console.log(params); // ou use params.id, params.nome, etc.
   
+  //const { userName } = useUserData();
   const {
     activeModal,
     openModal,

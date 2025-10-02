@@ -206,7 +206,7 @@ export const useAccount = () => {
     }
   };
 
-  const handleAddProfile = () => router.push('/GerenciarPerfil');
+  const handleAddProfile = () => router.push('/account/manageProfiles');
   
   const handleSavePersonalInfo = async (newData: PersonalInfo) => {
     const result = await ApiService.saveProfile({ nome_completo: newData.fullName, email: newData.email }); 
