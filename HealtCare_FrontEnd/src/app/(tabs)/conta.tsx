@@ -51,7 +51,7 @@ export default function AccountScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <ScrollView>
         <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: themeColors.primary }]}>HEALTHCARE</Text>
+            <Text style={[styles.headerTitle, { color: themeColors.primary }]}>Seu Conta</Text>
         </View>
 
         <View style={[styles.profileCard, { backgroundColor: themeColors.card }]}>

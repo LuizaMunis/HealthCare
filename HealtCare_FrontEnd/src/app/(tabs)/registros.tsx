@@ -24,7 +24,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.logoText}>HEALTHCARE <Text style={styles.logoIcon}>+</Text></Text>
+          <Text style={styles.logoText}>Seus registros <Text style={styles.logoIcon}>+</Text></Text>
         </View>
 
         <View style={styles.welcomeCard}>

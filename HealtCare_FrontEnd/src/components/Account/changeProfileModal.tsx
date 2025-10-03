@@ -105,7 +105,7 @@ export default function ChangeProfileModal({
             <TouchableOpacity onPress={onClose}>
               <Feather name="arrow-left" size={24} color="#004A61" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Alterar conta</Text>
+            <Text style={styles.headerTitle}>Alterar perfil</Text>
             <View style={styles.headerPlaceholder} />
           </View>
 
