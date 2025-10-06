@@ -24,9 +24,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.logoText}>HEALTHCARE <Text style={styles.logoIcon}>+</Text></Text>
-        </View>
+        {/* Cabeçalho removido conforme solicitação */}
 
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeStripe} />

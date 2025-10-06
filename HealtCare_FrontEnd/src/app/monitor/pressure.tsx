@@ -1,7 +1,7 @@
 // HealthCare_FrontEnd/src/app/monitor/pressure.tsx
 
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Animated } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -30,6 +30,33 @@ export default function PressureScreen() {
     const da = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${da}`;
   };
+
+  // Configurações dos seletores (efeito igual ao da glicose)
+  const ITEM_HEIGHT = 44;
+  const VISIBLE_ITEMS = 3; // 1 acima, 1 central, 1 abaixo
+  const SYS_MIN = 80;
+  const SYS_MAX = 250;
+  const DIA_MIN = 50;
+  const DIA_MAX = 150;
+
+  const sysValues = useMemo(() => Array.from({ length: SYS_MAX - SYS_MIN + 1 }, (_, i) => SYS_MIN + i), []);
+  const diaValues = useMemo(() => Array.from({ length: DIA_MAX - DIA_MIN + 1 }, (_, i) => DIA_MIN + i), []);
+
+  const sysScrollRef = useRef<ScrollView | null>(null);
+  const diaScrollRef = useRef<ScrollView | null>(null);
+  const sysScrollY = useRef(new Animated.Value(0)).current;
+  const diaScrollY = useRef(new Animated.Value(0)).current;
+
+  // Centraliza valores iniciais ao abrir
+  useEffect(() => {
+    const initialSysIndex = Math.min(Math.max(systolic - SYS_MIN, 0), sysValues.length - 1);
+    const initialDiaIndex = Math.min(Math.max(diastolic - DIA_MIN, 0), diaValues.length - 1);
+    const t = setTimeout(() => {
+      sysScrollRef.current?.scrollTo({ y: initialSysIndex * ITEM_HEIGHT, animated: false });
+      diaScrollRef.current?.scrollTo({ y: initialDiaIndex * ITEM_HEIGHT, animated: false });
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   const handleSave = async () => {
     if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
@@ -92,12 +119,59 @@ export default function PressureScreen() {
             <Text style={styles.pressureHeaderValue}>{systolic}</Text>
           </View>
           <View style={styles.pressureBody}>
-            <Text style={styles.pressureValueSecondary}>119</Text>
-            <View style={styles.pressureValueContainer}>
-              <Text style={styles.pressureValueMain}>{systolic}</Text>
+            <View style={styles.pickerRow}>
+              <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
+                <Animated.ScrollView
+                  ref={sysScrollRef}
+                  showsVerticalScrollIndicator={false}
+                  bounces={false}
+                  alwaysBounceVertical={false}
+                  overScrollMode="never"
+                  decelerationRate="fast"
+                  snapToInterval={ITEM_HEIGHT}
+                  disableIntervalMomentum
+                  snapToAlignment="start"
+                  scrollEventThrottle={16}
+                  onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: sysScrollY } } }],
+                    { useNativeDriver: true }
+                  )}
+                  onMomentumScrollEnd={(ev) => {
+                    const offsetY = ev.nativeEvent.contentOffset.y;
+                    const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                    const clampedIndex = Math.min(Math.max(rawIndex, 0), sysValues.length - 1);
+                    setSystolic(SYS_MIN + clampedIndex);
+                  }}
+                  contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
+                >
+                  {sysValues.map((item, index) => {
+                    const inputRange = [
+                      (index - 1) * ITEM_HEIGHT,
+                      index * ITEM_HEIGHT,
+                      (index + 1) * ITEM_HEIGHT,
+                    ];
+                    const opacity = sysScrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.25, 1, 0.25],
+                      extrapolate: 'clamp',
+                    });
+                    const scale = sysScrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.9, 1.6, 0.9],
+                      extrapolate: 'clamp',
+                    });
+                    return (
+                      <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                        <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
+                          {item}
+                        </Animated.Text>
+                      </View>
+                    );
+                  })}
+                </Animated.ScrollView>
+              </View>
               <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
-            <Text style={styles.pressureValueSecondary}>121</Text>
           </View>
         </View>
 
@@ -108,12 +182,59 @@ export default function PressureScreen() {
             <Text style={styles.pressureHeaderValue}>{diastolic}</Text>
           </View>
           <View style={styles.pressureBody}>
-            <Text style={styles.pressureValueSecondary}>88</Text>
-            <View style={styles.pressureValueContainer}>
-              <Text style={styles.pressureValueMain}>{diastolic}</Text>
+            <View style={styles.pickerRow}>
+              <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
+                <Animated.ScrollView
+                  ref={diaScrollRef}
+                  showsVerticalScrollIndicator={false}
+                  bounces={false}
+                  alwaysBounceVertical={false}
+                  overScrollMode="never"
+                  decelerationRate="fast"
+                  snapToInterval={ITEM_HEIGHT}
+                  disableIntervalMomentum
+                  snapToAlignment="start"
+                  scrollEventThrottle={16}
+                  onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: diaScrollY } } }],
+                    { useNativeDriver: true }
+                  )}
+                  onMomentumScrollEnd={(ev) => {
+                    const offsetY = ev.nativeEvent.contentOffset.y;
+                    const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                    const clampedIndex = Math.min(Math.max(rawIndex, 0), diaValues.length - 1);
+                    setDiastolic(DIA_MIN + clampedIndex);
+                  }}
+                  contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
+                >
+                  {diaValues.map((item, index) => {
+                    const inputRange = [
+                      (index - 1) * ITEM_HEIGHT,
+                      index * ITEM_HEIGHT,
+                      (index + 1) * ITEM_HEIGHT,
+                    ];
+                    const opacity = diaScrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.25, 1, 0.25],
+                      extrapolate: 'clamp',
+                    });
+                    const scale = diaScrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.9, 1.6, 0.9],
+                      extrapolate: 'clamp',
+                    });
+                    return (
+                      <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                        <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
+                          {item}
+                        </Animated.Text>
+                      </View>
+                    );
+                  })}
+                </Animated.ScrollView>
+              </View>
               <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
-            <Text style={styles.pressureValueSecondary}>90</Text>
           </View>
         </View>
 
@@ -223,8 +344,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  pickerRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   controlButton: {
     padding: 10,
+  },
+  wheelContainer: {
+    width: 120,
+    overflow: 'hidden',
+    position: 'relative',
+    marginRight: 8,
   },
   pressureValueContainer: {
     flexDirection: 'row',
@@ -234,6 +367,11 @@ const styles = StyleSheet.create({
     fontSize: 60,
     fontWeight: 'bold',
     color: '#333',
+  },
+  wheelItemText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#004A61',
   },
   pressureUnit: {
     fontSize: 20,

@@ -7,12 +7,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>
-          HEALTHCARE <Text style={styles.logoIcon}>+</Text>
-        </Text>
-        <Text style={styles.tagline}>Aqui, cuidar é uma forma de amar.</Text>
-      </View>
+      {/* Branding removido conforme solicitação */}
 
       <View style={styles.content}>
         <Text style={styles.title}>

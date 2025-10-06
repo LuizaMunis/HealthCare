@@ -23,4 +23,6 @@ export const ENDPOINTS = {
     GET_SAVE: '/perfil',
   },
   PRESSURE_RECORDS: '/pressao-arterial',
+  TEMPERATURE_RECORDS: '/temperatura',
+  HEART_RATE_RECORDS: '/frequencia-cardiaca',
 };
