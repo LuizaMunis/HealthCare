@@ -1,12 +1,75 @@
 // HealthCare_FrontEnd/src/app/monitor/pressure.tsx
 
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, ENDPOINTS } from '../../constants/api';
 
 export default function PressureScreen() {
   const router = useRouter(); 
+  const [systolic, setSystolic] = useState(120);
+  const [diastolic, setDiastolic] = useState(80);
+  const [dateISO, setDateISO] = useState(new Date().toISOString().split('T')[0]);
+  const dateDisplay = useMemo(() => {
+    try {
+      const [y, m, d] = (dateISO || '').split('-');
+      const dt = new Date(Number(y), Number(m) - 1, Number(d));
+      return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long' }).format(dt);
+    } catch {
+      return dateISO;
+    }
+  }, [dateISO]);
+  const [showPicker, setShowPicker] = useState(false);
+  const today = useMemo(() => { const t = new Date(); t.setHours(0,0,0,0); return t; }, []);
+  const toLocalISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${da}`;
+  };
+
+  const handleSave = async () => {
+    if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
+      Alert.alert('Atenção', 'Por favor, insira valores de pressão válidos.');
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Erro de Autenticação', 'Você não está logado.');
+        return;
+      }
+
+      const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          sistolica_mmhg: systolic,
+          diastolica_mmhg: diastolic,
+          data_hora_medicao: `${dateISO} ${new Date().toTimeString().slice(0, 8)}`,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'O servidor retornou um erro ao salvar os dados.');
+      }
+
+      Alert.alert('Sucesso!', 'Sua pressão foi salva.');
+      router.back();
+    } catch (error: any) {
+      console.error('Erro ao salvar pressão:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível conectar ao servidor.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -57,13 +120,33 @@ export default function PressureScreen() {
         {/* --- Data do Registro --- */}
         <View style={styles.dateContainer}>
           <Text style={styles.dateLabel}>Data do registro</Text>
-          <TextInput
+          <TouchableOpacity
+            accessibilityLabel="Selecionar data do registro"
             style={styles.dateInput}
-            value={date}
-            onChangeText={setDate}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor="#C7C7CD"
-          />
+            onPress={() => setShowPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dateInputText}>{dateDisplay}</Text>
+          </TouchableOpacity>
+          {showPicker && (
+            <DateTimePicker
+              value={new Date(dateISO + 'T00:00:00')}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={today}
+              onChange={(event, selectedDate) => {
+                if (Platform.OS === 'android') setShowPicker(false);
+                if (!selectedDate) return;
+                const chosen = new Date(selectedDate);
+                chosen.setHours(0,0,0,0);
+                if (chosen.getTime() > today.getTime()) {
+                  Alert.alert('Data inválida', 'Data não pode ser no futuro');
+                  return;
+                }
+                setDateISO(toLocalISODate(chosen));
+              }}
+            />
+          )}
         </View>
 
         {/* --- Botão Salvar --- */}
@@ -179,6 +262,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
   },
+   dateInputText: {
+     fontSize: 16,
+     color: '#333',
+   },
   saveButton: {
     backgroundColor: '#004A61',
     borderRadius: 15,

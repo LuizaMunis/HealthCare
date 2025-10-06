@@ -1,153 +1,155 @@
 // HealthCare_Backend/src/models/userModel.js
-
 const { pool } = require('../config/database');
 
 class UserModel {
   /**
-   * Cria a tabela 'usuario' no banco de dados se ela ainda não existir,
-   * com o esquema atualizado para suportar nomes e hashes de senha mais longos.
+   * Cria/verifica a tabela 'usuario' com schema atualizado.
+   * - Campos longos (VARCHAR(255))
+   * - data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   * - token_recuperacao_senha opcional
    */
   static async createTable() {
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS usuario (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-<<<<<<< HEAD
         nome_completo VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
         senha_hash VARCHAR(255) NOT NULL,
-        data_cadastro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE = InnoDB;
-    `;
-    try {
-      await pool.execute(createTableQuery);
-    } catch (error) {
-      console.error('❌ Erro ao criar a tabela "usuario":', error);
-      throw error;
-    }
-  }
-
-  static async create(userData) {
-    const { nome_completo, email, senha_hash } = userData;
-    const query = 'INSERT INTO usuario (nome_completo, email, senha_hash) VALUES (?, ?, ?)';
-    const [result] = await pool.execute(query, [nome_completo, email, senha_hash]);
-    return { id: result.insertId, nome_completo, email };
-=======
-        nome_completo VARCHAR(255) NOT NULL, /* Atualizado para 255 */
-        email VARCHAR(255) UNIQUE NOT NULL,
-        senha_hash VARCHAR(255) NOT NULL,   /* Atualizado para 255 */
-        data_cadastro DATE NOT NULL,
+        data_cadastro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         token_recuperacao_senha VARCHAR(255) NULL
-      ) ENGINE = InnoDB;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `;
-
     try {
       await pool.execute(createTableQuery);
-      console.log('✅ Tabela usuario criada/verificada com sucesso (schema atualizado)!');
+      console.log('✅ Tabela "usuario" criada/verificada com sucesso.');
     } catch (error) {
-      console.error('❌ Erro ao criar tabela usuario (schema atualizado):', error);
+      console.error('❌ Erro ao criar/verificar a tabela "usuario":', error);
       throw error;
     }
->>>>>>> 955ab6818754a84eaa773769df8ba1f618616e52
   }
 
   /**
-   * Cria um novo usuário no banco de dados.
-   * @param {object} userData - Dados do usuário a serem criados.
-   * @param {string} userData.nome_completo - Nome completo do usuário.
-   * @param {string} userData.email - Email do usuário (deve ser único).
-   * @param {string} userData.senha_hash - Senha criptografada (hash).
-   * @param {string} userData.data_cadastro - Data de cadastro no formato 'YYYY-MM-DD'.
-   * @returns {object} O usuário criado com seu ID, nome e email.
+   * Cria um novo usuário.
+   * Aceita { nome_completo, email, senha_hash }.
+   * data_cadastro é automático pelo banco.
    */
-  static async create(userData) {
-    const { nome_completo, email, senha_hash, data_cadastro } = userData;
-    const query = 'INSERT INTO usuario (nome_completo, email, senha_hash, data_cadastro) VALUES (?, ?, ?, ?)';
-
+  static async create({ nome_completo, email, senha_hash }) {
+    const query = `
+      INSERT INTO usuario (nome_completo, email, senha_hash)
+      VALUES (?, ?, ?)
+    `;
     try {
-      const [result] = await pool.execute(query, [nome_completo, email, senha_hash, data_cadastro]);
+      const [result] = await pool.execute(query, [nome_completo, email, senha_hash]);
       return { id: result.insertId, nome_completo, email };
     } catch (error) {
-      console.error('Erro ao criar usuário:', error);
+      console.error('❌ Erro ao criar usuário:', error);
       throw error;
     }
   }
 
   /**
-   * Encontra um usuário pelo seu endereço de email.
-   * @param {string} email - Email do usuário a ser buscado.
-   * @returns {object|undefined} O objeto do usuário se encontrado, ou undefined.
+   * Busca por e-mail.
+   * includePassword opcional para retornar senha_hash quando necessário (ex.: login).
    */
-  static async findByEmail(email) {
-    const query = 'SELECT * FROM usuario WHERE email = ?';
-<<<<<<< HEAD
-    const [rows] = await pool.execute(query, [email]);
-    return rows[0];
-  }
-
-  static async findById(id, includePassword = false) {
-    const fields = 'id, nome_completo, email, data_cadastro' + (includePassword ? ', senha_hash' : '');
-    const query = `SELECT ${fields} FROM usuario WHERE id = ?`;
-    const [rows] = await pool.execute(query, [id]);
-    return rows[0];
-=======
-
+  static async findByEmail(email, includePassword = false) {
+    const fields = includePassword
+      ? 'id, nome_completo, email, senha_hash, data_cadastro, token_recuperacao_senha'
+      : 'id, nome_completo, email, data_cadastro, token_recuperacao_senha';
+    const query = `SELECT ${fields} FROM usuario WHERE email = ? LIMIT 1`;
     try {
       const [rows] = await pool.execute(query, [email]);
       return rows[0];
     } catch (error) {
-      console.error('Erro ao buscar usuário por email:', error);
+      console.error('❌ Erro ao buscar usuário por email:', error);
       throw error;
     }
   }
 
   /**
-   * Encontra um usuário pelo seu ID.
-   * @param {number} id - ID do usuário a ser buscado.
-   * @returns {object|undefined} O objeto do usuário (com campos selecionados) se encontrado, ou undefined.
+   * Busca por ID.
+   * includePassword opcional.
    */
-  static async findById(id) {
-    const query = 'SELECT id, nome_completo, email, data_cadastro FROM usuario WHERE id = ?';
-
+  static async findById(id, includePassword = false) {
+    const fields = includePassword
+      ? 'id, nome_completo, email, senha_hash, data_cadastro, token_recuperacao_senha'
+      : 'id, nome_completo, email, data_cadastro, token_recuperacao_senha';
+    const query = `SELECT ${fields} FROM usuario WHERE id = ? LIMIT 1`;
     try {
       const [rows] = await pool.execute(query, [id]);
       return rows[0];
     } catch (error) {
-      console.error('Erro ao buscar usuário por ID:', error);
+      console.error('❌ Erro ao buscar usuário por ID:', error);
       throw error;
     }
->>>>>>> 955ab6818754a84eaa773769df8ba1f618616e52
   }
 
   /**
-   * Obtém todos os usuários registrados no sistema.
-   * @returns {Array<object>} Uma lista de objetos de usuários (com campos selecionados), ordenados pela data de cadastro.
+   * Lista todos os usuários (ordenado por data de cadastro desc).
    */
   static async getAll() {
-<<<<<<< HEAD
-    const query = 'SELECT id, nome_completo, email FROM usuario ORDER BY nome_completo ASC';
-    const [rows] = await pool.execute(query);
-    return rows;
-  }
-
-  static async update(id, data) {
-    const query = 'UPDATE usuario SET nome_completo = ?, email = ? WHERE id = ?';
-    await pool.execute(query, [data.nome_completo, data.email, id]);
-  }
-
-  static async updatePassword(id, newPasswordHash) {
-    const query = 'UPDATE usuario SET senha_hash = ? WHERE id = ?';
-    await pool.execute(query, [newPasswordHash, id]);
-=======
-    const query = 'SELECT id, nome_completo, email, data_cadastro FROM usuario ORDER BY data_cadastro DESC';
-
+    const query = `
+      SELECT id, nome_completo, email, data_cadastro
+      FROM usuario
+      ORDER BY data_cadastro DESC
+    `;
     try {
       const [rows] = await pool.execute(query);
       return rows;
     } catch (error) {
-      console.error('Erro ao obter todos os usuários:', error);
+      console.error('❌ Erro ao obter todos os usuários:', error);
       throw error;
     }
->>>>>>> 955ab6818754a84eaa773769df8ba1f618616e52
+  }
+
+  /**
+   * Atualiza nome e email.
+   */
+  static async update(id, { nome_completo, email }) {
+    const query = `
+      UPDATE usuario
+      SET nome_completo = ?, email = ?
+      WHERE id = ?
+    `;
+    try {
+      await pool.execute(query, [nome_completo, email, id]);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar usuário:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Atualiza a senha (hash).
+   */
+  static async updatePassword(id, newPasswordHash) {
+    const query = `
+      UPDATE usuario
+      SET senha_hash = ?
+      WHERE id = ?
+    `;
+    try {
+      await pool.execute(query, [newPasswordHash, id]);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar senha do usuário:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Define/limpa token de recuperação de senha.
+   */
+  static async setRecoveryToken(id, tokenOrNull) {
+    const query = `
+      UPDATE usuario
+      SET token_recuperacao_senha = ?
+      WHERE id = ?
+    `;
+    try {
+      await pool.execute(query, [tokenOrNull, id]);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar token de recuperação:', error);
+      throw error;
+    }
   }
 }
 
