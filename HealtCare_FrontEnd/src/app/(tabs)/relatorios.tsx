@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     eventTextContainer: { flex: 1 },
     eventTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
     eventSubtitle: { fontSize: 14, color: '#E0E0E0' },
-    quickAccessContainer: { flexDirection: 'row', justifyContent: 'space-between' },
+    quickAccessContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
     quickAccessCard: { backgroundColor: '#FFFFFF', borderRadius: 15, width: '48%', alignItems: 'center', paddingVertical: 30, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
     quickAccessTitle: { marginTop: 10, fontSize: 14, fontWeight: 'bold', color: '#333' },
     // Estilo para o container do loading
