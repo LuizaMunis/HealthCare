@@ -125,10 +125,6 @@ export default function RegisterScreen() {
             <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}>
               {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Cadastrar-me</Text>}
             </TouchableOpacity>
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/iarla
             <View style={styles.footer}>
               <Text style={styles.footerText}>Já tem uma conta? </Text>
               <Link href="/login" asChild>

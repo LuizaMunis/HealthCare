@@ -7,17 +7,28 @@ import Constants from 'expo-constants';
 const getApiBaseUrl = () => {
   // A variável global __DEV__ é `true` quando rodando no modo de desenvolvimento.
   if (__DEV__) {
-    // Em desenvolvimento, pegamos o endereço do host do servidor Metro Bundler.
+    // Permite sobrescrever via variável de ambiente quando necessário
+    const envDev = process.env.EXPO_PUBLIC_API_URL_DEV;
+    if (envDev) return envDev;
+
+    // Em desenvolvimento, tentamos obter o host usado pelo Metro/Expo
     // Exemplo de hostUri: "192.168.15.8:8081"
     const hostUri = Constants.expoConfig?.hostUri;
-    
-    // Extraímos apenas o IP/hostname, removendo a porta.
-    const hostname = hostUri?.split(':')[0];
-    
-    // A porta do seu backend (ex: 3000). Altere se for diferente.
-    const backendPort = 3000; 
 
-    // Montamos a URL de desenvolvimento dinamicamente.
+    // Expo Go (manifest v2) pode expor o host aqui
+    // @ts-ignore - campos internos do manifest2
+    const expoGoHost = (Constants as any)?.manifest2?.extra?.expoGo?.developer?.host as string | undefined;
+
+    // Em ambiente web, usar o hostname atual do browser
+    const webHost = typeof window !== 'undefined' ? window.location?.hostname : undefined;
+
+    // Escolhe, em ordem, o host do Expo, do manifest2, do browser, ou fallback para localhost
+    const hostname = hostUri?.split(':')[0] || expoGoHost || webHost || 'localhost';
+
+    // Porta do backend
+    const backendPort = 3000;
+
+    // Monta a URL de desenvolvimento dinamicamente.
     return `http://${hostname}:${backendPort}`;
   } else {
     // Em produção, usamos a URL definida nas variáveis de ambiente.
