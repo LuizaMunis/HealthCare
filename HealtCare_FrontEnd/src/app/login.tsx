@@ -3,7 +3,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '@/services/apiService';
 
@@ -13,6 +14,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); 
   const router = useRouter();
 
   const handleLogin = async () => {
@@ -20,38 +22,48 @@ export default function LoginScreen() {
       Alert.alert('Erro', 'Por favor, preencha o email e a senha.');
       return;
     }
+    setIsLoading(true);
 
     try {
       const result = await ApiService.login({ email, password });
 
       if (result.success) {
+        console.log('Resposta completa da API:', JSON.stringify(result, null, 2));
+
         // Salvar informações do usuário
-        await AsyncStorage.setItem('userInfo', JSON.stringify(result.data.data.user));
+        await AsyncStorage.setItem('userInfo', JSON.stringify(result.data.user));
 
         // Verificar se o perfil foi preenchido
+        console.log('Buscando dados do perfil adicional...');
         const profileResult = await ApiService.getAdditionalProfile();
-        
-        if (profileResult.success && profileResult.data && profileResult.data.data) {
-          const profileData = profileResult.data.data;
+        console.log('Resultado do perfil adicional:', JSON.stringify(profileResult, null, 2));
+
+        if (profileResult.success && profileResult.data) {
+          const profileData = profileResult.data;
           
+          console.log('Dados do perfil a serem verificados:', profileData);
+
           // Verificar se o perfil tem dados essenciais preenchidos
           const hasEssentialData = profileData.cpf && 
                                   profileData.celular && 
                                   profileData.data_nascimento && 
-                                  profileData.peso && 
-                                  profileData.altura && 
+                                  profileData.peso != null && // Checa se não é nulo ou undefined
+                                  profileData.altura != null && // Checa se não é nulo ou undefined
                                   profileData.genero;
           
+          console.log('O perfil tem dados essenciais?', hasEssentialData);
+
           if (hasEssentialData) {
-            // Perfil completo, navegar para home
+            console.log('DECISÃO: Perfil completo. Navegando para /home.');
             router.replace('/(tabs)/home');
           } else {
-            // Perfil incompleto, navegar para perfil
-            router.replace('/Perfil');
+            console.log('DECISÃO: Perfil incompleto. Navegando para /CompletarPerfilInicial.');
+            router.replace('/CompletarPerfilInicial');
           }
         } else {
-          // Erro ao buscar perfil ou perfil não existe, navegar para perfil
-          router.replace('/Perfil');
+          // Isso acontece se a API falhar ou se a estrutura de dados não for a esperada.
+          console.log('DECISÃO: Falha ao buscar perfil ou perfil não existe. Navegando para /CompletarPerfilInicial.');
+          router.replace('/CompletarPerfilInicial');
         }
       } else {
         Alert.alert('Falha no Login', result.error || 'Credenciais inválidas.');
@@ -59,6 +71,8 @@ export default function LoginScreen() {
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       Alert.alert('Erro', 'Não foi possível conectar ao servidor. Tente novamente mais tarde.');
+    } finally {
+      setIsLoading(false); // Desativa o loading no final
     }
   };
 
@@ -96,9 +110,11 @@ export default function LoginScreen() {
         
         <View style={styles.optionsContainer}>
             <Text>Lembre-me</Text>
-            <TouchableOpacity>
-                <Text style={styles.linkText}>Esqueceu a sua senha?</Text>
-            </TouchableOpacity>
+            <Link href="/forgot-password/forgot-password" asChild>
+                <TouchableOpacity>
+                    <Text style={styles.linkText}>Esqueceu a sua senha?</Text>
+                </TouchableOpacity>
+            </Link>
         </View>
 
         <TouchableOpacity style={styles.button} onPress={handleLogin}>

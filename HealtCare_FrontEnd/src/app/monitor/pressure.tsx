@@ -1,7 +1,7 @@
 // HealthCare_FrontEnd/src/app/monitor/pressure.tsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert, Platform, Animated } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -57,7 +57,6 @@ export default function PressureScreen() {
     }, 0);
     return () => clearTimeout(t);
   }, []);
-
   const handleSave = async () => {
     if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
       Alert.alert('Atenção', 'Por favor, insira valores de pressão válidos.');
@@ -65,13 +64,16 @@ export default function PressureScreen() {
     }
 
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) {
-        Alert.alert('Erro de Autenticação', 'Você não está logado.');
+        Alert.alert('Erro de Autenticação', 'Você não está logado. Por favor, faça o login novamente.');
+        router.push('/login'); 
         return;
       }
 
       const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}`;
+      const now = new Date();
+      const measurementDateTime = new Date(`${dateISO}T${now.toTimeString().slice(0, 8)}`);
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -81,7 +83,7 @@ export default function PressureScreen() {
         body: JSON.stringify({
           sistolica_mmhg: systolic,
           diastolica_mmhg: diastolic,
-          data_hora_medicao: `${dateISO} ${new Date().toTimeString().slice(0, 8)}`,
+          data_hora_medicao: measurementDateTime.toISOString()
         }),
       });
 
@@ -90,11 +92,13 @@ export default function PressureScreen() {
         throw new Error(result.message || 'O servidor retornou um erro ao salvar os dados.');
       }
 
-      Alert.alert('Sucesso!', 'Sua pressão foi salva.');
-      router.back();
+      console.log('Dados salvos com sucesso no servidor:', result);
+      Alert.alert('Sucesso!', 'Sua pressão arterial foi salva.');
+      router.back(); // Volta para a tela anterior
+
     } catch (error: any) {
-      console.error('Erro ao salvar pressão:', error);
-      Alert.alert('Erro', error.message || 'Não foi possível conectar ao servidor.');
+      console.error('Erro ao salvar medição:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível conectar ao servidor. Tente novamente.');
     }
   };
 
@@ -269,6 +273,36 @@ export default function PressureScreen() {
             />
           )}
         </View>
+        <View style={styles.dateContainer}>
+          <Text style={styles.dateLabel}>Data do registro</Text>
+          <TouchableOpacity
+            accessibilityLabel="Selecionar data do registro"
+            style={styles.dateInput}
+            onPress={() => setShowPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dateInputText}>{dateDisplay}</Text>
+          </TouchableOpacity>
+          {showPicker && (
+            <DateTimePicker
+              value={new Date(dateISO + 'T00:00:00')}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={today}
+              onChange={(event, selectedDate) => {
+                if (Platform.OS === 'android') setShowPicker(false);
+                if (!selectedDate) return;
+                const chosen = new Date(selectedDate);
+                chosen.setHours(0,0,0,0);
+                if (chosen.getTime() > today.getTime()) {
+                  Alert.alert('Data inválida', 'Data não pode ser no futuro');
+                  return;
+                }
+                setDateISO(toLocalISODate(chosen));
+              }}
+            />
+          )}
+        </View>
 
         {/* --- Botão Salvar --- */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -279,7 +313,7 @@ export default function PressureScreen() {
   );
 }
 
-// ... (Estilos permanecem os mesmos)
+// (Estilos)
 const styles = StyleSheet.create({
   container: {
     flex: 1,

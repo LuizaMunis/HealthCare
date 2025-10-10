@@ -55,7 +55,8 @@ class RegistroPressaoArterialController {
         data_hora_medicao: data_hora_medicao // Deveria ser um string em formato de DATETIME válido
       };
 
-      const newRegistro = await RegistroPressaoArterialService.createRegistro(registroData);
+      const newRegistro = await RegistroPressaoArterialService.createRegistro(newRegistroData);
+
 
       res.status(201).json({
         success: true,

@@ -1,7 +1,7 @@
 // HealthCare_Backend/src/controllers/userController.js
 
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); // se preferir evitar dependência nativa, troque por 'bcryptjs'
 const UserService = require('../services/userService');
 const UserModel = require('../models/userModel');
 
@@ -49,13 +49,22 @@ class UserController {
         senha_hash,
       });
 
+      const token = jwt.sign(
+        { id: created.id, email: created.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
       return res.status(201).json({
         success: true,
         message: 'Usuário criado com sucesso',
         data: {
-          id: created.id,
-          nome_completo: created.nome_completo,
-          email: created.email,
+          user: {
+            id: created.id,
+            nome_completo: created.nome_completo,
+            email: created.email,
+          },
+          token,
         }
       });
     } catch (error) {

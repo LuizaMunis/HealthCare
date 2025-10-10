@@ -1,3 +1,10 @@
+/**
+ * @file Componente de ScrollView que aplica um efeito "parallax" a uma imagem de cabeçalho.
+ * Conforme o usuário rola a tela, a imagem se move e escala de forma animada,
+ * criando uma experiência visualmente rica e dinâmica.
+ * Utiliza a biblioteca `react-native-reanimated` para animações performáticas.
+ */
+
 import type { PropsWithChildren, ReactElement } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
@@ -11,11 +18,12 @@ import { ThemedView } from '@/components/ui/ThemedView';
 import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
+// Altura fixa para a área do cabeçalho que será animada.
 const HEADER_HEIGHT = 250;
 
 type Props = PropsWithChildren<{
-  headerImage: ReactElement;
-  headerBackgroundColor: { dark: string; light: string };
+  headerImage: ReactElement; // O componente da imagem a ser exibido no cabeçalho.
+  headerBackgroundColor: { dark: string; light: string }; // Cores de fundo para os temas.
 }>;
 
 export default function ParallaxScrollView({
@@ -24,13 +32,19 @@ export default function ParallaxScrollView({
   headerBackgroundColor,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
+  // Referência animada para o ScrollView.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  // Hook que rastreia a posição de rolagem (offset) do ScrollView.
   const scrollOffset = useScrollViewOffset(scrollRef);
   const bottom = useBottomTabOverflow();
+
+  // Hook que define o estilo animado do cabeçalho.
   const headerAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
         {
+          // 'interpolate' mapeia a posição do scroll para um valor de translação (movimento Y).
+          // Isso faz a imagem se mover para cima mais lentamente que o scroll.
           translateY: interpolate(
             scrollOffset.value,
             [-HEADER_HEIGHT, 0, HEADER_HEIGHT],
@@ -38,6 +52,8 @@ export default function ParallaxScrollView({
           ),
         },
         {
+          // Também mapeia a posição do scroll para um valor de escala.
+          // Isso faz a imagem dar um "zoom out" suave ao começar a rolar.
           scale: interpolate(scrollOffset.value, [-HEADER_HEIGHT, 0, HEADER_HEIGHT], [2, 1, 1]),
         },
       ],
@@ -48,17 +64,19 @@ export default function ParallaxScrollView({
     <ThemedView style={styles.container}>
       <Animated.ScrollView
         ref={scrollRef}
-        scrollEventThrottle={16}
+        scrollEventThrottle={16} // Define a frequência de eventos de scroll (importante para performance).
         scrollIndicatorInsets={{ bottom }}
         contentContainerStyle={{ paddingBottom: bottom }}>
+        {/* View animada que contém a imagem do cabeçalho */}
         <Animated.View
           style={[
             styles.header,
             { backgroundColor: headerBackgroundColor[colorScheme] },
-            headerAnimatedStyle,
+            headerAnimatedStyle, // Aplica os estilos de animação calculados.
           ]}>
           {headerImage}
         </Animated.View>
+        {/* View que contém o conteúdo principal da tela */}
         <ThemedView style={styles.content}>{children}</ThemedView>
       </Animated.ScrollView>
     </ThemedView>
@@ -71,7 +89,7 @@ const styles = StyleSheet.create({
   },
   header: {
     height: HEADER_HEIGHT,
-    overflow: 'hidden',
+    overflow: 'hidden', // Garante que a imagem não "vaze" da área do cabeçalho.
   },
   content: {
     flex: 1,
