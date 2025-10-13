@@ -98,9 +98,20 @@ export default function HomeScreen() {
               style={styles.quickAccessCard} 
               onPress={() => router.push('/history/medication')}
             >
-              <Feather name="circle" size={32} color="#004A61" />
+              <Feather name="pill" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Medicamento</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.quickAccessContainer}>
+          <TouchableOpacity 
+              style={styles.quickAccessCard} 
+              onPress={() => router.push('/history/vaccination')}
+            >
+              <Feather name="shield" size={32} color="#004A61" />
+              <Text style={styles.quickAccessTitle}>Vacinação</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.quickAccessCardPlaceholder} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -126,6 +137,11 @@ const styles = StyleSheet.create({
     quickAccessContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
     quickAccessCard: { backgroundColor: '#FFFFFF', borderRadius: 15, width: '48%', alignItems: 'center', paddingVertical: 30, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
     quickAccessTitle: { marginTop: 10, fontSize: 14, fontWeight: 'bold', color: '#333' },
+    quickAccessCardPlaceholder: {
+        width: '48%',
+        height: 0,
+        opacity: 0
+    },
     // Estilo para o container do loading
     loaderContainer: {
         flex: 1,
