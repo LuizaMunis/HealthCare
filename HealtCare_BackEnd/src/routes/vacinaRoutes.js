@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const VacinaController = require('../controllers/vacinaController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
 
 // Protege todas as rotas de vacinas com autenticação
 router.use(authMiddleware);

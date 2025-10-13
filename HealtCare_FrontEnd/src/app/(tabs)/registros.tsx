@@ -82,6 +82,18 @@ export default function RegistrosScreen() {
             <Text style={styles.quickAccessTitle}>Medicamento</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={styles.quickAccessContainer}>
+          <TouchableOpacity 
+            style={styles.quickAccessCard} 
+            onPress={() => router.push('/monitor/vacina')}
+          >
+            <Feather name="shield" size={32} color="#004A61" />
+            <Text style={styles.quickAccessTitle}>Vacinação</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.quickAccessCardPlaceholder} />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -150,6 +162,11 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     fontWeight: 'bold', 
     color: '#333' 
+  },
+  quickAccessCardPlaceholder: {
+    width: '48%',
+    height: 0,
+    opacity: 0
   },
   loaderContainer: {
     flex: 1,

@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const MedicamentoController = require('../controllers/medicamentoController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
 

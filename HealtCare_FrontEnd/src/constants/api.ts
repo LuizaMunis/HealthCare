@@ -60,4 +60,5 @@ export const ENDPOINTS = {
   PRESSURE_RECORDS: '/registros-pressao',
   TEMPERATURE_RECORDS: '/temperatura',
   HEART_RATE_RECORDS: '/frequencia-cardiaca',
+  VACCINE_RECORDS: '/vacina',
 };

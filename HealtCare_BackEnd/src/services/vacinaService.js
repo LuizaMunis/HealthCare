@@ -8,7 +8,7 @@ class VacinaService {
    * Helper para obter o perfil_id a partir do usuario_id.
    */
   static async _getPerfilId(usuarioId) {
-    const perfil = await PerfilModel.findByUsuarioId(usuarioId);
+    const perfil = await PerfilModel.findByUserId(usuarioId);
     if (!perfil) {
       throw new Error('Perfil de usuário não encontrado. Complete seu perfil para continuar.');
     }

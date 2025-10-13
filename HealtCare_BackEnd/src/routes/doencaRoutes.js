@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const DoencaController = require('../controllers/doencaController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
 
