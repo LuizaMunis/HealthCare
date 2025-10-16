@@ -15,19 +15,17 @@ console.log('PORT:', process.env.PORT);
 const { testConnection } = require('./config/database');
 const UserModel = require('./models/userModel');
 const PerfilModel = require('./models/perfilModel');
-const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel');
-const VacinaModel = require('./models/vacinaModel'); 
+const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel'); 
 
 // --- Rotas ---
 const userRoutes = require('./routes/userRoutes');
 const perfilRoutes = require('./routes/perfilRoutes');
 const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // Importa as rotas de registros
-const vacinaRoutes = require('./routes/vacinaRoutes'); // Importa as rotas de vacinas
 const ErrorMiddleware = require('./middleware/errorMiddleware'); // Ajuste o caminho se necessário
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0'; // ✅ acessível pela rede
+const HOST = process.env.HOST || '0.0.0.0';
 
 // --- Middlewares globais ---
 app.use(cors());
@@ -43,10 +41,9 @@ app.use(ErrorMiddleware.handleTimeout);
 // --- Rotas da API ---
 app.use('/api/users', userRoutes);
 app.use('/api/perfil', perfilRoutes);
-app.use('/api/registros-pressao', registroPressaoArterialRoutes);
-app.use('/api/vacina', vacinaRoutes); 
+app.use('/api/registros-pressao', registroPressaoArterialRoutes); 
 
-// --- Health checks (ambas por conveniência) ---
+// --- Health checks ---
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, message: 'API funcionando e saudável!', timestamp: new Date().toISOString() });
 });
@@ -54,7 +51,7 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, message: 'alive', ts: Date.now() });
 });
 
-// --- Boot do servidor + migrações simples ---
+// --- Boot do servidor ---
 const startServer = async () => {
   try {
     console.log('🔗 Tentando conectar ao banco de dados...');
@@ -69,9 +66,6 @@ const startServer = async () => {
 
     console.log('📦 Verificando/criando tabela de registros de pressão arterial...');
     await RegistroPressaoArterialModel.createTable();
-
-    console.log('📦 Verificando/criando tabela de vacinas...');
-    await VacinaModel.createTable();
 
     // --- Middlewares finais de erro (depois das rotas) ---
     app.use(ErrorMiddleware.handleSyntaxError);

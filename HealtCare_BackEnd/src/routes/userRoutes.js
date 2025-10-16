@@ -1,14 +1,13 @@
-// HealthCare_Back-End/src/routes/userRoutes.js
+// HealthCare_BackEnd/src/routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
 const UserController = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const ValidationMiddleware = require('../middleware/validationMiddleware');
 
-// Rotas públicas com validação
 router.post('/register', 
   ValidationMiddleware.sanitizeInput,
-  ValidationMiddleware.validateUserRegistration(),
+  ValidationMiddleware.validateUserRegistration(), 
   UserController.register
 );
 
@@ -18,15 +17,15 @@ router.post('/login',
   UserController.login
 );
 
-// Rotas protegidas
-router.get('/profile', authMiddleware, UserController.getProfile);
-router.get('/all', authMiddleware, UserController.getAllUsers);
+router.get('/profiles', 
+  authMiddleware, 
+  UserController.getUserProfiles 
+);
 
-// Rotas protegidas com validação
-router.put('/profile', 
+router.put('/update-user', 
   authMiddleware,
   ValidationMiddleware.sanitizeInput,
-  ValidationMiddleware.validateProfileUpdate(),
+  ValidationMiddleware.validateProfileUpdate(), 
   UserController.updateProfile
 );
 
@@ -36,5 +35,7 @@ router.post('/change-password',
   ValidationMiddleware.validatePasswordChange(),
   UserController.changePassword
 );
+
+router.get('/all', authMiddleware, UserController.getAllUsers);
 
 module.exports = router;
