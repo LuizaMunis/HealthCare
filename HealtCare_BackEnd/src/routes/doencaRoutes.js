@@ -1,26 +1,23 @@
 // backend/src/routes/doencaRoute.js
 const express = require('express');
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 const DoencaController = require('../controllers/doencaController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
 
-// --- Rotas para o CRUD de Doenças ---
 router.post('/', DoencaController.createDoenca);
-router.get('/', DoencaController.getAllDoencas);
-router.get('/:id', DoencaController.getDoencaById);
-router.put('/:id', DoencaController.updateDoenca);
-router.delete('/:id', DoencaController.deleteDoenca);
 
-// --- Rotas Aninhadas para os Sintomas de uma Doença ---
+router.get('/', DoencaController.getAllDoencasByProfile);
 
-// Adicionar um sintoma a uma doença específica
-// POST /api/doencas/45/sintomas
-router.post('/:doencaId/sintomas', DoencaController.addSintoma);
+router.get('/:doencaId', DoencaController.getDoencaById);
 
-// Listar todos os sintomas de uma doença específica
-// GET /api/doencas/45/sintomas
-router.get('/:doencaId/sintomas', DoencaController.getSintomasByDoenca);
+router.put('/:doencaId', DoencaController.updateDoenca);
+
+router.delete('/:doencaId', DoencaController.deleteDoenca);
+
+router.post('/:doencaId/symptoms', DoencaController.addSintomaToDoenca);
+
+router.get('/:doencaId/symptoms', DoencaController.getSintomasByDoenca);
 
 module.exports = router;

@@ -4,85 +4,80 @@ const FrequenciaCardiacaModel = require('../models/frequenciaCardiacaModel');
 const PerfilModel = require('../models/perfilModel');
 
 class FrequenciaCardiacaService {
-  static async _getPerfilId(usuarioId) {
-    const perfil = await PerfilModel.findByUsuarioId(usuarioId);
-    if (!perfil) {
-      throw new Error('Perfil de usuário não encontrado.');
-    }
-    return perfil.id;
-  }
+  static async createRegistro(usuarioId, perfilId, registroData) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
 
-  /**
-   * Cria um novo registro de frequência cardíaca.
-   */
-  static async createRegistro(usuarioId, dadosRegistro) {
-    const { bpm, data_hora_medicao } = dadosRegistro;
+    const { bpm, data_hora_medicao } = registroData;
+
     if (!bpm || !data_hora_medicao) {
       throw new Error('BPM (batimentos por minuto) e data/hora da medição são obrigatórios.');
     }
-    if (typeof bpm !== 'number' || bpm <= 0) {
-        throw new Error('O valor de BPM deve ser um número positivo.');
+    if (typeof bpm !== 'number' || bpm < 30 || bpm > 250) {
+      throw new Error('BPM inválido ou fora do intervalo humano (30-250 bpm).');
     }
 
-    const perfilId = await this._getPerfilId(usuarioId);
-    const dadosParaCriar = { ...dadosRegistro, perfil_id: perfilId };
+    const dataToCreate = {
+      perfil_id: perfilId,
+      bpm,
+      data_hora_medicao,
+    };
 
-    return await FrequenciaCardiacaModel.create(dadosParaCriar);
+    return await FrequenciaCardiacaModel.create(dataToCreate);
   }
 
-  /**
-   * Retorna todos os registros de um usuário.
-   */
-  static async getAllRegistrosByUsuario(usuarioId) {
-    const perfilId = await this._getPerfilId(usuarioId);
+  static async getAllRegistrosByProfile(usuarioId, perfilId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
     return await FrequenciaCardiacaModel.findByPerfilId(perfilId);
   }
 
-  /**
-   * Busca um registro por ID, garantindo que pertence ao usuário.
-   */
-  static async getRegistroById(usuarioId, registroId) {
-    const perfilId = await this._getPerfilId(usuarioId);
-    const registro = await FrequenciaCardiacaModel.findById(registroId);
-
-    if (!registro) {
-      throw new Error('Registro de frequência cardíaca não encontrado.');
-    }
-    if (registro.perfil_id !== perfilId) {
-      throw new Error('Acesso negado. Este registro não pertence ao seu perfil.');
-    }
-    return registro;
+  static async getRegistroById(usuarioId, perfilId, registroId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
+    return await this._verifyRegistroOwnership(perfilId, registroId);
   }
 
-  /**
-   * Atualiza um registro.
-   */
-  static async updateRegistro(usuarioId, registroId, dadosUpdate) {
-    await this.getRegistroById(usuarioId, registroId); // Garante a posse
+  static async updateRegistro(usuarioId, perfilId, registroId, updateData) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
+    await this._verifyRegistroOwnership(perfilId, registroId);
 
-    delete dadosUpdate.id;
-    delete dadosUpdate.perfil_id;
-
-    if (Object.keys(dadosUpdate).length === 0) {
-      throw new Error("Nenhum dado fornecido para atualização.");
+    if (updateData.bpm && (typeof updateData.bpm !== 'number' || updateData.bpm < 30 || updateData.bpm > 250)) {
+        throw new Error('BPM inválido ou fora do intervalo humano (30-250 bpm).');
     }
 
-    const sucesso = await FrequenciaCardiacaModel.update(registroId, dadosUpdate);
-    if (!sucesso) throw new Error("Falha ao atualizar o registro.");
-    
+    await FrequenciaCardiacaModel.update(registroId, updateData);
     return await FrequenciaCardiacaModel.findById(registroId);
   }
 
-  /**
-   * Deleta um registro.
-   */
-  static async deleteRegistro(usuarioId, registroId) {
-    await this.getRegistroById(usuarioId, registroId); // Garante a posse
+  static async deleteRegistro(usuarioId, perfilId, registroId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
+    await this._verifyRegistroOwnership(perfilId, registroId);
 
-    const sucesso = await FrequenciaCardiacaModel.delete(registroId);
-    if (!sucesso) throw new Error("Falha ao deletar o registro.");
-    
+    const deleted = await FrequenciaCardiacaModel.delete(registroId);
+    if (!deleted) {
+      throw new Error('Erro ao deletar o registro de frequência cardíaca.');
+    }
     return true;
+  }
+
+  static async _verifyProfileOwnership(usuarioId, profileId) {
+    const perfil = await PerfilModel.findById(profileId);
+    if (!perfil) {
+      throw new Error('Perfil não encontrado.');
+    }
+    if (perfil.usuario_id !== usuarioId) {
+      throw new Error('Acesso não autorizado a este perfil.');
+    }
+    return perfil;
+  }
+
+  static async _verifyRegistroOwnership(perfilId, registroId) {
+    const registro = await FrequenciaCardiacaModel.findById(registroId);
+    if (!registro) {
+      throw new Error('Registro de frequência cardíaca não encontrado.');
+    }
+    if (registro.perfil_id !== Number(perfilId)) {
+      throw new Error('Registro não pertence a este perfil.');
+    }
+    return registro;
   }
 }
 

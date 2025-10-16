@@ -1,42 +1,14 @@
 // backend/src/models/doencaModel.js
-const { pool } = require('../config/database');
+const pool = require('../config/database');
 
 class DoencaModel {
-  static async createTable() {
-    const query = `
-      CREATE TABLE IF NOT EXISTS doenca (
-        id INT NOT NULL AUTO_INCREMENT,
-        perfil_id INT NOT NULL,
-        nome_doenca VARCHAR(100) NOT NULL,
-        tipo_doenca VARCHAR(45) NOT NULL,
-        data_diagnostico DATE NULL,
-        data_inicio_sintomas DATE NULL,
-        data_cura DATE NULL,
-        observacoes TEXT NULL,
-        PRIMARY KEY (id),
-        INDEX fk_doenca_perfil_idx (perfil_id ASC),
-        CONSTRAINT fk_doenca_perfil
-          FOREIGN KEY (perfil_id)
-          REFERENCES perfil (id)
-          ON DELETE CASCADE
-      ) ENGINE = InnoDB;
-    `;
-    try {
-      await pool.execute(query);
-      console.log('✅ Tabela doenca criada/verificada com sucesso!');
-    } catch (error) {
-      console.error('❌ Erro ao criar tabela doenca:', error);
-      throw error;
-    }
-  }
-
   static async create(dadosDoenca) {
     const { perfil_id, nome_doenca, tipo_doenca, data_diagnostico, data_inicio_sintomas, data_cura, observacoes } = dadosDoenca;
     const query = `
       INSERT INTO doenca (perfil_id, nome_doenca, tipo_doenca, data_diagnostico, data_inicio_sintomas, data_cura, observacoes)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
-    const values = [perfil_id, nome_doenca, tipo_doenca, data_diagnostico, data_inicio_sintomas, data_cura, observacoes];
+    const values = [perfil_id, nome_doenca, tipo_doenca, data_diagnostico || null, data_inicio_sintomas || null, data_cura || null, observacoes || null];
 
     try {
       const [result] = await pool.execute(query, values);

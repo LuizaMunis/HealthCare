@@ -5,77 +5,105 @@ class MedicamentoController {
   // --- MÉTODOS CRUD PARA MEDICAMENTO ---
   static async createMedicamento(req, res) {
     try {
-      const novoMedicamento = await MedicamentoService.createMedicamento(req.user.id, req.body);
-      res.status(201).json({ success: true, message: 'Medicamento registrado!', data: novoMedicamento });
+      const usuarioId = req.user.id;
+      const { profileId } = req.params;
+      const medicamentoData = req.body;
+
+      const novoMedicamento = await MedicamentoService.createMedicamento(usuarioId, profileId, medicamentoData);
+      res.status(201).json({ success: true, message: 'Medicamento registrado com sucesso!', data: novoMedicamento });
     } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
-  static async getAllMedicamentos(req, res) {
+  static async getAllMedicamentosByProfile(req, res) {
     try {
-      const medicamentos = await MedicamentoService.getAllMedicamentosByUsuario(req.user.id);
+      const usuarioId = req.user.id;
+      const { profileId } = req.params;
+
+      const medicamentos = await MedicamentoService.getAllMedicamentosByProfile(usuarioId, profileId);
       res.status(200).json({ success: true, data: medicamentos });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
   static async getMedicamentoById(req, res) {
     try {
-      const { id } = req.params;
-      const medicamento = await MedicamentoService.getMedicamentoById(req.user.id, id);
+      const usuarioId = req.user.id;
+      const { profileId, medicamentoId } = req.params;
+
+      const medicamento = await MedicamentoService.getMedicamentoById(usuarioId, profileId, medicamentoId);
       res.status(200).json({ success: true, data: medicamento });
     } catch (error) {
-      const statusCode = error.message.includes('não encontrado') ? 404 : 403;
-      res.status(statusCode).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
   static async updateMedicamento(req, res) {
     try {
-        const { id } = req.params;
-        const data = await MedicamentoService.updateMedicamento(req.user.id, id, req.body);
-        res.status(200).json({ success: true, message: 'Medicamento atualizado!', data });
+        const usuarioId = req.user.id;
+        const { profileId, medicamentoId } = req.params;
+        const updateData = req.body;
+
+        const data = await MedicamentoService.updateMedicamento(usuarioId, profileId, medicamentoId, updateData);
+        res.status(200).json({ success: true, message: 'Medicamento atualizado com sucesso!', data });
     } catch (error) {
-        const statusCode = error.message.includes('não encontrado') ? 404 : 400;
-        res.status(statusCode).json({ success: false, message: error.message });
+        this.handleError(res, error);
     }
   }
 
   static async deleteMedicamento(req, res) {
     try {
-        const { id } = req.params;
-        await MedicamentoService.deleteMedicamento(req.user.id, id);
-        res.status(200).json({ success: true, message: 'Medicamento deletado!' });
+        const usuarioId = req.user.id;
+        const { profileId, medicamentoId } = req.params;
+
+        await MedicamentoService.deleteMedicamento(usuarioId, profileId, medicamentoId);
+        res.status(200).json({ success: true, message: 'Medicamento deletado com sucesso!' });
     } catch (error) {
-        const statusCode = error.message.includes('não encontrado') ? 404 : 500;
-        res.status(statusCode).json({ success: false, message: error.message });
+        this.handleError(res, error);
     }
   }
 
-  // --- NOVOS MÉTODOS PARA REGISTRO DE USO ---
-  
+  // --- MÉTODOS PARA REGISTRO DE USO ---
   static async registrarUsoMedicamento(req, res) {
     try {
-      const { medicamentoId } = req.params;
-      const novoRegistro = await MedicamentoService.registrarUso(req.user.id, medicamentoId, req.body);
-      res.status(201).json({ success: true, message: 'Uso do medicamento registrado!', data: novoRegistro });
+      const usuarioId = req.user.id;
+      const { profileId, medicamentoId } = req.params;
+      const usoData = req.body;
+
+      const novoRegistro = await MedicamentoService.registrarUso(usuarioId, profileId, medicamentoId, usoData);
+      res.status(201).json({ success: true, message: 'Uso do medicamento registrado com sucesso!', data: novoRegistro });
     } catch (error) {
-      const statusCode = error.message.includes('Acesso negado') ? 403 : 400;
-      res.status(statusCode).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
   static async getHistoricoDeUso(req, res) {
     try {
-      const { medicamentoId } = req.params;
-      const historico = await MedicamentoService.getHistoricoDeUso(req.user.id, medicamentoId);
+      const usuarioId = req.user.id;
+      const { profileId, medicamentoId } = req.params;
+
+      const historico = await MedicamentoService.getHistoricoDeUso(usuarioId, profileId, medicamentoId);
       res.status(200).json({ success: true, data: historico });
     } catch (error) {
-      const statusCode = error.message.includes('Acesso negado') ? 403 : 404;
-      res.status(statusCode).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
+  }
+  
+  static handleError(res, error) {
+    let statusCode = 500;
+    const errorMessage = error.message || 'Ocorreu um erro interno no servidor.';
+
+    if (errorMessage.includes('obrigatório') || errorMessage.includes('inválido')) {
+        statusCode = 400;
+    } else if (errorMessage.includes('não encontrado')) {
+        statusCode = 404;
+    } else if (errorMessage.includes('não pertence') || errorMessage.includes('não autorizado') || errorMessage.includes('Acesso negado')) {
+        statusCode = 403;
+    }
+
+    res.status(statusCode).json({ success: false, message: errorMessage });
   }
 }
 

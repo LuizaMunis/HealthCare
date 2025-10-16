@@ -2,76 +2,133 @@
 const DoencaService = require('../services/doencaService');
 
 class DoencaController {
-  // --- DOENÇA CONTROLLERS ---
   static async createDoenca(req, res) {
     try {
-      const novaDoenca = await DoencaService.createDoenca(req.user.id, req.body);
-      res.status(201).json({ success: true, message: 'Doença registrada com sucesso!', data: novaDoenca });
+      const usuarioId = req.user.id;
+      const { profileId } = req.params;
+      const doencaData = req.body;
+
+      const newDoenca = await DoencaService.createDoenca(usuarioId, profileId, doencaData);
+
+      res.status(201).json({
+        success: true,
+        message: 'Doença registrada com sucesso!',
+        data: newDoenca
+      });
     } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
-  static async getAllDoencas(req, res) {
+  static async getAllDoencasByProfile(req, res) {
     try {
-      const doencas = await DoencaService.getAllDoencasByUsuario(req.user.id);
-      res.status(200).json({ success: true, data: doencas });
+      const usuarioId = req.user.id;
+      const { profileId } = req.params;
+
+      const doencas = await DoencaService.getAllDoencasByProfile(usuarioId, profileId);
+
+      res.json({
+        success: true,
+        data: doencas
+      });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
   static async getDoencaById(req, res) {
     try {
-      const doenca = await DoencaService.getDoencaById(req.user.id, req.params.id);
-      res.status(200).json({ success: true, data: doenca });
+      const usuarioId = req.user.id;
+      const { profileId, doencaId } = req.params;
+
+      const doenca = await DoencaService.getDoencaById(usuarioId, profileId, doencaId);
+
+      res.json({
+        success: true,
+        data: doenca
+      });
     } catch (error) {
-      const statusCode = error.message.includes('não encontrada') ? 404 : 403;
-      res.status(statusCode).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
   static async updateDoenca(req, res) {
     try {
-      const data = await DoencaService.updateDoenca(req.user.id, req.params.id, req.body);
-      res.status(200).json({ success: true, message: 'Doença atualizada com sucesso!', data });
+      const usuarioId = req.user.id;
+      const { profileId, doencaId } = req.params;
+      const updateData = req.body;
+
+      const updatedDoenca = await DoencaService.updateDoenca(usuarioId, profileId, doencaId, updateData);
+
+      res.json({
+        success: true,
+        message: 'Doença atualizada com sucesso!',
+        data: updatedDoenca
+      });
     } catch (error) {
-      const statusCode = error.message.includes('não encontrada') ? 404 : 400;
-      res.status(statusCode).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
   static async deleteDoenca(req, res) {
     try {
-      await DoencaService.deleteDoenca(req.user.id, req.params.id);
-      res.status(200).json({ success: true, message: 'Doença deletada com sucesso!' });
+      const usuarioId = req.user.id;
+      const { profileId, doencaId } = req.params;
+
+      await DoencaService.deleteDoenca(usuarioId, profileId, doencaId);
+
+      res.json({
+        success: true,
+        message: 'Doença deletada com sucesso!'
+      });
     } catch (error) {
-      const statusCode = error.message.includes('não encontrada') ? 404 : 500;
-      res.status(statusCode).json({ success: false, message: error.message });
+      this.handleError(res, error);
     }
   }
 
   // --- SINTOMA CONTROLLERS ---
-  static async addSintoma(req, res) {
+  // Note: Sintomas should likely have their own service and model for better separation.
+  // For now, they are handled here as requested.
+
+  static async addSintomaToDoenca(req, res) {
     try {
-      const { doencaId } = req.params;
-      const novoSintoma = await DoencaService.addSintoma(req.user.id, doencaId, req.body);
-      res.status(201).json({ success: true, message: 'Sintoma adicionado com sucesso!', data: novoSintoma });
+        const usuarioId = req.user.id;
+        const { profileId, doencaId } = req.params;
+        const sintomaData = req.body;
+
+        const novoSintoma = await DoencaService.addSintoma(usuarioId, profileId, doencaId, sintomaData);
+        res.status(201).json({ success: true, message: 'Sintoma adicionado com sucesso!', data: novoSintoma });
     } catch (error) {
-      const statusCode = error.message.includes('Acesso negado') ? 403 : 400;
-      res.status(statusCode).json({ success: false, message: error.message });
+        this.handleError(res, error);
     }
   }
 
   static async getSintomasByDoenca(req, res) {
     try {
-      const { doencaId } = req.params;
-      const sintomas = await DoencaService.getSintomasByDoenca(req.user.id, doencaId);
-      res.status(200).json({ success: true, data: sintomas });
+        const usuarioId = req.user.id;
+        const { profileId, doencaId } = req.params;
+
+        const sintomas = await DoencaService.getSintomasByDoenca(usuarioId, profileId, doencaId);
+        res.json({ success: true, data: sintomas });
     } catch (error) {
-      const statusCode = error.message.includes('Acesso negado') ? 403 : 404;
-      res.status(statusCode).json({ success: false, message: error.message });
+        this.handleError(res, error);
     }
+  }
+
+
+  static handleError(res, error) {
+    let statusCode = 500;
+    const errorMessage = error.message || 'Ocorreu um erro interno no servidor.';
+
+    if (errorMessage.includes('obrigatório') || errorMessage.includes('inválido')) {
+        statusCode = 400;
+    } else if (errorMessage.includes('não encontrada')) {
+        statusCode = 404;
+    } else if (errorMessage.includes('não pertence') || errorMessage.includes('não autorizado') || errorMessage.includes('Acesso negado')) {
+        statusCode = 403;
+    }
+
+    res.status(statusCode).json({ success: false, message: errorMessage });
   }
 }
 
