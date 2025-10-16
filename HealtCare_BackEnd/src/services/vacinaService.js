@@ -4,7 +4,6 @@ const VacinaModel = require('../models/vacinaModel');
 const PerfilModel = require('../models/perfilModel');
 
 class VacinaService {
-<<<<<<< HEAD
   /**
    * Helper para obter o perfil_id a partir do usuario_id.
    */
@@ -15,8 +14,6 @@ class VacinaService {
     }
     return perfil.id;
   }
-=======
->>>>>>> silvaerikdaniel
 
   static async createVacina(usuarioId, profileId, dadosVacina) {
     await this._verifyProfileOwnership(usuarioId, profileId);
