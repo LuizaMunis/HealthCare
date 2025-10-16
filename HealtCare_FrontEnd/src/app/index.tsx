@@ -1,15 +1,17 @@
 //HealthCare_FrontEnd/src/app/index.tsx
 
-import { Link } from 'expo-router'; // <<< CORREÇÃO: Importa de 'expo-router'
+import { Link } from 'expo-router'; 
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+const HealthLogo = require('../assets/images/iconLogo.png');
 
 export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Text style={styles.logoText}>
-          HEALTHCARE <Text style={styles.logoIcon}>+</Text>
+          HEALTHCARE 
+          <Text style={styles.logoIcon}>+</Text>
         </Text>
         <Text style={styles.tagline}>Aqui, cuidar é uma forma de amar.</Text>
       </View>
@@ -63,6 +65,11 @@ const styles = StyleSheet.create({
   },
   logoIcon: {
     color: '#00B8D4',
+  },
+    logoInlineIcon: {
+    width: 42,
+    height: 42,
+    marginLeft: 8,
   },
   tagline: {
     fontSize: 16,

@@ -1,34 +1,63 @@
 // HealthCare_FrontEnd/src/app/monitor/pressure.tsx
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Animated } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router'; 
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG } from '../../constants/api';
-import DatePickerInput from '../../components/DatePickerInput';
+import { API_CONFIG, ENDPOINTS } from '../../constants/api';
 
 export default function PressureScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const isEditMode = !!params.id;
+  const router = useRouter(); 
+  const [systolic, setSystolic] = useState(120);
+  const [diastolic, setDiastolic] = useState(80);
+  const [dateISO, setDateISO] = useState(new Date().toISOString().split('T')[0]);
+  const dateDisplay = useMemo(() => {
+    try {
+      const [y, m, d] = (dateISO || '').split('-');
+      const dt = new Date(Number(y), Number(m) - 1, Number(d));
+      return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long' }).format(dt);
+    } catch {
+      return dateISO;
+    }
+  }, [dateISO]);
+  const [showPicker, setShowPicker] = useState(false);
+  const today = useMemo(() => { const t = new Date(); t.setHours(0,0,0,0); return t; }, []);
+  const toLocalISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${da}`;
+  };
 
-  // Estados para armazenar os valores que mudarão
-  const [systolic, setSystolic] = useState(
-    isEditMode ? Number(params.sistolica_mmhg) : 120
-  );
-  const [diastolic, setDiastolic] = useState(
-    isEditMode ? Number(params.diastolica_mmhg) : 89
-  );
-  const [date, setDate] = useState(
-    isEditMode 
-      ? new Date(params.data_hora_medicao as string).toISOString().split('T')[0] 
-      : new Date().toISOString().split('T')[0]
-  );
+  // Configurações dos seletores (efeito igual ao da glicose)
+  const ITEM_HEIGHT = 44;
+  const VISIBLE_ITEMS = 3; // 1 acima, 1 central, 1 abaixo
+  const SYS_MIN = 80;
+  const SYS_MAX = 250;
+  const DIA_MIN = 50;
+  const DIA_MAX = 150;
 
-  /**
-   * Função para salvar o registro de pressão, agora conectada ao backend.
-   */
+  const sysValues = useMemo(() => Array.from({ length: SYS_MAX - SYS_MIN + 1 }, (_, i) => SYS_MIN + i), []);
+  const diaValues = useMemo(() => Array.from({ length: DIA_MAX - DIA_MIN + 1 }, (_, i) => DIA_MIN + i), []);
+
+  const sysScrollRef = useRef<ScrollView | null>(null);
+  const diaScrollRef = useRef<ScrollView | null>(null);
+  const sysScrollY = useRef(new Animated.Value(0)).current;
+  const diaScrollY = useRef(new Animated.Value(0)).current;
+
+  // Centraliza valores iniciais ao abrir
+  useEffect(() => {
+    const initialSysIndex = Math.min(Math.max(systolic - SYS_MIN, 0), sysValues.length - 1);
+    const initialDiaIndex = Math.min(Math.max(diastolic - DIA_MIN, 0), diaValues.length - 1);
+    const t = setTimeout(() => {
+      sysScrollRef.current?.scrollTo({ y: initialSysIndex * ITEM_HEIGHT, animated: false });
+      diaScrollRef.current?.scrollTo({ y: initialDiaIndex * ITEM_HEIGHT, animated: false });
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+
   const handleSave = async () => {
     if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
       Alert.alert('Atenção', 'Por favor, insira valores de pressão válidos.');
@@ -36,35 +65,23 @@ export default function PressureScreen() {
     }
 
     try {
-      const token = await AsyncStorage.getItem('healthcare_auth_token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        Alert.alert('Erro de Autenticação', 'Você não está logado. Por favor, faça o login novamente.');
-        // Opcional: redirecionar para a tela de login
-        router.push('/login'); 
+        Alert.alert('Erro de Autenticação', 'Você não está logado.');
         return;
       }
 
-      const url = isEditMode
-        ? `${API_CONFIG.BASE_URL}/registros-pressao/${params.id}` 
-        : `${API_CONFIG.BASE_URL}/registros-pressao`;  
-      const method = isEditMode ? 'PUT' : 'POST';
-
-      const now = new Date();
-      // Combina a data do seletor com a hora atual
-      const measurementDateTime = new Date(
-        `${date}T${now.toTimeString().slice(0, 8)}`
-      );
-
+      const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}`;
       const response = await fetch(url, {
-        method: method,
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           sistolica_mmhg: systolic,
           diastolica_mmhg: diastolic,
-          data_hora_medicao: measurementDateTime.toISOString()
+          data_hora_medicao: `${dateISO} ${new Date().toTimeString().slice(0, 8)}`,
         }),
       });
 
@@ -73,16 +90,11 @@ export default function PressureScreen() {
         throw new Error(result.message || 'O servidor retornou um erro ao salvar os dados.');
       }
 
-      console.log('Dados salvos com sucesso no servidor:', result);
-
-      // Feedback de sucesso para o usuário
-      Alert.alert('Sucesso!', 'Sua pressão arterial foi salva.');
-      router.back(); // Volta para a tela anterior
-
+      Alert.alert('Sucesso!', 'Sua pressão foi salva.');
+      router.back();
     } catch (error: any) {
-      // 5. Tratamento de Erro de Rede ou da API
-      console.error("Erro ao salvar medição:", error);
-      Alert.alert('Erro', error.message || 'Não foi possível conectar ao servidor. Tente novamente.');
+      console.error('Erro ao salvar pressão:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível conectar ao servidor.');
     }
   };
 
@@ -107,12 +119,59 @@ export default function PressureScreen() {
             <Text style={styles.pressureHeaderValue}>{systolic}</Text>
           </View>
           <View style={styles.pressureBody}>
-            <Text style={styles.pressureValueSecondary}>119</Text>
-            <View style={styles.pressureValueContainer}>
-              <Text style={styles.pressureValueMain}>{systolic}</Text>
+            <View style={styles.pickerRow}>
+              <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
+                <Animated.ScrollView
+                  ref={sysScrollRef}
+                  showsVerticalScrollIndicator={false}
+                  bounces={false}
+                  alwaysBounceVertical={false}
+                  overScrollMode="never"
+                  decelerationRate="fast"
+                  snapToInterval={ITEM_HEIGHT}
+                  disableIntervalMomentum
+                  snapToAlignment="start"
+                  scrollEventThrottle={16}
+                  onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: sysScrollY } } }],
+                    { useNativeDriver: true }
+                  )}
+                  onMomentumScrollEnd={(ev) => {
+                    const offsetY = ev.nativeEvent.contentOffset.y;
+                    const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                    const clampedIndex = Math.min(Math.max(rawIndex, 0), sysValues.length - 1);
+                    setSystolic(SYS_MIN + clampedIndex);
+                  }}
+                  contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
+                >
+                  {sysValues.map((item, index) => {
+                    const inputRange = [
+                      (index - 1) * ITEM_HEIGHT,
+                      index * ITEM_HEIGHT,
+                      (index + 1) * ITEM_HEIGHT,
+                    ];
+                    const opacity = sysScrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.25, 1, 0.25],
+                      extrapolate: 'clamp',
+                    });
+                    const scale = sysScrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.9, 1.6, 0.9],
+                      extrapolate: 'clamp',
+                    });
+                    return (
+                      <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                        <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
+                          {item}
+                        </Animated.Text>
+                      </View>
+                    );
+                  })}
+                </Animated.ScrollView>
+              </View>
               <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
-            <Text style={styles.pressureValueSecondary}>121</Text>
           </View>
         </View>
 
@@ -123,22 +182,93 @@ export default function PressureScreen() {
             <Text style={styles.pressureHeaderValue}>{diastolic}</Text>
           </View>
           <View style={styles.pressureBody}>
-            <Text style={styles.pressureValueSecondary}>88</Text>
-            <View style={styles.pressureValueContainer}>
-              <Text style={styles.pressureValueMain}>{diastolic}</Text>
+            <View style={styles.pickerRow}>
+              <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
+                <Animated.ScrollView
+                  ref={diaScrollRef}
+                  showsVerticalScrollIndicator={false}
+                  bounces={false}
+                  alwaysBounceVertical={false}
+                  overScrollMode="never"
+                  decelerationRate="fast"
+                  snapToInterval={ITEM_HEIGHT}
+                  disableIntervalMomentum
+                  snapToAlignment="start"
+                  scrollEventThrottle={16}
+                  onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: diaScrollY } } }],
+                    { useNativeDriver: true }
+                  )}
+                  onMomentumScrollEnd={(ev) => {
+                    const offsetY = ev.nativeEvent.contentOffset.y;
+                    const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                    const clampedIndex = Math.min(Math.max(rawIndex, 0), diaValues.length - 1);
+                    setDiastolic(DIA_MIN + clampedIndex);
+                  }}
+                  contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
+                >
+                  {diaValues.map((item, index) => {
+                    const inputRange = [
+                      (index - 1) * ITEM_HEIGHT,
+                      index * ITEM_HEIGHT,
+                      (index + 1) * ITEM_HEIGHT,
+                    ];
+                    const opacity = diaScrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.25, 1, 0.25],
+                      extrapolate: 'clamp',
+                    });
+                    const scale = diaScrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.9, 1.6, 0.9],
+                      extrapolate: 'clamp',
+                    });
+                    return (
+                      <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                        <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
+                          {item}
+                        </Animated.Text>
+                      </View>
+                    );
+                  })}
+                </Animated.ScrollView>
+              </View>
               <Text style={styles.pressureUnit}>mmHg</Text>
             </View>
-            <Text style={styles.pressureValueSecondary}>90</Text>
           </View>
         </View>
 
         {/* --- Data do Registro --- */}
-        <DatePickerInput
-          label="Data do registro"
-          initialValue={date}
-          onDateChange={setDate} // Passamos a função 'setDate' para que o componente filho possa atualizar o estado pai
-          containerStyle={{ marginTop: 20, marginBottom: 40 }}
-        />
+        <View style={styles.dateContainer}>
+          <Text style={styles.dateLabel}>Data do registro</Text>
+          <TouchableOpacity
+            accessibilityLabel="Selecionar data do registro"
+            style={styles.dateInput}
+            onPress={() => setShowPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dateInputText}>{dateDisplay}</Text>
+          </TouchableOpacity>
+          {showPicker && (
+            <DateTimePicker
+              value={new Date(dateISO + 'T00:00:00')}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={today}
+              onChange={(event, selectedDate) => {
+                if (Platform.OS === 'android') setShowPicker(false);
+                if (!selectedDate) return;
+                const chosen = new Date(selectedDate);
+                chosen.setHours(0,0,0,0);
+                if (chosen.getTime() > today.getTime()) {
+                  Alert.alert('Data inválida', 'Data não pode ser no futuro');
+                  return;
+                }
+                setDateISO(toLocalISODate(chosen));
+              }}
+            />
+          )}
+        </View>
 
         {/* --- Botão Salvar --- */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -214,8 +344,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  pickerRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   controlButton: {
     padding: 10,
+  },
+  wheelContainer: {
+    width: 120,
+    overflow: 'hidden',
+    position: 'relative',
+    marginRight: 8,
   },
   pressureValueContainer: {
     flexDirection: 'row',
@@ -225,6 +367,11 @@ const styles = StyleSheet.create({
     fontSize: 60,
     fontWeight: 'bold',
     color: '#333',
+  },
+  wheelItemText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#004A61',
   },
   pressureUnit: {
     fontSize: 20,
@@ -253,6 +400,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
   },
+   dateInputText: {
+     fontSize: 16,
+     color: '#333',
+   },
   saveButton: {
     backgroundColor: '#004A61',
     borderRadius: 15,

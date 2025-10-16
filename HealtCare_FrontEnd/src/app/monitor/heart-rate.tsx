@@ -1,3 +1,5 @@
+// HealthCare_FrontEnd/src/app/monitor/heart-rate.tsx
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, Platform, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -6,9 +8,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
-export default function TemperaturaScreen() {
+export default function HeartRateScreen() {
   const router = useRouter();
-  const [temperature, setTemperature] = useState(37.5);
+  const [hr, setHr] = useState(70);
   const [dateISO, setDateISO] = useState(new Date().toISOString().slice(0,10));
   const dateDisplay = useMemo(() => {
     try {
@@ -28,22 +30,16 @@ export default function TemperaturaScreen() {
     return `${y}-${m}-${da}`;
   };
 
-  // Wheel picker config (32°C a 45°C, passo 0.1)
+  // Wheel picker config (30–220 bpm)
   const ITEM_HEIGHT = 60;
   const VISIBLE_ITEMS = 3;
-  const MIN_TEMP = 32.0;
-  const MAX_TEMP = 45.0;
-  const values = useMemo(() => {
-    const arr: number[] = [];
-    for (let t = MIN_TEMP; t <= MAX_TEMP + 1e-9; t += 0.1) {
-      arr.push(parseFloat(t.toFixed(1)));
-    }
-    return arr;
-  }, []);
+  const MIN_HR = 30;
+  const MAX_HR = 220;
+  const values = useMemo(() => Array.from({ length: MAX_HR - MIN_HR + 1 }, (_, i) => MIN_HR + i), []);
   const scrollRef = useRef(null as any);
   const scrollY = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const idx = Math.round((temperature - MIN_TEMP) / 0.1);
+    const idx = hr - MIN_HR;
     const t = setTimeout(() => {
       scrollRef.current?.scrollTo({ y: idx * ITEM_HEIGHT, animated: false });
     }, 0);
@@ -51,15 +47,14 @@ export default function TemperaturaScreen() {
   }, []);
 
   const handleSave = async () => {
-    // Validações
-    if (temperature < 32 || temperature > 45) {
-      Alert.alert('Atenção', 'O intervalo de temperatura deve ser entre 32° e 45°');
+    if (hr < 30 || hr > 220) {
+      Alert.alert('Atenção', 'O intervalo aceitável de batimentos é entre 30 bpm e 220 bpm.');
       return;
     }
     const chosen = new Date(dateISO + 'T00:00:00');
     const now = new Date(); now.setHours(0,0,0,0);
     if (chosen.getTime() > now.getTime()) {
-      Alert.alert('Atenção', 'Não cadastre uma data futura');
+      Alert.alert('Atenção', 'Não cadastre uma data futura.');
       return;
     }
 
@@ -70,22 +65,21 @@ export default function TemperaturaScreen() {
         return;
       }
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.TEMPERATURE_RECORDS}` , {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.HEART_RATE_RECORDS}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          graus_celsius: temperature,
+          bpm: hr,
           data_hora_medicao: `${dateISO} ${new Date().toTimeString().slice(0,8)}`,
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Falha ao salvar');
 
-      // Alerta crítico
-      if (temperature < 36) Alert.alert('Muito baixa', 'Sua temperatura está abaixo do normal.');
-      if (temperature > 38) Alert.alert('Muito elevada', 'Sua temperatura está acima do normal.');
+      if (hr < 50) Alert.alert('Frequência baixa', 'Sua FC está abaixo do esperado.');
+      if (hr > 120) Alert.alert('Frequência elevada', 'Sua FC está acima do esperado.');
 
-      Alert.alert('Sucesso!', 'Temperatura registrada com sucesso.');
+      Alert.alert('Sucesso!', 'Frequência cardíaca registrada.');
       router.back();
     } catch (e: any) {
       Alert.alert('Falha: Tente Novamente', e.message || 'Erro inesperado');
@@ -99,7 +93,7 @@ export default function TemperaturaScreen() {
           <Feather name="arrow-left" size={24} color="#004A61" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Temperatura</Text>
+          <Text style={styles.headerTitle}>Frequência Cardíaca</Text>
           <Text style={styles.headerSubtitle}>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
         </View>
         <View style={{ width: 24 }} />
@@ -107,8 +101,8 @@ export default function TemperaturaScreen() {
 
       <View style={styles.card}>
         <View style={styles.cardHeader}> 
-          <Text style={styles.cardHeaderText}>Temperatura basal</Text>
-          <Text style={styles.cardHeaderValue}>{temperature.toFixed(1)}</Text>
+          <Text style={styles.cardHeaderText}>Pulsação</Text>
+          <Text style={styles.cardHeaderValue}>{hr}</Text>
         </View>
         <View style={styles.cardBody}>
           <View style={styles.pickerRow}>
@@ -126,7 +120,7 @@ export default function TemperaturaScreen() {
                   const offsetY = ev.nativeEvent.contentOffset.y;
                   const index = Math.round(offsetY / ITEM_HEIGHT);
                   const clamped = Math.min(Math.max(index, 0), values.length - 1);
-                  setTemperature(values[clamped]);
+                  setHr(values[clamped]);
                 }}
                 contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
               >
@@ -141,14 +135,14 @@ export default function TemperaturaScreen() {
                   return (
                     <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
                       <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
-                        {item.toFixed(1)}
+                        {item}
                       </Animated.Text>
                     </View>
                   );
                 })}
               </Animated.ScrollView>
             </View>
-            <Text style={styles.unit}>°C</Text>
+            <Text style={styles.unit}>bpm</Text>
           </View>
         </View>
       </View>
@@ -174,7 +168,7 @@ export default function TemperaturaScreen() {
               if (!selectedDate) return;
               const chosen = new Date(selectedDate); chosen.setHours(0,0,0,0);
               if (chosen.getTime() > today.getTime()) {
-                Alert.alert('Data inválida', 'Data não pode ser no futuro');
+                Alert.alert('Data inválida', 'Não cadastre uma data futura.');
                 return;
               }
               setDateISO(toLocalISODate(chosen));
@@ -213,8 +207,5 @@ const styles = StyleSheet.create({
   saveButton: { backgroundColor: '#004A61', borderRadius: 15, alignItems: 'center', paddingVertical: 15, elevation: 3, marginHorizontal: 20 },
   saveButtonText: { fontSize: 18, color: '#FFFFFF', fontWeight: 'bold' },
 });
-
-
-
 
 

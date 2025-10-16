@@ -1,7 +1,8 @@
 // HealthCare_FrontEnd/src/app/monitor/glicemia.tsx
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Alert, Animated, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,9 +17,46 @@ export default function GlicemiaScreen() {
   const [glicose, setGlicose] = useState(
     isEditMode ? Number(params.glicose_mg_dl) : 100
   );
-  const [date, setDate] = useState(
+  const [dateISO, setDateISO] = useState(
     isEditMode ? new Date(params.data_hora_medicao as string).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
   );
+  const dateDisplay = useMemo(() => {
+    try {
+      const [y, m, d] = (dateISO || '').split('-');
+      const dt = new Date(Number(y), Number(m) - 1, Number(d));
+      return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long' }).format(dt);
+    } catch {
+      return dateISO;
+    }
+  }, [dateISO]);
+  const [showPicker, setShowPicker] = useState(false);
+  const today = useMemo(() => { const t = new Date(); t.setHours(0,0,0,0); return t; }, []);
+  const toLocalISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${da}`;
+  };
+
+  // Configurações do seletor rolável
+  const MIN_VALUE = 40;
+  const MAX_VALUE = 400;
+  const ITEM_HEIGHT = 44;
+  const VISIBLE_ITEMS = 3; // 1 acima, 1 central, 1 abaixo
+  const values = useMemo(() => Array.from({ length: MAX_VALUE - MIN_VALUE + 1 }, (_, i) => MIN_VALUE + i), []);
+
+  const scrollRef = useRef<ScrollView | null>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Centralizar o valor inicial ao abrir a tela
+  useEffect(() => {
+    const initialIndex = Math.min(Math.max(glicose - MIN_VALUE, 0), values.length - 1);
+    const initialOffset = initialIndex * ITEM_HEIGHT;
+    const timeout = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: initialOffset, animated: false });
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, []);
 
   /**
    * Função para salvar o registro de glicemia, conectada ao backend.
@@ -49,7 +87,7 @@ export default function GlicemiaScreen() {
         },
         body: JSON.stringify({
           glicose_mg_dl: glicose,
-          data_hora_medicao: `${date} ${new Date().toTimeString().slice(0, 8)}` // Envia a hora atual
+          data_hora_medicao: `${dateISO} ${new Date().toTimeString().slice(0, 8)}` // Envia a hora atual
         }),
       });
 
@@ -93,29 +131,90 @@ export default function GlicemiaScreen() {
             <Text style={styles.glicemiaHeaderValue}>{glicose}</Text>
           </View>
           <View style={styles.glicemiaBody}>
-            <TouchableOpacity style={styles.controlButton} onPress={() => setGlicose(prev => Math.max(prev - 1, 0))}>
-              <Feather name="minus-circle" size={32} color="#004A61" />
-            </TouchableOpacity>
-            <View style={styles.glicemiaValueContainer}>
-              <Text style={styles.glicemiaValueMain}>{glicose}</Text>
+            <View style={styles.pickerRow}>
+              <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>                
+
+                <Animated.ScrollView
+                  ref={scrollRef}
+                  showsVerticalScrollIndicator={false}
+                  bounces={false}
+                  snapToInterval={ITEM_HEIGHT}
+                  decelerationRate="fast"
+                  onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true }
+                  )}
+                  onMomentumScrollEnd={(ev) => {
+                    const offsetY = ev.nativeEvent.contentOffset.y;
+                    const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                    const clampedIndex = Math.min(Math.max(rawIndex, 0), values.length - 1);
+                    const value = MIN_VALUE + clampedIndex;
+                    setGlicose(value);
+                    scrollRef.current?.scrollTo({ y: clampedIndex * ITEM_HEIGHT, animated: true });
+                  }}
+                  contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
+                >
+                  {values.map((item, index) => {
+                    const inputRange = [
+                      (index - 1) * ITEM_HEIGHT,
+                      index * ITEM_HEIGHT,
+                      (index + 1) * ITEM_HEIGHT,
+                    ];
+                    const opacity = scrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.25, 1, 0.25],
+                      extrapolate: 'clamp',
+                    });
+                    const scale = scrollY.interpolate({
+                      inputRange,
+                      outputRange: [0.9, 1.6, 0.9],
+                      extrapolate: 'clamp',
+                    });
+                    return (
+                      <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                        <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
+                          {item}
+                        </Animated.Text>
+                      </View>
+                    );
+                  })}
+                </Animated.ScrollView>
+              </View>
               <Text style={styles.glicemiaUnit}>mg/dL</Text>
             </View>
-            <TouchableOpacity style={styles.controlButton} onPress={() => setGlicose(prev => prev + 1)}>
-              <Feather name="plus-circle" size={32} color="#004A61" />
-            </TouchableOpacity>
           </View>
         </View>
 
         {/* --- Data do Registro --- */}
         <View style={styles.dateContainer}>
           <Text style={styles.dateLabel}>Data do registro</Text>
-          <TextInput
+          <TouchableOpacity
+            accessibilityLabel="Selecionar data do registro"
             style={styles.dateInput}
-            value={date}
-            onChangeText={setDate}
-            placeholder="AAAA-MM-DD"
-            placeholderTextColor="#C7C7CD"
-          />
+            onPress={() => setShowPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dateInputText}>{dateDisplay}</Text>
+          </TouchableOpacity>
+          {showPicker && (
+            <DateTimePicker
+              value={new Date(dateISO + 'T00:00:00')}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={today}
+              onChange={(event, selectedDate) => {
+                if (Platform.OS === 'android') setShowPicker(false);
+                if (!selectedDate) return;
+                const chosen = new Date(selectedDate);
+                chosen.setHours(0,0,0,0);
+                if (chosen.getTime() > today.getTime()) {
+                  Alert.alert('Data inválida', 'Data não pode ser no futuro');
+                  return;
+                }
+                setDateISO(toLocalISODate(chosen));
+              }}
+            />
+          )}
         </View>
 
         {/* --- Botão Salvar --- */}
@@ -233,6 +332,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
   },
+  dateInputText: {
+    fontSize: 16,
+    color: '#333',
+  },
   saveButton: {
     backgroundColor: '#004A61',
     borderRadius: 15,
@@ -244,5 +347,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  // Estilos do seletor rolável
+  pickerRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wheelContainer: {
+    width: 140,
+    overflow: 'hidden',
+    position: 'relative',
+    marginRight: 8,
+  },
+  centerOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 74, 97, 0.08)',
+    borderRadius: 8,
+  },
+  wheelItemText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#004A61',
   },
 });
