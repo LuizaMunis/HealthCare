@@ -4,14 +4,8 @@ const router = express.Router({ mergeParams: true });
 const ConsultaController = require('../controllers/registroConsultaController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-<<<<<<< HEAD
-// Middleware de autenticação para proteger as rotas
-// Este é um exemplo de como seria usado. O arquivo real precisa ser criado.
 const authMiddleware = require('../middleware/authMiddleware'); 
 
-// Aplicar o middleware de autenticação a todas as rotas de consulta
-=======
->>>>>>> silvaerikdaniel
 router.use(authMiddleware);
 
 router.post('/', ConsultaController.createConsulta);
