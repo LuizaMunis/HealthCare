@@ -1,88 +1,82 @@
 // backend/src/services/temperaturaService.js
-
 const TemperaturaModel = require('../models/temperaturaModel');
 const PerfilModel = require('../models/perfilModel');
 
 class TemperaturaService {
-  static async _getPerfilId(usuarioId) {
-    const perfil = await PerfilModel.findByUsuarioId(usuarioId);
-    if (!perfil) {
-      throw new Error('Perfil de usuário não encontrado.');
+  static async createRegistro(usuarioId, perfilId, registroData) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
+
+    const { graus_celsius, data_hora_medicao } = registroData;
+
+    if (!graus_celsius || !data_hora_medicao) {
+      throw new Error('Graus Celsius e data/hora da medição são obrigatórios.');
     }
-    return perfil.id;
+    if (typeof graus_celsius !== 'number' || graus_celsius < 30 || graus_celsius > 45) {
+      throw new Error('Temperatura inválida ou fora do intervalo humano (30°C - 45°C).');
+    }
+
+    const dataToCreate = {
+      perfil_id: perfilId,
+      graus_celsius,
+      data_hora_medicao,
+    };
+
+    return await TemperaturaModel.create(dataToCreate);
   }
 
-  /**
-   * Cria um novo registro de temperatura.
-   */
-  static async createRegistro(usuarioId, dadosRegistro) {
-    const { graus_celsius, data_hora_medicao } = dadosRegistro;
-    if (graus_celsius === undefined || !data_hora_medicao) {
-      throw new Error('O valor da temperatura (graus_celsius) e a data/hora da medição são obrigatórios.');
-    }
-    if (typeof graus_celsius !== 'number') {
-        throw new Error('O valor da temperatura deve ser um número.');
-    }
-
-    const perfilId = await this._getPerfilId(usuarioId);
-    const dadosParaCriar = { ...dadosRegistro, perfil_id: perfilId };
-
-    return await TemperaturaModel.create(dadosParaCriar);
-  }
-
-  /**
-   * Retorna todos os registros de um usuário.
-   */
-  static async getAllRegistrosByUsuario(usuarioId) {
-    const perfilId = await this._getPerfilId(usuarioId);
+  static async getAllRegistrosByProfile(usuarioId, perfilId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
     return await TemperaturaModel.findByPerfilId(perfilId);
   }
 
-  /**
-   * Busca um registro por ID, garantindo que pertence ao usuário.
-   */
-  static async getRegistroById(usuarioId, registroId) {
-    const perfilId = await this._getPerfilId(usuarioId);
-    const registro = await TemperaturaModel.findById(registroId);
-
-    if (!registro) {
-      throw new Error('Registro de temperatura não encontrado.');
-    }
-    if (registro.perfil_id !== perfilId) {
-      throw new Error('Acesso negado. Este registro não pertence ao seu perfil.');
-    }
-    return registro;
+  static async getRegistroById(usuarioId, perfilId, registroId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
+    return await this._verifyRegistroOwnership(perfilId, registroId);
   }
 
-  /**
-   * Atualiza um registro.
-   */
-  static async updateRegistro(usuarioId, registroId, dadosUpdate) {
-    await this.getRegistroById(usuarioId, registroId); // Garante a posse
+  static async updateRegistro(usuarioId, perfilId, registroId, updateData) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
+    await this._verifyRegistroOwnership(perfilId, registroId);
 
-    delete dadosUpdate.id;
-    delete dadosUpdate.perfil_id;
-
-    if (Object.keys(dadosUpdate).length === 0) {
-      throw new Error("Nenhum dado fornecido para atualização.");
+    if (updateData.graus_celsius && (typeof updateData.graus_celsius !== 'number' || updateData.graus_celsius < 30 || updateData.graus_celsius > 45)) {
+      throw new Error('Temperatura inválida ou fora do intervalo humano (30°C - 45°C).');
     }
 
-    const sucesso = await TemperaturaModel.update(registroId, dadosUpdate);
-    if (!sucesso) throw new Error("Falha ao atualizar o registro.");
-    
+    await TemperaturaModel.update(registroId, updateData);
     return await TemperaturaModel.findById(registroId);
   }
 
-  /**
-   * Deleta um registro.
-   */
-  static async deleteRegistro(usuarioId, registroId) {
-    await this.getRegistroById(usuarioId, registroId); // Garante a posse
+  static async deleteRegistro(usuarioId, perfilId, registroId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
+    await this._verifyRegistroOwnership(perfilId, registroId);
 
-    const sucesso = await TemperaturaModel.delete(registroId);
-    if (!sucesso) throw new Error("Falha ao deletar o registro.");
-    
+    const deleted = await TemperaturaModel.delete(registroId);
+    if (!deleted) {
+      throw new Error('Erro ao deletar o registro de temperatura.');
+    }
     return true;
+  }
+
+  static async _verifyProfileOwnership(usuarioId, profileId) {
+    const perfil = await PerfilModel.findById(profileId);
+    if (!perfil) {
+      throw new Error('Perfil não encontrado.');
+    }
+    if (perfil.usuario_id !== usuarioId) {
+      throw new Error('Acesso não autorizado a este perfil.');
+    }
+    return perfil;
+  }
+
+  static async _verifyRegistroOwnership(perfilId, registroId) {
+    const registro = await TemperaturaModel.findById(registroId);
+    if (!registro) {
+      throw new Error('Registro de temperatura não encontrado.');
+    }
+    if (registro.perfil_id !== Number(perfilId)) {
+      throw new Error('Registro não pertence a este perfil.');
+    }
+    return registro;
   }
 }
 

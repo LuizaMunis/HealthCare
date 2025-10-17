@@ -2,23 +2,23 @@
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs'); // se preferir evitar dependência nativa, troque por 'bcryptjs'
-const UserService = require('../services/userService');
 const UserModel = require('../models/userModel');
+const ProfileModel = require('../models/profileModel'); // Importa o novo modelo de perfil
 
 class UserController {
   /**
-   * Registra um novo usuário.
-   * Espera: { nome_completo, email, password }
+   * Registra um novo usuário e seu primeiro perfil.
+   * Espera: { nome_completo, email, password, nome_perfil }
    */
   static async register(req, res) {
     try {
-      const { nome_completo, email, password } = req.body;
+      const { nome_completo, email, password, nome_perfil } = req.body;
 
-      // Validações básicas
-      if (!nome_completo || !email || !password) {
+      // Validações básicas, incluindo o novo campo 'nome_perfil'
+      if (!nome_completo || !email || !password || !nome_perfil) {
         return res.status(400).json({
           success: false,
-          message: 'Todos os campos (nome_completo, email, password) são obrigatórios'
+          message: 'Todos os campos (nome_completo, email, password, nome_perfil) são obrigatórios'
         });
       }
 
@@ -30,7 +30,7 @@ class UserController {
         });
       }
 
-      // Verifica duplicidade
+      // Verifica duplicidade de email na tabela 'usuario'
       const existingUser = await UserModel.findByEmail(email);
       if (existingUser) {
         return res.status(409).json({
@@ -42,29 +42,37 @@ class UserController {
       // Cria hash da senha
       const senha_hash = await bcrypt.hash(password, 10);
 
-      // Cria o usuário
-      const created = await UserModel.create({
+      // Cria o usuário na tabela 'usuario'
+      const createdUser = await UserModel.create({
         nome_completo,
         email,
         senha_hash,
       });
 
+      // Cria o primeiro perfil para o novo usuário na tabela 'perfil'
+      const createdProfile = await ProfileModel.create({
+        usuario_id: createdUser.id,
+        nome_perfil
+      });
+
+      // Gera o token JWT com o ID do usuário
       const token = jwt.sign(
-        { id: created.id, email: created.email },
+        { id: createdUser.id, email: createdUser.email },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
 
       return res.status(201).json({
         success: true,
-        message: 'Usuário criado com sucesso',
+        message: 'Usuário e perfil criados com sucesso',
         data: {
-          user: {
-            id: created.id,
-            nome_completo: created.nome_completo,
-            email: created.email,
-          },
           token,
+          user: {
+            id: createdUser.id,
+            nome_completo: createdUser.nome_completo,
+            email: createdUser.email,
+          },
+          profiles: [createdProfile] // Retorna o perfil recém-criado em uma lista
         }
       });
     } catch (error) {
@@ -76,10 +84,12 @@ class UserController {
     }
   }
 
+  //------------------------------------------------------------------------------------------------------------------------------------------------
+
   /**
-   * Login do usuário.
+   * Login do usuário e retorno de seus perfis.
    * Espera: { email, password }
-   * Retorna: { token, user }
+   * Retorna: { token, user, profiles }
    */
   static async login(req, res) {
     try {
@@ -92,7 +102,7 @@ class UserController {
         });
       }
 
-      const user = await UserModel.findByEmail(email, true); // includePassword = true
+      const user = await UserModel.findByEmail(email, true); // Retorna o usuário com o hash da senha
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -116,6 +126,9 @@ class UserController {
         });
       }
 
+      // Busca todos os perfis associados ao usuário
+      const profiles = await ProfileModel.findByUserId(user.id);
+
       const token = jwt.sign(
         { id: user.id, email: user.email },
         process.env.JWT_SECRET,
@@ -131,8 +144,8 @@ class UserController {
             id: user.id,
             nome_completo: user.nome_completo,
             email: user.email,
-            data_cadastro: user.data_cadastro
-          }
+          },
+          profiles // Envia a lista de perfis para o frontend
         }
       });
     } catch (error) {
@@ -144,92 +157,41 @@ class UserController {
     }
   }
 
-  /**
-   * Perfil do usuário autenticado.
-   * req.user.id deve ser populado por middleware de autenticação.
-   */
-  static async getProfile(req, res) {
-    try {
-      const user = await UserService.getUserProfile(req.user.id);
-      return res.json({
-        success: true,
-        data: {
-          id: user.id,
-          nome_completo: user.nome_completo,
-          email: user.email,
-          data_cadastro: user.data_cadastro
-        }
-      });
-    } catch (error) {
-      console.error('Erro ao obter perfil:', error);
-      const statusCode = String(error.message || '').includes('não encontrado') ? 404 : 500;
-      return res.status(statusCode).json({
-        success: false,
-        message: error.message || 'Erro ao obter perfil'
-      });
-    }
-  }
+  //------------------------------------------------------------------------------------------------------------------------------------------------
 
   /**
-   * Lista todos os usuários.
+   * Obtém os perfis de um usuário autenticado.
+   * A ser usada por uma nova rota.
    */
-  static async getAllUsers(_req, res) {
+  static async getUserProfiles(req, res) {
     try {
-      const users = await UserService.getAllUsers();
+      const userId = req.user.id; // ID do usuário vindo do JWT
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Usuário não autenticado.' });
+      }
+
+      const profiles = await ProfileModel.findByUserId(userId);
+      
       return res.json({
         success: true,
-        data: users
+        data: { profiles }
       });
     } catch (error) {
-      console.error('Erro ao obter todos os usuários:', error);
+      console.error('Erro ao obter perfis:', error);
       return res.status(500).json({
         success: false,
-        message: 'Erro ao obter todos os usuários'
+        message: 'Erro interno ao obter perfis'
       });
     }
   }
 
-  /**
-   * Atualiza dados do perfil (nome/email).
-   */
-  static async updateProfile(req, res) {
-    try {
-      const result = await UserService.updateUserProfile(req.user.id, req.body);
-      return res.json({ success: true, message: result.message });
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      let statusCode = 500;
-      const msg = String(error.message || '');
-      if (msg.includes('obrigatórios')) statusCode = 400;
-      else if (msg.includes('já está em uso')) statusCode = 409;
 
-      return res.status(statusCode).json({
-        success: false,
-        message: error.message || 'Erro ao atualizar perfil'
-      });
-    }
-  }
+  // Os métodos 'getProfile', 'getAllUsers', 'updateProfile', 'changePassword' podem ser
+  // mantidos como estão, mas agora eles deverão interagir com a tabela 'perfil'
+  // quando lidarem com dados específicos de saúde, em vez de apenas com 'usuario'.
+  // Como a sua estrutura agora separa usuario e perfil, os métodos para o perfil
+  // deverão ser movidos para um novo 'ProfileController.js' para manter a responsabilidade única.
 
-  /**
-   * Troca de senha do usuário.
-   */
-  static async changePassword(req, res) {
-    try {
-      const result = await UserService.changeUserPassword(req.user.id, req.body);
-      return res.json({ success: true, message: result.message });
-    } catch (error) {
-      console.error('Erro ao alterar senha:', error);
-      let statusCode = 500;
-      const msg = String(error.message || '');
-      if (msg.includes('obrigatórios')) statusCode = 400;
-      else if (msg.includes('incorreta')) statusCode = 401;
-
-      return res.status(statusCode).json({
-        success: false,
-        message: error.message || 'Erro ao alterar senha'
-      });
-    }
-  }
 }
 
 module.exports = UserController;
