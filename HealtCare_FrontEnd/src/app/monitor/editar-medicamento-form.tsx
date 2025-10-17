@@ -230,7 +230,9 @@ export default function EditarMedicamentoFormScreen() {
           <Feather name="arrow-left" size={24} color="#004A61" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>Editar medicamento</Text>
+          <View style={styles.titleButton}>
+            <Text style={styles.title}>Editar medicamento</Text>
+          </View>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -646,10 +648,18 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 24,
   },
+  titleButton: {
+    backgroundColor: '#004A61',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#81C5D8',
+  },
   title: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#FFFFFF',
   },
   content: {
     flex: 1,

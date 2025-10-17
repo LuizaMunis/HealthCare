@@ -221,12 +221,12 @@ export default function NovoMedicamentoScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
 
-      {/* Botão Salvar */}
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Salvar</Text>
-      </TouchableOpacity>
+        {/* Botão Salvar */}
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveButtonText}>Salvar</Text>
+        </TouchableOpacity>
+      </ScrollView>
 
     </SafeAreaView>
   );

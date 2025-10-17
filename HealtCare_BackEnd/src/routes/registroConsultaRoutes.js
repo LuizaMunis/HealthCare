@@ -4,6 +4,8 @@ const router = express.Router({ mergeParams: true });
 const ConsultaController = require('../controllers/registroConsultaController');
 const authMiddleware = require('../middleware/authMiddleware');
 
+const authMiddleware = require('../middleware/authMiddleware'); 
+
 router.use(authMiddleware);
 
 router.post('/', ConsultaController.createConsulta);
