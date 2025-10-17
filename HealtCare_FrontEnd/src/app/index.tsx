@@ -4,8 +4,6 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 const HealthLogo = require('../assets/images/iconLogo.png');
-import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
-const HealthLogo = require('../assets/images/iconLogo.png');
 
 export default function WelcomeScreen() {
   return (
@@ -65,15 +63,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoInlineIcon: {
-    width: 42,
-    height: 42,
-    marginLeft: 8,
-  },
   logoIcon: {
     width: 36,
     height: 36,
     marginBottom: 8,
+    color: '#B2EBF2',
   },
   logoImage: {
     width: 120,
@@ -85,7 +79,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#004A61',
   },
-    logoInlineIcon: {
+  logoInlineIcon: {
     width: 42,
     height: 42,
     marginLeft: 8,

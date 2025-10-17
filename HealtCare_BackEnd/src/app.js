@@ -14,16 +14,13 @@ console.log('PORT:', process.env.PORT);
 // --- Imports de infraestrutura/modelos ---
 const { testConnection } = require('./config/database');
 const UserModel = require('./models/userModel');
-const PerfilModel = require('./models/perfilModel');
+const ProfileModel = require('./models/profileModel');
 const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel'); 
 
 // --- Rotas ---
 const userRoutes = require('./routes/userRoutes');
-const perfilRoutes = require('./routes/perfilRoutes');
+const ProfileRoutes = require('./routes/profileRoutes');
 const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // Importa as rotas de registros
-const ErrorMiddleware = require('./middleware/errorMiddleware'); // Ajuste o caminho se necessário
-const perfilRoutes = require('./routes/perfilRoutes');
-// const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes');
 
 // --- ErrorMiddleware (fallback se não existir) ---
 let ErrorMiddleware;
@@ -82,7 +79,7 @@ app.use(ErrorMiddleware.handleTimeout);
 
 // --- Rotas da API ---
 app.use('/api/users', userRoutes);
-app.use('/api/perfil', perfilRoutes);
+app.use('/api/profile', ProfileRoutes);
 // app.use('/api/pressao-arterial', registroPressaoArterialRoutes);
 
 // --- Health checks ---
@@ -99,15 +96,6 @@ const startServer = async () => {
     console.log('🔗 Tentando conectar ao banco de dados...');
     await testConnection();
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
-
-    console.log('📦 Verificando/criando tabela de usuários (schema VARCHAR(255))...');
-    await UserModel.createTable();
-
-    console.log('📦 Verificando/criando tabela de perfis...');
-    await PerfilModel.createTable();
-
-    console.log('📦 Verificando/criando tabela de registros de pressão arterial...');
-    await RegistroPressaoArterialModel.createTable();
 
     // --- Middlewares finais de erro (depois das rotas) ---
     app.use(ErrorMiddleware.handleSyntaxError);

@@ -1,6 +1,6 @@
 // HealthCare_Backend/src/services/perfilService.js
 
-const PerfilModel = require('../models/perfilModel');
+const PerfilModel = require('../models/profileModel');
 
 class PerfilService {
 

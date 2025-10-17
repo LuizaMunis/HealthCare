@@ -1,6 +1,6 @@
 // HealthCare_Backend/src/controllers/perfilController.js
 
-const PerfilService = require('../services/perfilService');
+const PerfilService = require('../services/profileService');
 
 class PerfilController {
   
@@ -95,6 +95,34 @@ class PerfilController {
     }
     
     res.status(statusCode).json({ success: false, message: errorMessage });
+  }
+
+  // 👇 ADICIONE ESTE MÉTODO
+  static async getProfileStatus(req, res) {
+    try {
+      const { profileId } = req.params;
+      const userId = req.user.id;
+      
+      const status = await PerfilService.verificarCompletudePerfil(userId, profileId);
+      res.json({ success: true, data: status });
+    } catch (error) {
+      console.error('❌ Erro ao obter status do perfil:', error);
+      this.handleError(res, error);
+    }
+  }
+
+  // 👇 E ADICIONE ESTE MÉTODO
+  static async getProfileStats(req, res) {
+    try {
+      const { profileId } = req.params;
+      const userId = req.user.id;
+      
+      const stats = await PerfilService.getEstatisticasPerfil(userId, profileId);
+      res.json({ success: true, data: stats });
+    } catch (error) {
+      console.error('❌ Erro ao obter estatísticas do perfil:', error);
+      this.handleError(res, error);
+    }
   }
 }
 

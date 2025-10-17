@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const PerfilController = require('../controllers/perfilController');
+const ProfileController = require('../controllers/profileController');
 const authMiddleware = require('../middleware/authMiddleware');
 const ValidationMiddleware = require('../middleware/validationMiddleware');
 
@@ -13,19 +13,19 @@ router.post(
   authMiddleware,
   ValidationMiddleware.sanitizeInput,
   ValidationMiddleware.validateProfileData(),
-  PerfilController.createProfile
+  ProfileController.createProfile
 );
 
 router.get(
   '/', 
   authMiddleware, 
-  PerfilController.getAllUserProfiles
+  ProfileController.getAllUserProfiles
 );
 
 router.get(
   '/:profileId', 
   authMiddleware, 
-  PerfilController.getProfileById
+  ProfileController.getProfileById
 );
 
 router.put(
@@ -33,13 +33,13 @@ router.put(
   authMiddleware,
   ValidationMiddleware.sanitizeInput,
   ValidationMiddleware.validateProfileData(),
-  PerfilController.updateProfile
+  ProfileController.updateProfile
 );
 
 router.delete(
   '/:profileId', 
   authMiddleware, 
-  PerfilController.deleteProfile
+  ProfileController.deleteProfile
 );
 
 // --- Rotas Adicionais para Dados Derivados ---
@@ -47,14 +47,13 @@ router.delete(
 router.get(
   '/:profileId/status',
   authMiddleware,
-  PerfilController.getProfileStatus 
+  ProfileController.getProfileStatus 
 );
 
 router.get(
   '/:profileId/stats',
   authMiddleware,
-  PerfilController.getProfileStats 
+  ProfileController.getProfileStats 
 );
-
 
 module.exports = router;

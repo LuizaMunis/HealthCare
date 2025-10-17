@@ -1,7 +1,7 @@
 // HealthCare_Backend/src/controllers/userController.js
 
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); // se preferir evitar dependência nativa, troque por 'bcryptjs'
 const UserModel = require('../models/userModel');
 const ProfileModel = require('../models/profileModel'); // Importa o novo modelo de perfil
 
