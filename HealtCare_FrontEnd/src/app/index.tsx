@@ -4,6 +4,8 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 const HealthLogo = require('../assets/images/iconLogo.png');
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+const HealthLogo = require('../assets/images/iconLogo.png');
 
 export default function WelcomeScreen() {
   return (
@@ -21,6 +23,7 @@ export default function WelcomeScreen() {
           Descubra uma nova maneira de cuidar de quem mais importa.
         </Text>
       </View>
+
 
       <View style={styles.buttonContainer}>
         <Link href="/register" asChild>
@@ -58,13 +61,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 60,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoInlineIcon: {
+    width: 42,
+    height: 42,
+    marginLeft: 8,
+  },
+  logoIcon: {
+    width: 36,
+    height: 36,
+    marginBottom: 8,
+  },
+  logoImage: {
+    width: 120,
+    height: 70,
+    marginBottom: 8,
+  },
   logoText: {
     fontSize: 36,
     fontWeight: 'bold',
     color: '#004A61',
-  },
-  logoIcon: {
-    color: '#00B8D4',
   },
     logoInlineIcon: {
     width: 42,

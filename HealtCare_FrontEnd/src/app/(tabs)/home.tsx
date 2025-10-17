@@ -1,18 +1,20 @@
 // HealthCare_FrontEnd/src/app/(tabs)/index.tsx
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import { useUserData } from '@/hooks/useUserData';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useRouter } from 'expo-router';
 
 
 export default function HomeScreen() {
   
   const { userName, loading } = useUserData();
+  const router = useRouter();
 
   const colorScheme = useColorScheme() ?? 'light';
   const themeColors = Colors[colorScheme];
@@ -61,14 +63,20 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Acesso rápido</Text>
         <View style={styles.quickAccessContainer}>
-            <View style={styles.quickAccessCard}>
-                <Feather name="bell" size={32} color="#004A61" />
+            <TouchableOpacity 
+              style={styles.quickAccessCard}
+              onPress={() => router.push('/consultas')}
+            >
+                <Feather name="calendar" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Consultas</Text>
-            </View>
-            <View style={styles.quickAccessCard}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.quickAccessCard}
+              onPress={() => router.push('/notificacoes')}
+            >
                 <Feather name="bell" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Notificações</Text>
-            </View>
+            </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

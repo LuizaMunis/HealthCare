@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 interface Medicamento {
   id: string;
@@ -20,38 +20,21 @@ interface Medicamento {
   horario2: string;
 }
 
-export default function MedicamentoScreen() {
+export default function EditarMedicamentoScreen() {
   const router = useRouter();
-  const [medicamentos, setMedicamentos] = useState<Medicamento[]>([
-    { id: '1', nome: 'Medicamento 1', tomado: false, dosesPorDia: 2, horario1: '08:00', horario2: '17:00' },
-    { id: '2', nome: 'Medicamento 2', tomado: true, dosesPorDia: 1, horario1: '09:00', horario2: '' },
-    { id: '3', nome: 'Medicamento 3', tomado: true, dosesPorDia: 3, horario1: '08:00', horario2: '14:00' },
-    { id: '4', nome: 'Medicamento 4', tomado: true, dosesPorDia: 1, horario1: '20:00', horario2: '' },
-  ]);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const { medicamento } = useLocalSearchParams();
+  const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
 
-  const getCurrentDate = () => {
-    const now = new Date();
-    const months = [
-      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-    ];
-    return `${now.getDate()} de ${months[now.getMonth()]}`;
-  };
-
-  const toggleMedicamento = (id: string) => {
-    if (!isEditMode) {
-      setMedicamentos(prev =>
-        prev.map(med => 
-          med.id === id ? { ...med, tomado: !med.tomado } : med
-        )
-      );
-    }
-  };
-
-  const handleEdit = () => {
-    setIsEditMode(!isEditMode);
-  };
+  useEffect(() => {
+    // Aqui você carregaria os medicamentos do estado global ou do backend
+    // Por enquanto, usando dados mockados
+    setMedicamentos([
+      { id: '1', nome: 'Medicamento 1', tomado: false, dosesPorDia: 2, horario1: '08:00', horario2: '17:00' },
+      { id: '2', nome: 'Medicamento 2', tomado: true, dosesPorDia: 1, horario1: '09:00', horario2: '' },
+      { id: '3', nome: 'Medicamento 3', tomado: true, dosesPorDia: 3, horario1: '08:00', horario2: '14:00' },
+      { id: '4', nome: 'Medicamento 4', tomado: true, dosesPorDia: 1, horario1: '20:00', horario2: '' },
+    ]);
+  }, []);
 
   const handleAddMedicamento = () => {
     router.push('/monitor/novo-medicamento');
@@ -59,7 +42,7 @@ export default function MedicamentoScreen() {
 
   const handleEditMedicamento = (medicamento: Medicamento) => {
     router.push({
-      pathname: '/monitor/editar-medicamento',
+      pathname: '/monitor/editar-medicamento-form',
       params: { medicamento: JSON.stringify(medicamento) }
     });
   };
@@ -81,6 +64,11 @@ export default function MedicamentoScreen() {
     );
   };
 
+  const handleSave = () => {
+    // Aqui você pode implementar a lógica para salvar no backend
+    Alert.alert('Sucesso', 'Medicamentos salvos com sucesso!');
+    router.back();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -90,14 +78,9 @@ export default function MedicamentoScreen() {
           <Feather name="arrow-left" size={24} color="#004A61" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>Medicamentos</Text>
-          <Text style={styles.date}>{getCurrentDate()}</Text>
+          <Text style={styles.title}>Editar medicamentos</Text>
         </View>
-        <TouchableOpacity onPress={handleEdit}>
-          <Text style={styles.editButton}>
-            {isEditMode ? 'concluir' : 'editar'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={styles.content}>
@@ -116,47 +99,37 @@ export default function MedicamentoScreen() {
         <View style={styles.medicamentosList}>
           {medicamentos.map((medicamento) => (
             <View key={medicamento.id} style={styles.medicamentoItem}>
-              <TouchableOpacity
+              <View
                 style={[
                   styles.medicamentoCard,
                   medicamento.tomado ? styles.medicamentoCardTomado : styles.medicamentoCardNaoTomado
                 ]}
-                onPress={() => toggleMedicamento(medicamento.id)}
               >
                 <Text style={styles.medicamentoNome}>{medicamento.nome}</Text>
-                {!isEditMode && (
-                  <View style={styles.checkboxContainer}>
-                    {medicamento.tomado ? (
-                      <View style={styles.checkboxChecked}>
-                        <Feather name="check" size={16} color="#004A61" />
-                      </View>
-                    ) : (
-                      <View style={styles.checkboxUnchecked} />
-                    )}
-                  </View>
-                )}
-                {isEditMode && (
-                  <View style={styles.editActions}>
-                    <TouchableOpacity
-                      onPress={() => handleEditMedicamento(medicamento)}
-                      style={styles.editAction}
-                    >
-                      <Feather name="edit-2" size={16} color="#666" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleDeleteMedicamento(medicamento.id)}
-                      style={styles.deleteAction}
-                    >
-                      <Feather name="x" size={16} color="#FF4444" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </TouchableOpacity>
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    onPress={() => handleEditMedicamento(medicamento)}
+                    style={styles.editAction}
+                  >
+                    <Feather name="edit-2" size={16} color="#666" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteMedicamento(medicamento.id)}
+                    style={styles.deleteAction}
+                  >
+                    <Feather name="x" size={16} color="#FF4444" />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           ))}
         </View>
       </ScrollView>
 
+      {/* Botão Salvar */}
+      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <Text style={styles.saveButtonText}>Salvar</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -179,19 +152,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  headerSpacer: {
+    width: 24,
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-  },
-  date: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  editButton: {
-    fontSize: 16,
-    color: '#004A61',
   },
   content: {
     flex: 1,
@@ -242,24 +209,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     flex: 1,
   },
-  checkboxContainer: {
-    marginLeft: 12,
-  },
-  checkboxChecked: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxUnchecked: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
   editActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,5 +219,19 @@ const styles = StyleSheet.create({
   },
   deleteAction: {
     padding: 4,
+  },
+  saveButton: {
+    backgroundColor: '#004A61',
+    borderRadius: 15,
+    alignItems: 'center',
+    paddingVertical: 15,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    elevation: 3,
+  },
+  saveButtonText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
 });

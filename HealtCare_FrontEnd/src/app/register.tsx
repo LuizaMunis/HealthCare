@@ -43,7 +43,7 @@ export default function RegisterScreen() {
     }
 
     try {
-      const result = await ApiService.register({
+      const response = await ApiService.register({
         nome_completo: nomeCompleto,
         email: email,
         password: password

@@ -8,6 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '@/services/apiService';
 
+// Branding removido conforme solicitação
+
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -76,9 +78,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Login</Text>
-      </View>
+      {/* Branding removido */}
 
       <View style={styles.form}>
         <Text style={styles.welcomeTitle}>Seja bem-vindo de volta!</Text>
@@ -139,6 +139,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
     header: { padding: 20, alignItems: 'center' },
     headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#004A61' },
+    
     form: { flex: 1, paddingHorizontal: 25, paddingTop: 20 },
     welcomeTitle: { fontSize: 28, fontWeight: 'bold', color: '#333' },
     welcomeSubtitle: { fontSize: 16, color: 'gray', marginBottom: 30 },

@@ -1,4 +1,3 @@
-// HealthCare_Backend/src/models/userModel.js
 const { pool } = require('../config/database');
 
 class UserModel {
