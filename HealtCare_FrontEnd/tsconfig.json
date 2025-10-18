@@ -1,3 +1,4 @@
+// HealtCare_FrontEnd/tsconfig.json
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {

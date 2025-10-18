@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Serviço do Banco de Dados (substituindo o XAMPP)
+  db:
+    image: mysql:8.0
+    container_name: healthcare_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root  # Mude para uma senha segura
+      MYSQL_DATABASE: healthcare # Cria o banco de dados 'healthcare'
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # Serviço do Backend
+  backend:
+    build: ./HealtCare_BackEnd # Constrói a partir do Dockerfile na pasta
+    container_name: healthcare_backend
+    restart: always
+    ports:
+      - "3000:3000" # Mapeia a porta 3000 da sua máquina para a 3000 do contêiner
+    depends_on:
+      - db # Garante que o banco de dados inicie antes do backend
+    environment:
+      - DB_HOST=db # IMPORTANTE: O host do banco agora é o nome do serviço 'db'
+      - DB_USER=root
+      - DB_PASSWORD=root # A mesma senha definida no serviço do db
+      - DB_NAME=healthcare
+      - AI_SERVICE_URL=http://ai_service:5000/predict # Comunicação com a IA
+
+  # Serviço do Frontend
+  frontend:
+    build: ./HealtCare_FrontEnd
+    container_name: healthcare_frontend
+    restart: always
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    depends_on:
+      - backend
+    environment:
+      - EXPO_PUBLIC_API_URL_DEV=http://backend:3000
+
+  # Serviço da Inteligência Artificial
+  ai_service:
+    build: ./HealtCare_AI_Service
+    container_name: ai_service
+    restart: always
+    ports:
+      - "5000:5000"
+
+  # Serviço de Admin do Banco (Opcional, mas útil)
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: healthcare_phpmyadmin
+    restart: always
+    ports:
+      - "8082:80"
+    depends_on:
+      - db
+    environment:
+      - PMA_HOST=db
+
+# Define o volume para persistir os dados do banco
+volumes:
+  db_data:
