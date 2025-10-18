@@ -272,36 +272,6 @@ export default function PressureScreen() {
             />
           )}
         </View>
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateLabel}>Data do registro</Text>
-          <TouchableOpacity
-            accessibilityLabel="Selecionar data do registro"
-            style={styles.dateInput}
-            onPress={() => setShowPicker(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dateInputText}>{dateDisplay}</Text>
-          </TouchableOpacity>
-          {showPicker && (
-            <DateTimePicker
-              value={new Date(dateISO + 'T00:00:00')}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              maximumDate={today}
-              onChange={(event, selectedDate) => {
-                if (Platform.OS === 'android') setShowPicker(false);
-                if (!selectedDate) return;
-                const chosen = new Date(selectedDate);
-                chosen.setHours(0,0,0,0);
-                if (chosen.getTime() > today.getTime()) {
-                  Alert.alert('Data inválida', 'Data não pode ser no futuro');
-                  return;
-                }
-                setDateISO(toLocalISODate(chosen));
-              }}
-            />
-          )}
-        </View>
 
         {/* --- Botão Salvar --- */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
