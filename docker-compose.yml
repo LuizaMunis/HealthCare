@@ -1,5 +1,4 @@
-version: '3.8'
-
+# HealthCare/docker-compose.yml
 services:
   # Serviço do Banco de Dados (substituindo o XAMPP)
   db:

@@ -1,3 +1,4 @@
+# HealthCare_FrontEnd/Dockerfile
 # Use a mesma imagem base do Node.js
 FROM node:18-alpine
 
@@ -22,4 +23,4 @@ EXPOSE 19002
 
 # O comando para iniciar o Expo
 # O host 0.0.0.0 é crucial para que ele seja acessível de fora do contêiner
-CMD ["npx", "expo", "start", "--host", "0.0.0.0"]
+CMD ["npx", "expo", "start", "--lan"]

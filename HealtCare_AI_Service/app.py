@@ -1,5 +1,5 @@
 import os
-import joblib # Usado para carregar o modelo .pkl do scikit-learn
+import joblib
 import pandas as pd
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
@@ -52,7 +52,8 @@ def analyze_health_data(data):
         if is_high_pressure and has_warning_symptoms:
             return {"riskLevel": "Atencao", "reason": "Pressão alta combinada com sintomas como dor de cabeça ou tontura."}
             
-        return {"riskLevel": "Normal", "reason": "Nenhum risco imediato detectado pelas regras."
+        # AQUI ESTAVA O ERRO - A CHAVE } FOI ADICIONADA
+        return {"riskLevel": "Normal", "reason": "Nenhum risco imediato detectado pelas regras."}
 
     # Se o modelo de ML estiver carregado, use-o (LÓGICA REAL)
     print("Usando modelo de Machine Learning para predição.")
