@@ -1,7 +1,18 @@
-// HealtCare_BackEnd/src/controllers/registroPressaoArterialController.js
+// backend/src/controllers/registroPressaoArterialController.js
+const RegistroPressaoArterialModel = require('../models/registroPressaoArterialModel');
 const RegistroPressaoArterialService = require('../services/registroPressaoArterialService');
+const PerfilModel = require('../models/perfilModel'); // Precisamos do PerfilModel para obter o perfil_id
 
 class RegistroPressaoArterialController {
+  /**
+   * Helper privado para obter o perfil_id do usuário autenticado.
+   * @param {number} usuarioId - ID do usuário autenticado.
+   * @returns {number|null} O perfil_id se encontrado, ou null.
+   */
+  static async _getPerfilIdFromUserId(usuarioId) {
+    const perfil = await PerfilModel.findByUserId(usuarioId);
+    return perfil ? perfil.id : null;
+  }
 
   static async createRegistro(req, res) {
     try {
