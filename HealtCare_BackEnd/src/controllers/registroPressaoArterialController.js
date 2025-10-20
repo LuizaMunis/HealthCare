@@ -1,5 +1,6 @@
 // backend/src/controllers/registroPressaoArterialController.js
 const RegistroPressaoArterialModel = require('../models/registroPressaoArterialModel');
+const RegistroPressaoArterialService = require('../services/registroPressaoArterialService');
 const PerfilModel = require('../models/perfilModel'); // Precisamos do PerfilModel para obter o perfil_id
 
 class RegistroPressaoArterialController {
@@ -9,7 +10,7 @@ class RegistroPressaoArterialController {
    * @returns {number|null} O perfil_id se encontrado, ou null.
    */
   static async _getPerfilIdFromUserId(usuarioId) {
-    const perfil = await PerfilModel.findByUsuarioId(usuarioId);
+    const perfil = await PerfilModel.findByUserId(usuarioId);
     return perfil ? perfil.id : null;
   }
 

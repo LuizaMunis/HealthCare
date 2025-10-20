@@ -157,11 +157,24 @@ class ValidationMiddleware {
    */
   static validateBloodPressure() {
     return [
+      // Aceita ambos os esquemas de nomenclatura para compatibilidade
       body('pressao_sistolica')
+        .optional()
+        .isInt({ min: 70, max: 300 })
+        .withMessage('Pressão sistólica deve estar entre 70 e 300 mmHg'),
+      
+      body('sistolica_mmhg')
+        .optional()
         .isInt({ min: 70, max: 300 })
         .withMessage('Pressão sistólica deve estar entre 70 e 300 mmHg'),
       
       body('pressao_diastolica')
+        .optional()
+        .isInt({ min: 40, max: 200 })
+        .withMessage('Pressão diastólica deve estar entre 40 e 200 mmHg'),
+      
+      body('diastolica_mmhg')
+        .optional()
         .isInt({ min: 40, max: 200 })
         .withMessage('Pressão diastólica deve estar entre 40 e 200 mmHg'),
       
@@ -175,10 +188,36 @@ class ValidationMiddleware {
         .isISO8601()
         .withMessage('Data e hora devem estar no formato ISO 8601'),
       
+      body('data_hora_medicao')
+        .optional()
+        .isISO8601()
+        .withMessage('Data e hora da medição devem estar no formato ISO 8601'),
+      
       body('observacoes')
         .optional()
         .isLength({ max: 500 })
         .withMessage('Observações devem ter no máximo 500 caracteres'),
+      
+      // Validação customizada para garantir que pelo menos um dos campos de pressão esteja presente
+      (req, res, next) => {
+        const { pressao_sistolica, sistolica_mmhg, pressao_diastolica, diastolica_mmhg } = req.body;
+        
+        if (!pressao_sistolica && !sistolica_mmhg) {
+          return res.status(400).json({
+            success: false,
+            message: 'Pressão sistólica é obrigatória'
+          });
+        }
+        
+        if (!pressao_diastolica && !diastolica_mmhg) {
+          return res.status(400).json({
+            success: false,
+            message: 'Pressão diastólica é obrigatória'
+          });
+        }
+        
+        next();
+      },
       
       ValidationMiddleware.handleValidationErrors
     ];

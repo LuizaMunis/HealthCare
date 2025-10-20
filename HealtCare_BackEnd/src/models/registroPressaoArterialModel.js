@@ -77,6 +77,11 @@ class RegistroPressaoArterialModel {
     }
   }
 
+  // Alias com case correto para evitar erros em chamadores
+  static async findByPerfilId(perfilId) {
+    return this.findByperfilId(perfilId);
+  }
+
   /**
    * Encontra um registro de pressão arterial específico por seu ID.
    * @param {number} registroId - ID do registro.

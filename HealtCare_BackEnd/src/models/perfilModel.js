@@ -2,6 +2,20 @@
 
 const { pool } = require('../config/database');
 
+// Executa queries com uma tentativa de retry em caso de ECONNRESET
+async function executeWithRetry(query, params = []) {
+  try {
+    return await pool.execute(query, params);
+  } catch (error) {
+    if (error && (error.code === 'ECONNRESET' || error.errno === -4077)) {
+      console.warn('⚠️ Conexão MySQL foi resetada. Tentando novamente uma vez...');
+      await new Promise((r) => setTimeout(r, 200));
+      return await pool.execute(query, params);
+    }
+    throw error;
+  }
+}
+
 class PerfilModel {
   static async createTable() {
     const query = `
@@ -21,14 +35,14 @@ class PerfilModel {
           FOREIGN KEY (usuario_id)
           REFERENCES usuario (id) -- --- MESCLADO: Garante consistência com a tabela 'usuario'
           ON DELETE CASCADE
-      ) ENGINE = InnoDB;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `;
-    await pool.execute(query);
+    await executeWithRetry(query);
   }
 
   static async findByUserId(usuario_id) {
     const query = 'SELECT * FROM perfil WHERE usuario_id = ?';
-    const [rows] = await pool.execute(query, [usuario_id]);
+    const [rows] = await executeWithRetry(query, [usuario_id]);
     return rows[0];
   }
 
@@ -112,7 +126,7 @@ class PerfilModel {
         const updateValues = [nome_perfil, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada, usuario_id];
         
         console.log('Executando UPDATE com valores:', updateValues);
-        await pool.execute(updateQuery, updateValues);
+        await executeWithRetry(updateQuery, updateValues);
       } else {
         // INSERT - perfil não existe
         const insertQuery = `
@@ -122,7 +136,7 @@ class PerfilModel {
         const insertValues = [usuario_id, nome_perfil, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada];
         
         console.log('Executando INSERT com valores:', insertValues);
-        await pool.execute(insertQuery, insertValues);
+        await executeWithRetry(insertQuery, insertValues);
       }
       
       return this.findByUserId(usuario_id);

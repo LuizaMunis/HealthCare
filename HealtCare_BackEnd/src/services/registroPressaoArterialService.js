@@ -1,23 +1,36 @@
 // HealthCare_Backend/src/services/registroPressaoArterialService.js
 
 const RegistroPressaoArterialModel = require('../models/registroPressaoArterialModel');
+const PerfilModel = require('../models/perfilModel');
 
 class RegistroPressaoArterialService {
   /**
+   * Obtém perfil_id a partir do usuario_id.
+   */
+  static async getPerfilIdOrThrow(usuario_id) {
+    if (!usuario_id) throw new Error('ID do usuário é obrigatório');
+    const perfil = await PerfilModel.findByUserId(usuario_id);
+    if (!perfil) throw new Error('Perfil não encontrado para o usuário autenticado');
+    return perfil.id;
+  }
+
+  /**
    * Cria um novo registro de pressão arterial
    * @param {Object} registroData - Dados do registro
-   * @param {number} registroData.usuario_id - ID do usuário
+   * @param {number} [registroData.perfil_id] - ID do perfil (preferencial)
+   * @param {number} [registroData.usuario_id] - ID do usuário (fallback para compatibilidade)
    * @param {number} registroData.sistolica_mmhg - Pressão sistólica
    * @param {number} registroData.diastolica_mmhg - Pressão diastólica
    * @param {string} registroData.data_hora_medicao - Data e hora da medição
    * @returns {Object} Registro criado
    */
   static async createRegistro(registroData) {
-    const { usuario_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao } = registroData;
+    const { perfil_id: perfilIdFromBody, usuario_id, sistolica_mmhg, diastolica_mmhg, data_hora_medicao } = registroData;
 
-    // Validações de negócio
-    if (!usuario_id) {
-      throw new Error('ID do usuário é obrigatório');
+    // Preferir perfil_id já calculado pelo controller; se não vier, derivar do usuario_id
+    let perfil_id = perfilIdFromBody;
+    if (!perfil_id) {
+      perfil_id = await this.getPerfilIdOrThrow(usuario_id);
     }
 
     if (!data_hora_medicao) {
@@ -47,7 +60,7 @@ class RegistroPressaoArterialService {
     }
 
     const newRegistroData = {
-      usuario_id,
+      perfil_id,
       sistolica_mmhg: sistolica_mmhg || null,
       diastolica_mmhg: diastolica_mmhg || null,
       data_hora_medicao
@@ -58,23 +71,20 @@ class RegistroPressaoArterialService {
   }
 
   /**
-   * Busca todos os registros de um usuário
-   * @param {number} usuario_id - ID do usuário
+   * Busca todos os registros do perfil do usuário
+   * @param {number} usuario_id - ID do usuário (convertido para perfil_id)
    * @returns {Array} Lista de registros
    */
   static async getRegistrosByUsuario(usuario_id) {
-    if (!usuario_id) {
-      throw new Error('ID do usuário é obrigatório');
-    }
-
-    const registros = await RegistroPressaoArterialModel.findByUsuarioId(usuario_id);
+    const perfil_id = await this.getPerfilIdOrThrow(usuario_id);
+    const registros = await RegistroPressaoArterialModel.findByPerfilId(perfil_id);
     return registros;
   }
 
   /**
    * Busca um registro específico
    * @param {number} registroId - ID do registro
-   * @param {number} usuario_id - ID do usuário (para verificação de propriedade)
+   * @param {number} usuario_id - ID do usuário (para verificação de propriedade → perfil_id)
    * @returns {Object} Registro encontrado
    */
   static async getRegistroById(registroId, usuario_id) {
@@ -82,10 +92,7 @@ class RegistroPressaoArterialService {
       throw new Error('ID do registro é obrigatório');
     }
 
-    if (!usuario_id) {
-      throw new Error('ID do usuário é obrigatório');
-    }
-
+    const perfil_id = await this.getPerfilIdOrThrow(usuario_id);
     const registro = await RegistroPressaoArterialModel.findById(registroId);
     
     if (!registro) {
@@ -93,7 +100,7 @@ class RegistroPressaoArterialService {
     }
 
     // Verificar se o registro pertence ao usuário
-    if (registro.usuario_id !== usuario_id) {
+    if (registro.perfil_id !== perfil_id) {
       throw new Error('Registro não pertence a este usuário');
     }
 
@@ -103,7 +110,7 @@ class RegistroPressaoArterialService {
   /**
    * Atualiza um registro de pressão arterial
    * @param {number} registroId - ID do registro
-   * @param {number} usuario_id - ID do usuário
+   * @param {number} usuario_id - ID do usuário (para verificação → perfil_id)
    * @param {Object} updateData - Dados para atualização
    * @returns {Object} Registro atualizado
    */
@@ -112,13 +119,10 @@ class RegistroPressaoArterialService {
       throw new Error('ID do registro é obrigatório');
     }
 
-    if (!usuario_id) {
-      throw new Error('ID do usuário é obrigatório');
-    }
-
-    // Verificar se o registro existe e pertence ao usuário
+    const perfil_id = await this.getPerfilIdOrThrow(usuario_id);
+    // Verificar se o registro existe e pertence ao perfil do usuário
     const existingRegistro = await RegistroPressaoArterialModel.findById(registroId);
-    if (!existingRegistro || existingRegistro.usuario_id !== usuario_id) {
+    if (!existingRegistro || existingRegistro.perfil_id !== perfil_id) {
       throw new Error('Registro não encontrado ou não pertence a este usuário');
     }
 
@@ -157,7 +161,7 @@ class RegistroPressaoArterialService {
   /**
    * Deleta um registro de pressão arterial
    * @param {number} registroId - ID do registro
-   * @param {number} usuario_id - ID do usuário
+   * @param {number} usuario_id - ID do usuário (para verificação → perfil_id)
    * @returns {boolean} True se deletado com sucesso
    */
   static async deleteRegistro(registroId, usuario_id) {
@@ -165,13 +169,9 @@ class RegistroPressaoArterialService {
       throw new Error('ID do registro é obrigatório');
     }
 
-    if (!usuario_id) {
-      throw new Error('ID do usuário é obrigatório');
-    }
-
-    // Verificar se o registro existe e pertence ao usuário
+    const perfil_id = await this.getPerfilIdOrThrow(usuario_id);
     const existingRegistro = await RegistroPressaoArterialModel.findById(registroId);
-    if (!existingRegistro || existingRegistro.usuario_id !== usuario_id) {
+    if (!existingRegistro || existingRegistro.perfil_id !== perfil_id) {
       throw new Error('Registro não encontrado ou não pertence a este usuário');
     }
 
@@ -186,15 +186,12 @@ class RegistroPressaoArterialService {
 
   /**
    * Analisa os registros de pressão arterial de um usuário
-   * @param {number} usuario_id - ID do usuário
+   * @param {number} usuario_id - ID do usuário (convertido para perfil_id)
    * @returns {Object} Análise dos registros
    */
   static async analisarRegistros(usuario_id) {
-    if (!usuario_id) {
-      throw new Error('ID do usuário é obrigatório');
-    }
-
-    const registros = await RegistroPressaoArterialModel.findByUsuarioId(usuario_id);
+    const perfil_id = await this.getPerfilIdOrThrow(usuario_id);
+    const registros = await RegistroPressaoArterialModel.findByPerfilId(perfil_id);
     
     if (registros.length === 0) {
       return {
@@ -271,10 +268,11 @@ class RegistroPressaoArterialService {
       throw new Error('Data de início deve ser anterior à data de fim');
     }
 
-    // Buscar registros do período
-    const registros = await RegistroPressaoArterialModel.findByUsuarioId(usuario_id);
+    // Buscar registros do período para o perfil do usuário
+    const perfil_id = await this.getPerfilIdOrThrow(usuario_id);
+    const registros = await RegistroPressaoArterialModel.findByPerfilId(perfil_id);
     
-    return registros.filter(registro => {
+      return registros.filter(registro => {
       const dataRegistro = new Date(registro.data_hora_medicao);
       return dataRegistro >= dataInicioObj && dataRegistro <= dataFimObj;
     });

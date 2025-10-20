@@ -2,7 +2,9 @@
 
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+// Garante que as variáveis sejam lidas do arquivo config.env na raiz do backend
+require('dotenv').config({ path: path.resolve(__dirname, '../config.env') });
 
 // --- Logs iniciais de ambiente ---
 console.log('🔧 Verificando variáveis de ambiente:');
