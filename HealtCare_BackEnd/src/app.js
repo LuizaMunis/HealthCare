@@ -23,6 +23,12 @@ const RegistroPressaoArterialModel = require('./models/registroPressaoArterialMo
 const userRoutes = require('./routes/userRoutes');
 const perfilRoutes = require('./routes/perfilRoutes');
 const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // Importa as rotas de registros
+const medicamentoRoutes = require('./routes/medicamentoRoutes');
+const doencaRoutes = require('./routes/doencaRoutes');
+const vacinaRoutes = require('./routes/vacinaRoutes');
+const temperaturaRoutes = require('./routes/temperaturaRoute');
+const frequenciaCardiacaRoutes = require('./routes/frequenciaCardiacaRoute');
+const registroConsultaRoutes = require('./routes/registroConsultaRoutes');
 const ErrorMiddleware = require('./middleware/errorMiddleware'); // Ajuste o caminho se necessário
 
 const app = express();
@@ -44,6 +50,12 @@ app.use(ErrorMiddleware.handleTimeout);
 app.use('/api/users', userRoutes);
 app.use('/api/perfil', perfilRoutes);
 app.use('/api/registros-pressao', registroPressaoArterialRoutes); 
+app.use('/api/medicamentos', medicamentoRoutes);
+app.use('/api/doencas', doencaRoutes);
+app.use('/api/vacinas', vacinaRoutes);
+app.use('/api/temperatura', temperaturaRoutes);
+app.use('/api/frequencia-cardiaca', frequenciaCardiacaRoutes);
+app.use('/api/consultas', registroConsultaRoutes);
 
 // --- Health checks ---
 app.get('/api/health', (_req, res) => {
@@ -60,14 +72,8 @@ const startServer = async () => {
     await testConnection();
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
 
-    console.log('📦 Verificando/criando tabela de usuários (schema VARCHAR(255))...');
-    await UserModel.createTable();
-
-    console.log('📦 Verificando/criando tabela de perfis...');
-    await PerfilModel.createTable();
-
-    console.log('📦 Verificando/criando tabela de registros de pressão arterial...');
-    await RegistroPressaoArterialModel.createTable();
+    console.log('📦 Verificando conexão com banco de dados...');
+    console.log('✅ Banco de dados pronto para uso');
 
     // --- Middlewares finais de erro (depois das rotas) ---
     app.use(ErrorMiddleware.handleSyntaxError);

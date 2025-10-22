@@ -1,5 +1,5 @@
 // backend/src/models/registroUsoMedicamentoModel.js
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 
 class RegistroUsoMedicamentoModel {
   static async create(dadosRegistro) {

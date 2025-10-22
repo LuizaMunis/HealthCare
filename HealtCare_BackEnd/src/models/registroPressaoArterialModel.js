@@ -1,5 +1,5 @@
 // HealtCare_BackEnd/src/models/registroPressaoArterialModel.js
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 
 class RegistroPressaoArterialModel {
 

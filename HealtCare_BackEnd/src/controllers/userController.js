@@ -3,7 +3,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/userModel');
-const ProfileModel = require('../models/profileModel'); // Importa o novo modelo de perfil
+const ProfileModel = require('../models/perfilModel'); // Importa o novo modelo de perfil
 
 class UserController {
   /**
@@ -52,7 +52,14 @@ class UserController {
       // Cria o primeiro perfil para o novo usuário na tabela 'perfil'
       const createdProfile = await ProfileModel.create({
         usuario_id: createdUser.id,
-        nome_perfil
+        nome_perfil,
+        parentesco: null,
+        data_nascimento: null,
+        celular: null,
+        genero: null,
+        cpf: null,
+        peso: null,
+        altura: null
       });
 
       // Gera o token JWT com o ID do usuário
@@ -182,6 +189,96 @@ class UserController {
         success: false,
         message: 'Erro interno ao obter perfis'
       });
+    }
+  }
+
+  //------------------------------------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Atualiza dados básicos do usuário autenticado (nome e email).
+   * Espera: { nome_completo?, email? }
+   */
+  static async updateProfile(req, res) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Usuário não autenticado.' });
+      }
+
+      const { nome_completo, email } = req.body || {};
+
+      if (!nome_completo && !email) {
+        return res.status(400).json({ success: false, message: 'Nada para atualizar.' });
+      }
+
+      await UserModel.update(userId, { nome_completo, email });
+
+      const updated = await UserModel.findById(userId);
+      return res.json({
+        success: true,
+        message: 'Perfil atualizado com sucesso',
+        data: {
+          id: updated.id,
+          nome_completo: updated.nome_completo,
+          email: updated.email,
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      return res.status(500).json({ success: false, message: 'Erro interno ao atualizar perfil' });
+    }
+  }
+
+  //------------------------------------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Altera a senha do usuário autenticado.
+   * Espera: { senha_atual, nova_senha }
+   */
+  static async changePassword(req, res) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Usuário não autenticado.' });
+      }
+
+      const { senha_atual, nova_senha } = req.body || {};
+      if (!senha_atual || !nova_senha) {
+        return res.status(400).json({ success: false, message: 'Senha atual e nova senha são obrigatórias' });
+      }
+
+      const user = await UserModel.findById(userId, true);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
+      }
+
+      const isPasswordValid = await bcrypt.compare(senha_atual, user.senha_hash);
+      if (!isPasswordValid) {
+        return res.status(400).json({ success: false, message: 'Senha atual incorreta' });
+      }
+
+      const nova_senha_hash = await bcrypt.hash(nova_senha, 10);
+      await UserModel.updatePassword(userId, nova_senha_hash);
+
+      return res.json({ success: true, message: 'Senha alterada com sucesso' });
+    } catch (error) {
+      console.error('Erro ao alterar senha:', error);
+      return res.status(500).json({ success: false, message: 'Erro interno ao alterar senha' });
+    }
+  }
+
+  //------------------------------------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Retorna a lista de usuários (requer autenticação/autorização a critério do middleware de auth).
+   */
+  static async getAllUsers(_req, res) {
+    try {
+      const users = await UserModel.getAll();
+      return res.json({ success: true, data: users });
+    } catch (error) {
+      console.error('Erro ao obter usuários:', error);
+      return res.status(500).json({ success: false, message: 'Erro interno ao obter usuários' });
     }
   }
 

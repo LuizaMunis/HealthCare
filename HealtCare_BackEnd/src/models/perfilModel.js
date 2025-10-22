@@ -1,6 +1,6 @@
 // HealthCare_Backend/src/models/perfilModel.js
 
-const pool = require('../config/database'); 
+const { pool } = require('../config/database'); 
 
 // Executa queries com uma tentativa de retry em caso de ECONNRESET
 async function executeWithRetry(query, params = []) {
@@ -176,7 +176,7 @@ class PerfilModel {
       } else {
         // INSERT - perfil não existe
         const insertQuery = `
-          INSERT INTO perfil (usuario_id, nome_perfil, data_nascimento, celular, genero, cpf, peso, altura)
+          INSERT INTO perfil (usuario_id, nome, data_nascimento, celular, genero, cpf, peso, altura)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const insertValues = [usuario_id, nome_perfil, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada];

@@ -30,6 +30,7 @@ interface UserData {
   nome_completo: string;
   email: string;
   password: string;
+  nome_perfil: string;
 }
 
 interface Credentials {

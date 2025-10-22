@@ -7,7 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.use(authMiddleware);
 
 router.post('/', VacinaController.createVacina);
-router.get('/', VacinaController.getAllVacinasByProfile);
+router.get('/', VacinaController.getAllVacinas);
 router.get('/:vacinaId', VacinaController.getVacinaById);
 router.put('/:vacinaId', VacinaController.updateVacina);
 router.delete('/:vacinaId', VacinaController.deleteVacina);

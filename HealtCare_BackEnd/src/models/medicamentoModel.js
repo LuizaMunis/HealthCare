@@ -1,5 +1,5 @@
 // backend/src/models/medicamentoModel.js
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 
 class MedicamentoModel {
   static async create(dadosMedicamento) {

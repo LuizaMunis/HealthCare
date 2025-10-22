@@ -1,5 +1,5 @@
 // backend/src/models/doencaModel.js
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 
 class DoencaModel {
   static async create(dadosDoenca) {

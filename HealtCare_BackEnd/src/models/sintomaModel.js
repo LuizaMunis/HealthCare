@@ -1,5 +1,5 @@
 // backend/src/models/sintomaModel.js
-const pool = require('../config/db');
+const { pool } = require('../config/database');
 
 class SintomaModel {
   static async create(dadosSintoma) {
