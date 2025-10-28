@@ -58,7 +58,6 @@ export const ENDPOINTS = {
     GET_SAVE: '/perfil',
   },
   PRESSURE_RECORDS: '/registros-pressao',
-  PRESSURE_RECORDS: '/registros-pressao',
   TEMPERATURE_RECORDS: '/temperatura',
   HEART_RATE_RECORDS: '/frequencia-cardiaca',
   VACCINE_RECORDS: '/vacina',
