@@ -29,6 +29,7 @@ const vacinaRoutes = require('./routes/vacinaRoutes');
 const temperaturaRoutes = require('./routes/temperaturaRoute');
 const frequenciaCardiacaRoutes = require('./routes/frequenciaCardiacaRoute');
 const registroConsultaRoutes = require('./routes/registroConsultaRoutes');
+const glicemiaRoutes = require('./routes/glicemiaRoutes');
 const ErrorMiddleware = require('./middleware/errorMiddleware'); // Ajuste o caminho se necessário
 
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api/doencas', doencaRoutes);
 app.use('/api/vacinas', vacinaRoutes);
 app.use('/api/temperatura', temperaturaRoutes);
 app.use('/api/frequencia-cardiaca', frequenciaCardiacaRoutes);
+app.use('/api/glicemia', glicemiaRoutes);
 app.use('/api/consultas', registroConsultaRoutes);
 
 // --- Health checks ---

@@ -229,6 +229,26 @@ class UserController {
     }
   }
 
+  /**
+   * Retorna os dados básicos do usuário autenticado (nome_completo e email)
+   */
+  static async getProfile(req, res) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Usuário não autenticado.' });
+      }
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
+      }
+      return res.json({ success: true, data: { id: user.id, nome_completo: user.nome_completo, email: user.email } });
+    } catch (error) {
+      console.error('Erro ao obter perfil do usuário:', error);
+      return res.status(500).json({ success: false, message: 'Erro interno ao obter perfil do usuário' });
+    }
+  }
+
   //------------------------------------------------------------------------------------------------------------------------------------------------
 
   /**

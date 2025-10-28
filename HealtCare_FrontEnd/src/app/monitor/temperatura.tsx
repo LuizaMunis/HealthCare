@@ -64,7 +64,7 @@ export default function TemperaturaScreen() {
     }
 
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) {
         Alert.alert('Erro de Autenticação', 'Você não está logado.');
         return;
@@ -75,7 +75,8 @@ export default function TemperaturaScreen() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           graus_celsius: temperature,
-          data_hora_medicao: `${dateISO} ${new Date().toTimeString().slice(0,8)}`,
+          // ISO 8601 no app; o backend normaliza para MySQL automaticamente
+          data_hora_medicao: `${dateISO}T${new Date().toTimeString().slice(0,8)}`,
         }),
       });
       const result = await response.json();

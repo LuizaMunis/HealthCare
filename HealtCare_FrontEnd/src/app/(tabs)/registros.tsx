@@ -40,7 +40,7 @@ export default function RegistrosScreen() {
             
           <TouchableOpacity 
             style={styles.quickAccessCard} 
-            onPress={() => router.push('/monitor/heart-rate')}
+            onPress={() => router.push('/monitor/frequencia')}
           >
             <Feather name="heart" size={32} color="#004A61" />
             <Text style={styles.quickAccessTitle}>Frequência Cardíaca</Text>

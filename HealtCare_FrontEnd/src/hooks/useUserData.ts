@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 
@@ -32,6 +33,21 @@ export function useUserData() {
             // Pega o primeiro nome para uma saudação mais pessoal
             const firstName = userInfo.nome_completo.split(' ')[0];
             setUserName(firstName);
+          } else {
+            // Fallback: busca do backend (garante web sem cache)
+            try {
+              const res = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.USERS.PROFILE}`, { headers: { 'Authorization': `Bearer ${await AsyncStorage.getItem('healthcare_auth_token')}` } });
+              const data = await res.json();
+              if (res.ok && data?.data?.nome_completo) {
+                const firstName = String(data.data.nome_completo).split(' ')[0];
+                setUserName(firstName);
+                await AsyncStorage.setItem('userInfo', JSON.stringify({ nome_completo: data.data.nome_completo }));
+              } else {
+                setUserName('');
+              }
+            } catch {
+              setUserName('');
+            }
           }
         } catch (error) {
           console.error("Falha ao carregar dados do utilizador do AsyncStorage.", error);

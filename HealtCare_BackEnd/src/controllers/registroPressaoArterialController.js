@@ -16,11 +16,14 @@ class RegistroPressaoArterialController {
 
   static async createRegistro(req, res) {
     try {
-      const usuarioId = req.user.id;
-      const { profileId } = req.params;
-      const registroData = req.body;
+      const usuarioId = req.user?.id;
+      const registroData = req.body || {};
 
-      const newRegistro = await RegistroPressaoArterialService.createRegistro(usuarioId, profileId, registroData);
+      // O service espera um único objeto com os dados. Incluímos o usuario_id
+      // para que ele possa resolver o perfil_id quando necessário.
+      const payload = { usuario_id: usuarioId, ...registroData };
+
+      const newRegistro = await RegistroPressaoArterialService.createRegistro(payload);
 
       res.status(201).json({
         success: true,
@@ -29,16 +32,16 @@ class RegistroPressaoArterialController {
       });
     } catch (error) {
       console.error('Erro ao criar registro de pressão arterial:', error);
-      this.handleError(res, error);
+      RegistroPressaoArterialController.handleError(res, error);
     }
   }
 
   static async getRegistrosByProfile(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId } = req.params;
 
-      const registros = await RegistroPressaoArterialService.getRegistrosByProfile(usuarioId, profileId);
+      // Endpoint não recebe profileId; buscar pelos registros do usuário autenticado
+      const registros = await RegistroPressaoArterialService.getRegistrosByUsuario(usuarioId);
 
       res.json({
         success: true,
@@ -47,17 +50,17 @@ class RegistroPressaoArterialController {
       });
     } catch (error) {
       console.error('Erro ao obter registros de pressão arterial:', error);
-      this.handleError(res, error);
+      RegistroPressaoArterialController.handleError(res, error);
     }
   }
 
   static async updateRegistro(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, registroId } = req.params;
+      const { registroId } = req.params;
       const updateData = req.body;
 
-      const updatedRegistro = await RegistroPressaoArterialService.updateRegistro(usuarioId, profileId, registroId, updateData);
+      const updatedRegistro = await RegistroPressaoArterialService.updateRegistro(registroId, usuarioId, updateData);
 
       res.json({
         success: true,
@@ -66,16 +69,16 @@ class RegistroPressaoArterialController {
       });
     } catch (error) {
       console.error('Erro ao atualizar registro de pressão arterial:', error);
-      this.handleError(res, error);
+      RegistroPressaoArterialController.handleError(res, error);
     }
   }
 
   static async deleteRegistro(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, registroId } = req.params;
+      const { registroId } = req.params;
 
-      await RegistroPressaoArterialService.deleteRegistro(usuarioId, profileId, registroId);
+      await RegistroPressaoArterialService.deleteRegistro(registroId, usuarioId);
 
       res.json({
         success: true,
@@ -83,7 +86,7 @@ class RegistroPressaoArterialController {
       });
     } catch (error) {
       console.error('Erro ao deletar registro de pressão arterial:', error);
-      this.handleError(res, error);
+      RegistroPressaoArterialController.handleError(res, error);
     }
   }
 

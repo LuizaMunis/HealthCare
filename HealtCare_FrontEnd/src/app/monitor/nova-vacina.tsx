@@ -45,16 +45,16 @@ export default function NovaVacinaScreen() {
 
     // Validação de data para web
     if (dataAplicacao.includes('/')) {
-      const dateRegex = /^\d{2}\/\d{2}\/\d{2}$/;
+      const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
       if (!dateRegex.test(dataAplicacao)) {
-        Alert.alert('Atenção', 'Por favor, insira a data no formato DD/MM/AA (ex: 15/01/24).');
+        Alert.alert('Atenção', 'Por favor, insira a data no formato DD/MM/AAAA (ex: 15/01/2024).');
         return;
       }
       
-      // Converter DD/MM/AA para Date
+      // Converter DD/MM/AAAA para Date
       const [day, month, year] = dataAplicacao.split('/');
-      const fullYear = parseInt('20' + year);
-      const selectedDate = new Date(fullYear, parseInt(month) - 1, parseInt(day));
+      const fullYear = parseInt(year, 10);
+      const selectedDate = new Date(fullYear, parseInt(month, 10) - 1, parseInt(day, 10));
       
       if (isNaN(selectedDate.getTime())) {
         Alert.alert('Atenção', 'Data inválida. Verifique o formato DD/MM/AA.');
@@ -81,7 +81,7 @@ export default function NovaVacinaScreen() {
       let dataISO = dataAplicacao;
       if (dataAplicacao.includes('/')) {
         const [day, month, year] = dataAplicacao.split('/');
-        const fullYear = parseInt('20' + year);
+        const fullYear = parseInt(year, 10);
         dataISO = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       }
 
@@ -120,17 +120,17 @@ export default function NovaVacinaScreen() {
     // Remove todos os caracteres não numéricos
     let cleanedText = text.replace(/\D/g, '');
 
-    // Aplica o formato DD/MM/AA automaticamente
-    if (cleanedText.length >= 2) {
-      cleanedText = cleanedText.substring(0, 2) + '/' + cleanedText.substring(2);
+    // Aplica o formato DD/MM/AAAA automaticamente
+    if (cleanedText.length > 2) {
+      cleanedText = cleanedText.slice(0, 2) + '/' + cleanedText.slice(2);
     }
-    if (cleanedText.length >= 5) {
-      cleanedText = cleanedText.substring(0, 5) + '/' + cleanedText.substring(5);
+    if (cleanedText.length > 5) {
+      cleanedText = cleanedText.slice(0, 5) + '/' + cleanedText.slice(5, 9);
     }
 
-    // Limita a 8 caracteres (DD/MM/AA)
-    if (cleanedText.length > 8) {
-      cleanedText = cleanedText.substring(0, 8);
+    // Limita a 10 caracteres (DD/MM/AAAA)
+    if (cleanedText.length > 10) {
+      cleanedText = cleanedText.slice(0, 10);
     }
 
     setDataAplicacao(cleanedText);
@@ -185,10 +185,10 @@ export default function NovaVacinaScreen() {
               style={styles.input}
               value={dataAplicacao}
               onChangeText={handleDateInputChange}
-              placeholder="DD/MM/AA"
+            placeholder="DD/MM/AAAA"
               placeholderTextColor="#999"
               keyboardType="numeric"
-              maxLength={8}
+            maxLength={10}
             />
           </View>
 

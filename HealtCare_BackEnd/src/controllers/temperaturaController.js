@@ -5,10 +5,10 @@ class TemperaturaController {
   static async createRegistro(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId } = req.params;
-      const registroData = req.body;
+      const registroData = req.body || {};
+      const payload = { usuario_id: usuarioId, ...registroData };
 
-      const novoRegistro = await TemperaturaService.createRegistro(usuarioId, profileId, registroData);
+      const novoRegistro = await TemperaturaService.createRegistro(payload);
 
       res.status(201).json({
         success: true,
@@ -16,49 +16,47 @@ class TemperaturaController {
         data: novoRegistro
       });
     } catch (error) {
-      this.handleError(res, error);
+      TemperaturaController.handleError(res, error);
     }
   }
 
   static async getAllRegistrosByProfile(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId } = req.params;
-
-      const registros = await TemperaturaService.getAllRegistrosByProfile(usuarioId, profileId);
+      const registros = await TemperaturaService.getRegistrosByUsuario(usuarioId);
 
       res.json({
         success: true,
         data: registros
       });
     } catch (error) {
-      this.handleError(res, error);
+      TemperaturaController.handleError(res, error);
     }
   }
 
   static async getRegistroById(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, registroId } = req.params;
+      const { registroId } = req.params;
 
-      const registro = await TemperaturaService.getRegistroById(usuarioId, profileId, registroId);
+      const registro = await TemperaturaService.getRegistroById(registroId, usuarioId);
 
       res.json({
         success: true,
         data: registro
       });
     } catch (error) {
-      this.handleError(res, error);
+      TemperaturaController.handleError(res, error);
     }
   }
 
   static async updateRegistro(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, registroId } = req.params;
+      const { registroId } = req.params;
       const updateData = req.body;
 
-      const registroAtualizado = await TemperaturaService.updateRegistro(usuarioId, profileId, registroId, updateData);
+      const registroAtualizado = await TemperaturaService.updateRegistro(registroId, usuarioId, updateData);
 
       res.json({
         success: true,
@@ -66,23 +64,23 @@ class TemperaturaController {
         data: registroAtualizado
       });
     } catch (error) {
-      this.handleError(res, error);
+      TemperaturaController.handleError(res, error);
     }
   }
 
   static async deleteRegistro(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, registroId } = req.params;
+      const { registroId } = req.params;
 
-      await TemperaturaService.deleteRegistro(usuarioId, profileId, registroId);
+      await TemperaturaService.deleteRegistro(registroId, usuarioId);
 
       res.json({
         success: true,
         message: 'Registro deletado com sucesso!'
       });
     } catch (error) {
-      this.handleError(res, error);
+      TemperaturaController.handleError(res, error);
     }
   }
 

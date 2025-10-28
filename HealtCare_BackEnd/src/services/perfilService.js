@@ -15,13 +15,15 @@ class PerfilService {
     const dataToSave = {
       ...profileData,
       usuario_id: usuario_id,
-      nome: profileData.nome_perfil, // Mapear nome_perfil para nome
+      parentesco: profileData.parentesco || null,
       cpf: profileData.cpf ? String(profileData.cpf).replace(/\D/g, '') : null,
       celular: profileData.celular ? String(profileData.celular).replace(/\D/g, '') : null,
     };
 
-    const newProfile = await PerfilModel.create(dataToSave);
-    return newProfile;
+    // Usa createOrUpdate para completar dados do perfil existente do usuário,
+    // evitando criar uma nova linha duplicada.
+    const savedProfile = await PerfilModel.createOrUpdate(usuario_id, dataToSave);
+    return savedProfile;
   }
 
   static async updatePerfil(userId, profileId, updateData) {
@@ -50,7 +52,12 @@ class PerfilService {
     if (!usuario_id) {
       throw new Error('ID do usuário é obrigatório');
     }
-    return await PerfilModel.findByUserId(usuario_id);
+    // Retorna array completo de perfis
+    if (typeof PerfilModel.findAllByUserId === 'function') {
+      return await PerfilModel.findAllByUserId(usuario_id);
+    }
+    const one = await PerfilModel.findByUserId(usuario_id);
+    return one ? [one] : [];
   }
 
   static async deletePerfil(userId, profileId) {

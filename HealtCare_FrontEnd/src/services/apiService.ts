@@ -68,6 +68,11 @@ const ApiService = {
         const token = response.data.data.token;
         await AsyncStorage.setItem(TOKEN_KEY, token);
         console.log('✅ Token salvo com sucesso');
+
+        // Salva também o userInfo mais recente para evitar dados antigos
+        if (response.data.data.user) {
+          await AsyncStorage.setItem('userInfo', JSON.stringify(response.data.data.user));
+        }
       } else {
         console.log('❌ Estrutura da resposta não contém token');
       }
@@ -82,9 +87,12 @@ const ApiService = {
   login: async (credentials: Credentials) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.LOGIN, credentials);
-      const { token } = response.data.data;
+      const { token, user } = response.data.data;
       if (token) {
         await AsyncStorage.setItem(TOKEN_KEY, token);
+        if (user) {
+          await AsyncStorage.setItem('userInfo', JSON.stringify(user));
+        }
       }
       return response.data;
     } catch (error: any) {
@@ -95,6 +103,8 @@ const ApiService = {
   logout: async () => {
     await AsyncStorage.removeItem(TOKEN_KEY);
     await AsyncStorage.removeItem('userInfo');
+    // Limpa também possíveis restos de perfis armazenados por telas
+    await AsyncStorage.removeItem('selectedProfileId');
   },
 
   // --- PROFILE & USER ---
@@ -122,9 +132,8 @@ const ApiService = {
    */
   getAllProfiles: async () => {
     try {
-      // O endpoint para buscar todos os perfis deve ser adicionado ao seu backend
-      const response = await api.get(`${ENDPOINTS.PROFILE.GET_SAVE}/all`); 
-      return response.data;
+      const response = await api.get(ENDPOINTS.PROFILE.GET_SAVE);
+      return response.data; // backend retorna { success, data: [ ... ] }
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao buscar perfis.' };
     }
@@ -137,9 +146,36 @@ const ApiService = {
   getProfileById: async (profileId: string) => {
     try {
       const response = await api.get(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`);
-      return response.data;
+      return response.data; // backend retorna { success, data: { ... } }
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados do perfil.' };
+    }
+  },
+
+  createProfile: async (profileData: ProfileData) => {
+    try {
+      const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, profileData);
+      return response.data;
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao criar perfil.' };
+    }
+  },
+
+  updateProfile: async (profileId: string, profileData: ProfileData) => {
+    try {
+      const response = await api.put(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`, profileData);
+      return response.data;
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao atualizar perfil.' };
+    }
+  },
+
+  deleteProfile: async (profileId: string) => {
+    try {
+      const response = await api.delete(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`);
+      return response.data;
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao excluir perfil.' };
     }
   },
 
@@ -152,26 +188,34 @@ const ApiService = {
     }
   },
   
+  // Cria/atualiza dados do perfil do usuário autenticado (POST /perfil)
   savePerfilData: async (perfilData: PerfilData) => {
     try {
       const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, perfilData);
       return response.data;
     } catch (error: any) {
       console.error('Erro no savePerfilData:', error);
-      
-      // Extrair mensagem de erro mais específica
       let errorMessage = 'Erro ao salvar dados adicionais.';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.status === 409) {
-        errorMessage = 'Este CPF já está em uso por outro usuário.';
-      } else if (error.response?.status === 400) {
-        errorMessage = 'Dados inválidos. Verifique as informações fornecidas.';
-      } else if (error.response?.status === 500) {
-        errorMessage = 'Erro interno do servidor. Tente novamente.';
-      }
-      
+      if (error.response?.data?.message) errorMessage = error.response.data.message;
+      else if (error.response?.status === 409) errorMessage = 'Este CPF já está em uso por outro usuário.';
+      else if (error.response?.status === 400) errorMessage = 'Dados inválidos. Verifique as informações fornecidas.';
+      else if (error.response?.status === 500) errorMessage = 'Erro interno do servidor. Tente novamente.';
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Atualiza dados de um perfil específico por ID (PUT /perfil/:id)
+  updatePerfilDataById: async (profileId: string, perfilData: PerfilData) => {
+    try {
+      const response = await api.put(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`, perfilData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro no updatePerfilDataById:', error);
+      let errorMessage = 'Erro ao salvar dados adicionais.';
+      if (error.response?.data?.message) errorMessage = error.response.data.message;
+      else if (error.response?.status === 409) errorMessage = 'Este CPF já está em uso por outro usuário.';
+      else if (error.response?.status === 400) errorMessage = 'Dados inválidos. Verifique as informações fornecidas.';
+      else if (error.response?.status === 500) errorMessage = 'Erro interno do servidor. Tente novamente.';
       return { success: false, error: errorMessage };
     }
   },

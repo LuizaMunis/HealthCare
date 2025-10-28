@@ -5,10 +5,10 @@ class FrequenciaCardiacaController {
   static async createRegistro(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId } = req.params;
-      const registroData = req.body;
+      const registroData = req.body || {};
+      const payload = { usuario_id: usuarioId, ...registroData };
 
-      const novoRegistro = await FrequenciaCardiacaService.createRegistro(usuarioId, profileId, registroData);
+      const novoRegistro = await FrequenciaCardiacaService.createRegistro(payload);
 
       res.status(201).json({
         success: true,
@@ -16,49 +16,47 @@ class FrequenciaCardiacaController {
         data: novoRegistro
       });
     } catch (error) {
-      this.handleError(res, error);
+      FrequenciaCardiacaController.handleError(res, error);
     }
   }
 
   static async getAllRegistrosByProfile(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId } = req.params;
-
-      const registros = await FrequenciaCardiacaService.getAllRegistrosByProfile(usuarioId, profileId);
+      const registros = await FrequenciaCardiacaService.getRegistrosByUsuario(usuarioId);
 
       res.json({
         success: true,
         data: registros
       });
     } catch (error) {
-      this.handleError(res, error);
+      FrequenciaCardiacaController.handleError(res, error);
     }
   }
 
   static async getRegistroById(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, registroId } = req.params;
+      const { registroId } = req.params;
 
-      const registro = await FrequenciaCardiacaService.getRegistroById(usuarioId, profileId, registroId);
+      const registro = await FrequenciaCardiacaService.getRegistroById(registroId, usuarioId);
 
       res.json({
         success: true,
         data: registro
       });
     } catch (error) {
-      this.handleError(res, error);
+      FrequenciaCardiacaController.handleError(res, error);
     }
   }
 
   static async updateRegistro(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, registroId } = req.params;
+      const { registroId } = req.params;
       const updateData = req.body;
 
-      const registroAtualizado = await FrequenciaCardiacaService.updateRegistro(usuarioId, profileId, registroId, updateData);
+      const registroAtualizado = await FrequenciaCardiacaService.updateRegistro(registroId, usuarioId, updateData);
 
       res.json({
         success: true,
@@ -66,23 +64,23 @@ class FrequenciaCardiacaController {
         data: registroAtualizado
       });
     } catch (error) {
-      this.handleError(res, error);
+      FrequenciaCardiacaController.handleError(res, error);
     }
   }
 
   static async deleteRegistro(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, registroId } = req.params;
+      const { registroId } = req.params;
 
-      await FrequenciaCardiacaService.deleteRegistro(usuarioId, profileId, registroId);
+      await FrequenciaCardiacaService.deleteRegistro(registroId, usuarioId);
 
       res.json({
         success: true,
         message: 'Registro deletado com sucesso!'
       });
     } catch (error) {
-      this.handleError(res, error);
+      FrequenciaCardiacaController.handleError(res, error);
     }
   }
 
