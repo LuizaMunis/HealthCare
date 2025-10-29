@@ -63,6 +63,20 @@ class SintomaModel {
         throw error;
     }
   }
+
+  static async findByDoencaIds(doencaIds) {
+    if (doencaIds.length === 0) return [];
+    
+    const placeholders = doencaIds.map(() => '?').join(',');
+    const query = `SELECT * FROM sintomas WHERE doenca_id IN (${placeholders}) ORDER BY data_hora_inicio DESC`;
+    try {
+        const [rows] = await pool.execute(query, doencaIds);
+        return rows;
+    } catch (error) {
+        console.error('Erro ao buscar sintomas por IDs de doenças:', error);
+        throw error;
+    }
+  }
 }
 
 module.exports = SintomaModel;

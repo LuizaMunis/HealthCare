@@ -62,4 +62,7 @@ export const ENDPOINTS = {
   HEART_RATE_RECORDS: '/frequencia-cardiaca',
   GLYCEMIA_RECORDS: '/glicemia',
   VACCINE_RECORDS: '/vacinas',
+  MEDICATION_RECORDS: '/medicamentos',
+  MEDICATION_USAGE_RECORDS: '/medicamentos',
+  SYMPTOMS_RECORDS: '/sintomas',
 };

@@ -86,7 +86,7 @@ export default function RegistrosScreen() {
         <View style={styles.quickAccessContainer}>
           <TouchableOpacity 
             style={styles.quickAccessCard} 
-            onPress={() => router.push('/monitor/vacina')}
+            onPress={() => router.push('/monitor/nova-vacina')}
           >
             <Feather name="shield" size={32} color="#004A61" />
             <Text style={styles.quickAccessTitle}>Vacinação</Text>

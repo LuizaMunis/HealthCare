@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,25 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
-export default function NovaVacinaScreen() {
+interface VaccineData {
+  id: number;
+  nome: string;
+  dose: string;
+  data_vacinacao: string;
+}
+
+export default function EditarVacinaScreen() {
   const router = useRouter();
+  const { vacina } = useLocalSearchParams();
+  
+  // Estados dos campos
   const [nomeVacina, setNomeVacina] = useState('');
   const [dose, setDose] = useState('');
   const [dataAplicacao, setDataAplicacao] = useState('');
@@ -31,8 +42,33 @@ export default function NovaVacinaScreen() {
     dose: false,
     dataAplicacao: false
   });
+  
+  // Estados de controle
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  // Funções de validação
+  // Carregar dados da vacina
+  useEffect(() => {
+    if (vacina) {
+      try {
+        const vacinaData: VaccineData = JSON.parse(vacina as string);
+        setNomeVacina(vacinaData.nome || '');
+        setDose(vacinaData.dose || '');
+        
+        // Converter data para formato DD/MM/AAAA
+        const date = new Date(vacinaData.data_vacinacao);
+        const formattedDate = date.toLocaleDateString('pt-BR');
+        setDataAplicacao(formattedDate);
+      } catch (error) {
+        console.error('Erro ao carregar dados da vacina:', error);
+        Alert.alert('Erro', 'Erro ao carregar dados da vacina');
+        router.back();
+      }
+    }
+    setInitialLoading(false);
+  }, [vacina]);
+
+  // Funções de validação (reutilizadas da nova-vacina.tsx)
   const validateField = (field: string, value: string) => {
     let error = '';
     
@@ -142,61 +178,6 @@ export default function NovaVacinaScreen() {
     setErrors(prev => ({ ...prev, [field]: error }));
   };
 
-  const handleSave = async () => {
-    // Validar todos os campos antes de prosseguir
-    if (!validateAllFields()) {
-      Alert.alert('Campos obrigatórios', 'Por favor, corrija os erros nos campos destacados em vermelho.');
-      return;
-    }
-
-    try {
-
-    try {
-      const token = await AsyncStorage.getItem('healthcare_auth_token');
-      if (!token) {
-        Alert.alert('Erro de Autenticação', 'Você não está logado.');
-        return;
-      }
-
-      // Converter data para formato ISO se necessário
-      let dataISO = dataAplicacao;
-      if (dataAplicacao.includes('/')) {
-        const [day, month, year] = dataAplicacao.split('/');
-        const fullYear = parseInt(year, 10);
-        dataISO = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      }
-
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.VACCINE_RECORDS}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          nome: nomeVacina,
-          dose: dose,
-          data_vacinacao: dataISO,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Erro ao salvar vacina.');
-      }
-
-      Alert.alert('Sucesso!', 'Vacina registrada com sucesso!');
-      router.back();
-    } catch (error: any) {
-      console.error('Erro ao salvar vacina:', error);
-      Alert.alert('Erro', error.message || 'Não foi possível salvar a vacina.');
-    }
-    } catch (error: any) {
-      console.error('Erro geral na função handleSave:', error);
-      Alert.alert('Erro', 'Ocorreu um erro inesperado. Tente novamente.');
-    }
-  };
-
   const handleDateInputChange = (text: string) => {
     // Remove todos os caracteres não numéricos
     let cleanedText = text.replace(/\D/g, '');
@@ -217,17 +198,100 @@ export default function NovaVacinaScreen() {
     handleFieldChange('dataAplicacao', cleanedText);
   };
 
+  const handleSave = async () => {
+    // Validar todos os campos antes de prosseguir
+    if (!validateAllFields()) {
+      Alert.alert('Campos obrigatórios', 'Por favor, corrija os erros nos campos destacados em vermelho.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
+      if (!token) {
+        Alert.alert('Erro de Autenticação', 'Você não está logado.');
+        return;
+      }
+
+      const activeProfileId = await AsyncStorage.getItem('active_profile_id');
+      if (!activeProfileId) {
+        Alert.alert('Erro', 'Perfil não encontrado.');
+        return;
+      }
+
+      // Converter data DD/MM/AAAA para formato ISO
+      let formattedDate = dataAplicacao;
+      if (dataAplicacao.includes('/')) {
+        const [day, month, year] = dataAplicacao.split('/');
+        formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+
+      const vacinaData = {
+        nome: nomeVacina.trim(),
+        dose: dose.trim(),
+        data_vacinacao: `${formattedDate}T00:00:00`,
+        perfil_id: parseInt(activeProfileId)
+      };
+
+      const vacinaId = JSON.parse(vacina as string).id;
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.VACCINE_RECORDS}/${vacinaId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(vacinaData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao atualizar vacina.');
+      }
+
+      Alert.alert('Sucesso!', 'Vacina atualizada com sucesso!');
+      router.back();
+    } catch (error: any) {
+      console.error('Erro ao atualizar vacina:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível atualizar a vacina.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    Alert.alert(
+      'Cancelar Edição',
+      'Tem certeza que deseja cancelar? As alterações serão perdidas.',
+      [
+        { text: 'Continuar Editando', style: 'cancel' },
+        { text: 'Cancelar', style: 'destructive', onPress: () => router.back() }
+      ]
+    );
+  };
+
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#004A61" />
+          <Text style={styles.loadingText}>Carregando dados da vacina...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color="#004A61" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <View style={styles.titleButton}>
-            <Text style={styles.title}>Nova vacina</Text>
-          </View>
+          <TouchableOpacity style={styles.titleButton}>
+            <Text style={styles.title}>Editar Vacina</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -299,15 +363,31 @@ export default function NovaVacinaScreen() {
               <Text style={styles.errorText}>{errors.dataAplicacao}</Text>
             )}
           </View>
-
         </View>
       </ScrollView>
 
-      {/* Botão Salvar */}
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Salvar</Text>
-      </TouchableOpacity>
-
+      {/* Botões de Ação */}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity 
+          style={styles.cancelButton} 
+          onPress={handleCancel}
+          disabled={loading}
+        >
+          <Text style={styles.cancelButtonText}>Cancelar</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>Salvar</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -346,6 +426,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+  backButton: {
+    padding: 8,
+  },
   content: {
     flex: 1,
     padding: 20,
@@ -362,6 +445,10 @@ const styles = StyleSheet.create({
     color: '#004A61',
     marginBottom: 8,
   },
+  required: {
+    color: '#FF4444',
+    fontWeight: 'bold',
+  },
   input: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
@@ -376,28 +463,60 @@ const styles = StyleSheet.create({
     borderColor: '#FF4444',
     backgroundColor: '#FFF5F5',
   },
-  required: {
-    color: '#FF4444',
-    fontWeight: 'bold',
-  },
   errorText: {
     color: '#FF4444',
     fontSize: 14,
     marginTop: 4,
     fontWeight: '500',
   },
-  saveButton: {
-    backgroundColor: '#004A61',
-    borderRadius: 15,
+  actionButtons: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 8,
     alignItems: 'center',
-    paddingVertical: 15,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    elevation: 3,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#004A61',
+    borderRadius: 8,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#CCCCCC',
   },
   saveButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 12,
+    fontWeight: '500',
   },
 });

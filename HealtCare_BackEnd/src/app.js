@@ -25,6 +25,7 @@ const perfilRoutes = require('./routes/perfilRoutes');
 const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // Importa as rotas de registros
 const medicamentoRoutes = require('./routes/medicamentoRoutes');
 const doencaRoutes = require('./routes/doencaRoutes');
+const sintomaRoutes = require('./routes/sintomaRoutes');
 const vacinaRoutes = require('./routes/vacinaRoutes');
 const temperaturaRoutes = require('./routes/temperaturaRoute');
 const frequenciaCardiacaRoutes = require('./routes/frequenciaCardiacaRoute');
@@ -53,6 +54,7 @@ app.use('/api/perfil', perfilRoutes);
 app.use('/api/registros-pressao', registroPressaoArterialRoutes); 
 app.use('/api/medicamentos', medicamentoRoutes);
 app.use('/api/doencas', doencaRoutes);
+app.use('/api/sintomas', sintomaRoutes);
 app.use('/api/vacinas', vacinaRoutes);
 app.use('/api/temperatura', temperaturaRoutes);
 app.use('/api/frequencia-cardiaca', frequenciaCardiacaRoutes);

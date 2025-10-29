@@ -80,9 +80,9 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity 
               style={styles.quickAccessCard} 
-              onPress={() => router.push('/history/symptoms')}
+              onPress={() => router.push('/history/sintomas')}
             >
-              <Feather name="loader" size={32} color="#004A61" />
+              <Feather name="activity" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Sintomas</Text>
           </TouchableOpacity>
         </View>

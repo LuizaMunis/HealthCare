@@ -10,18 +10,22 @@ import {
   Alert,
   Modal,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 interface Medicamento {
-  id: string;
-  nome: string;
-  tomado: boolean;
-  dosesPorDia: number;
+  id: number;
+  nome_medicamento: string;
   dosagem: string;
-  horario1: string;
-  horario2: string;
+  frequencia_horas: number;
+  duracao_dias_tratamento: number;
+  data_inicio_tratamento: string;
+  lembretes_ativos: boolean;
+  uso_continuo: boolean;
 }
 
 export default function EditarMedicamentoFormScreen() {
@@ -29,18 +33,17 @@ export default function EditarMedicamentoFormScreen() {
   const { medicamento } = useLocalSearchParams();
   const [medicamentoData, setMedicamentoData] = useState<Medicamento | null>(null);
   const [nome, setNome] = useState('');
-  const [dosesPorDia, setDosesPorDia] = useState('');
   const [dosagem, setDosagem] = useState('');
-  const [horario1, setHorario1] = useState('');
-  const [horario2, setHorario2] = useState('');
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [currentTimeField, setCurrentTimeField] = useState<'horario1' | 'horario2'>('horario1');
-  const [selectedHour, setSelectedHour] = useState(8);
-  const [selectedMinute, setSelectedMinute] = useState(0);
+  const [frequenciaHoras, setFrequenciaHoras] = useState('');
+  const [duracaoTratamento, setDuracaoTratamento] = useState('');
+  const [dataInicio, setDataInicio] = useState('');
+  const [usoContinuo, setUsoContinuo] = useState(false);
+  const [lembretesAtivos, setLembretesAtivos] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [showDosagemPicker, setShowDosagemPicker] = useState(false);
-  const [selectedDosagemIndex, setSelectedDosagemIndex] = useState(2); // 150 mg é o índice 2
-  const [showDosesPicker, setShowDosesPicker] = useState(false);
-  const [selectedDosesIndex, setSelectedDosesIndex] = useState(1); // 2 doses é o índice 1
+  const [selectedDosagemIndex, setSelectedDosagemIndex] = useState(2);
+  const [showFrequenciaPicker, setShowFrequenciaPicker] = useState(false);
+  const [selectedFrequenciaIndex, setSelectedFrequenciaIndex] = useState(1);
 
   // Configurações dos seletores (baseado na tela de pressão arterial)
   const ITEM_HEIGHT = 44;
@@ -54,6 +57,7 @@ export default function EditarMedicamentoFormScreen() {
   const minuteValues = useMemo(() => Array.from({ length: (MINUTE_MAX - MINUTE_MIN) / 15 + 1 }, (_, i) => MINUTE_MIN + i * 15), []);
   const dosagemValues = useMemo(() => ['50 mg', '100 mg', '150 mg', '200 mg', '250 mg', '500 mg'], []);
   const dosesValues = useMemo(() => ['1', '2', '3', '4'], []);
+  const frequenciaValues = useMemo(() => ['4', '6', '8', '12', '24'], []);
 
   const hourScrollRef = useRef<ScrollView | null>(null);
   const minuteScrollRef = useRef<ScrollView | null>(null);
@@ -69,27 +73,27 @@ export default function EditarMedicamentoFormScreen() {
       try {
         const parsedMedicamento = JSON.parse(medicamento as string);
         setMedicamentoData(parsedMedicamento);
-        setNome(parsedMedicamento.nome);
-        const dosesInicial = parsedMedicamento.dosesPorDia.toString();
-        setDosesPorDia(dosesInicial);
-        const dosesIndex = dosesValues.findIndex(d => d === dosesInicial);
-        setSelectedDosesIndex(dosesIndex >= 0 ? dosesIndex : 1);
+        setNome(parsedMedicamento.nome_medicamento || '');
+        setDosagem(parsedMedicamento.dosagem || '');
+        setFrequenciaHoras(parsedMedicamento.frequencia_horas?.toString() || '');
+        setDuracaoTratamento(parsedMedicamento.duracao_dias_tratamento?.toString() || '');
+        setDataInicio(parsedMedicamento.data_inicio_tratamento || '');
+        setUsoContinuo(parsedMedicamento.uso_continuo || false);
+        setLembretesAtivos(parsedMedicamento.lembretes_ativos || false);
+        
+        // Inicializar valores dos seletores
         const dosagemInicial = parsedMedicamento.dosagem || '150 mg';
         setDosagem(dosagemInicial);
         const dosagemIndex = dosagemValues.findIndex(d => d === dosagemInicial);
         setSelectedDosagemIndex(dosagemIndex >= 0 ? dosagemIndex : 2);
-        setHorario1(parsedMedicamento.horario1);
-        setHorario2(parsedMedicamento.horario2);
         
-        // Inicializar valores do seletor de hora
-        if (parsedMedicamento.horario1) {
-          const [hour, minute] = parsedMedicamento.horario1.split(':').map(Number);
-          setSelectedHour(hour);
-          setSelectedMinute(minute);
-        }
+        const frequenciaInicial = parsedMedicamento.frequencia_horas?.toString() || '8';
+        setFrequenciaHoras(frequenciaInicial);
+        const frequenciaIndex = frequenciaValues.findIndex(f => f === frequenciaInicial);
+        setSelectedFrequenciaIndex(frequenciaIndex >= 0 ? frequenciaIndex : 1);
       } catch (error) {
         console.error('Erro ao parsear medicamento:', error);
-        router.back();
+        Alert.alert('Erro', 'Erro ao carregar dados do medicamento.');
       }
     }
   }, [medicamento]);
@@ -129,14 +133,9 @@ export default function EditarMedicamentoFormScreen() {
     }
   }, [showDosesPicker, selectedDosesIndex]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!nome.trim()) {
       Alert.alert('Erro', 'Por favor, insira o nome do medicamento');
-      return;
-    }
-
-    if (!dosesPorDia || parseInt(dosesPorDia) < 1) {
-      Alert.alert('Erro', 'Por favor, insira um número válido de doses por dia');
       return;
     }
 
@@ -145,14 +144,70 @@ export default function EditarMedicamentoFormScreen() {
       return;
     }
 
-    if (!horario1.trim()) {
-      Alert.alert('Erro', 'Por favor, insira pelo menos um horário de lembrete');
+    if (!frequenciaHoras || parseInt(frequenciaHoras) < 1) {
+      Alert.alert('Erro', 'Por favor, insira uma frequência válida');
       return;
     }
 
-    // Aqui você implementaria a lógica para salvar no backend
-    Alert.alert('Sucesso', 'Medicamento atualizado com sucesso!');
-    router.back();
+    if (!duracaoTratamento || parseInt(duracaoTratamento) < 1) {
+      Alert.alert('Erro', 'Por favor, insira uma duração válida');
+      return;
+    }
+
+    if (!medicamentoData) {
+      Alert.alert('Erro', 'Dados do medicamento não encontrados');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
+      if (!token) {
+        Alert.alert('Erro de Autenticação', 'Você não está logado.');
+        return;
+      }
+
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
+        return;
+      }
+
+      // Preparar dados para envio
+      const medicamentoDataToUpdate = {
+        nome_medicamento: nome.trim(),
+        dosagem: dosagem.trim(),
+        frequencia_horas: parseInt(frequenciaHoras),
+        duracao_dias_tratamento: parseInt(duracaoTratamento),
+        data_inicio_tratamento: dataInicio || new Date().toISOString().split('T')[0],
+        uso_continuo: usoContinuo,
+        lembretes_ativos: lembretesAtivos,
+      };
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}/${medicamentoData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(medicamentoDataToUpdate),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao atualizar medicamento.');
+      }
+
+      Alert.alert('Sucesso!', 'Medicamento atualizado com sucesso!');
+      router.back();
+    } catch (error: any) {
+      console.error('Erro ao atualizar medicamento:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível atualizar o medicamento.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openDosesPicker = () => {
