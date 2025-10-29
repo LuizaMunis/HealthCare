@@ -1,5 +1,5 @@
 // backend/src/models/consultaModel.js
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 
 class ConsultaModel {
   static async create(consultaData) {

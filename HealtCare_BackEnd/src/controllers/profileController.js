@@ -18,7 +18,11 @@ class PerfilController {
       });
     } catch (error) {
       console.error('❌ Erro ao criar perfil:', error);
-      this.handleError(res, error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno ao criar perfil',
+        error: error.message
+      });
     }
   }
 
@@ -76,6 +80,32 @@ class PerfilController {
       res.status(200).json({ success: true, message: 'Perfil deletado com sucesso.' });
     } catch (error) {
       console.error('❌ Erro ao deletar perfil:', error);
+      this.handleError(res, error);
+    }
+  }
+
+  static async getProfileStatus(req, res) {
+    try {
+      const { profileId } = req.params;
+      const userId = req.user.id;
+
+      const status = await PerfilService.verificarCompletudePerfil(userId, profileId);
+      res.json({ success: true, data: status });
+    } catch (error) {
+      console.error('❌ Erro ao obter status do perfil:', error);
+      this.handleError(res, error);
+    }
+  }
+
+  static async getProfileStats(req, res) {
+    try {
+      const { profileId } = req.params;
+      const userId = req.user.id;
+
+      const stats = await PerfilService.getEstatisticasPerfil(userId, profileId);
+      res.json({ success: true, data: stats });
+    } catch (error) {
+      console.error('❌ Erro ao obter estatísticas do perfil:', error);
       this.handleError(res, error);
     }
   }

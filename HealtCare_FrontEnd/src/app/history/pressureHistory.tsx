@@ -54,7 +54,7 @@ export default function PressureHistoryScreen() {
       setError(null); 
       
       try {
-        const token = await AsyncStorage.getItem('userToken');
+        const token = await AsyncStorage.getItem('healthcare_auth_token');
         if (!token) {
           throw new Error('Token de autenticação não encontrado.');
         }
@@ -118,7 +118,7 @@ export default function PressureHistoryScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem('userToken');
+              const token = await AsyncStorage.getItem('healthcare_auth_token');
 
               const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${id}`, {
                 method: 'DELETE',
@@ -171,7 +171,7 @@ export default function PressureHistoryScreen() {
     }
 
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
       const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${editingRecord.id}`;
       const method = 'PUT';
 

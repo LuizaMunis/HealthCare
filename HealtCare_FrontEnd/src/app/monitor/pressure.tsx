@@ -74,7 +74,18 @@ export default function PressureScreen() {
 
       const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}`;
       const now = new Date();
-      const measurementDateTime = new Date(`${dateISO}T${now.toTimeString().slice(0, 8)}`);
+      // Criar data/hora local sem conversão UTC
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      
+      // Usar a data selecionada pelo usuário + hora atual no formato YYYY-MM-DD HH:MM:SS
+      const [yearSelected, monthSelected, daySelected] = dateISO.split('-');
+      const measurementDateTime = `${yearSelected}-${monthSelected}-${daySelected} ${hours}:${minutes}:${seconds}`;
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -84,7 +95,7 @@ export default function PressureScreen() {
         body: JSON.stringify({
           sistolica_mmhg: systolic,
           diastolica_mmhg: diastolic,
-          data_hora_medicao: `${dateISO} ${new Date().toTimeString().slice(0, 8)}`,
+          data_hora_medicao: measurementDateTime
         }),
       });
 

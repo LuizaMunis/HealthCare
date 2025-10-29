@@ -52,14 +52,39 @@ export default function GerenciarPerfilScreen() {
   const formatPeso = (text: string) => {
     const numbers = text.replace(/\D/g, '');
     if (numbers.length === 0) return '';
-    if (numbers.length >= 3) {
-      const kg = numbers.slice(0, -2);
-      const g = numbers.slice(-2);
-      return `${kg},${g}`;
+    
+    // UX: 1-2 dígitos como inteiro; a partir de 3, vírgula nos dois últimos
+    if (numbers.length <= 2) {
+      const inteiro = parseInt(numbers, 10);
+      if (inteiro > 500) return '500';
+      return String(inteiro);
     }
-    return numbers;
+
+    const valorNumerico = parseInt(numbers, 10) / 100;
+    if (valorNumerico > 500) return '500,00';
+
+    const kg = numbers.slice(0, -2);
+    const g = numbers.slice(-2);
+    return `${kg},${g}`;
   };
   const formatAltura = (text: string) => text.replace(/\D/g, '').slice(0, 3);
+  
+  // Função para processar peso antes de enviar ao backend
+  const processarPeso = (peso: string): string => {
+    if (!peso) return '';
+    
+    // Se começar com vírgula (ex: ",55"), adiciona "0" antes
+    if (peso.startsWith(',')) {
+      return `0${peso.replace(',', '.')}`;
+    }
+    
+    // Se for apenas números (ex: "5"), adiciona ".00"
+    if (!peso.includes(',') && !peso.includes('.')) {
+      return `${peso}.00`;
+    }
+    
+    return peso.replace(',', '.'); // converte vírgula em ponto
+  };
 
   // Busca dados do perfil se estiver em modo de edição.
   useEffect(() => {
@@ -110,7 +135,7 @@ export default function GerenciarPerfilScreen() {
         cpf: cpf.replace(/\D/g, '') || null,
         celular: telefone.replace(/\D/g, '') || null,
         data_nascimento: dataFormatada,
-        peso: peso ? parseFloat(peso.replace(',', '.')) : null,
+        peso: peso ? parseFloat(processarPeso(peso)) : null,
         altura: altura ? parseInt(altura) : null,
         genero: genero ? generoMapeado : null,
       };

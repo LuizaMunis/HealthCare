@@ -182,35 +182,44 @@ export function formatPeso(peso: string): string {
   const numbers = peso.replace(/\D/g, '');
   if (!numbers) return '';
 
-  // 2. Converte para um valor numérico para validar o intervalo.
-  // A lógica é tratar os números como "centavos de Kg". Ex: "8550" vira 85.50
+  // 2. Regra UX:
+  // - Para 1 ou 2 dígitos: mostrar como inteiro (sem vírgula) para evitar confusão
+  // - A partir do 3º dígito: aplicar vírgula nos dois últimos
+  if (numbers.length <= 2) {
+    const inteiro = parseInt(numbers, 10);
+    if (inteiro > 500) return '500';
+    return String(inteiro);
+  }
+
+  // 3. Para 3+ dígitos, tratar como centavos de Kg
   const valorNumerico = parseInt(numbers, 10) / 100;
+  if (valorNumerico > 500) return '500,00';
 
-  // 3. Validação do limite MÁXIMO (500 kg).
-  // Se o valor digitado ultrapassar 500, a máscara é travada em "500,00".
-  if (valorNumerico > 500) {
-    return '500,00';
-  }
-
-  // 4. Lógica de formatação original, agora aplicada a um valor válido.
-  if (numbers.length >= 3) {
-    const kg = numbers.slice(0, -2);
-    const g = numbers.slice(-2);
-    return `${kg},${g}`;
-  }
-  if (numbers.length === 2) return `0,${numbers}`;
-  if (numbers.length === 1) return `0,0${numbers}`;
+  const kg = numbers.slice(0, -2);
+  const g = numbers.slice(-2);
+  return `${kg},${g}`;
 
   return '';
 }
 
 /**
  * Converte o peso formatado para o padrão numérico com ponto (ex: 85.50).
- * @param peso - Peso formatado (ex: "85,50").
+ * @param peso - Peso formatado (ex: "85,50" ou ",55" ou "5").
  * @returns String de peso com ponto decimal.
  */
 export function unmaskPeso(peso: string): string {
   if (!peso) return '';
+  
+  // Se começar com vírgula (ex: ",55"), adiciona "0" antes
+  if (peso.startsWith(',')) {
+    return `0${peso.replace(',', '.')}`;
+  }
+  
+  // Se for apenas números (ex: "5"), adiciona ".00"
+  if (!peso.includes(',') && !peso.includes('.')) {
+    return `${peso}.00`;
+  }
+  
   return peso.replace(',', '.'); // converte vírgula em ponto
 }
 

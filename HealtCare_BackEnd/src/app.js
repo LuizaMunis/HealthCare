@@ -2,7 +2,9 @@
 
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+// Garante que as variáveis sejam lidas do arquivo config.env na raiz do backend
+require('dotenv').config({ path: path.resolve(__dirname, '../config.env') });
 
 // --- Logs iniciais de ambiente ---
 console.log('🔧 Verificando variáveis de ambiente:');
@@ -21,46 +23,13 @@ const RegistroPressaoArterialModel = require('./models/registroPressaoArterialMo
 const userRoutes = require('./routes/userRoutes');
 const ProfileRoutes = require('./routes/profileRoutes');
 const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // Importa as rotas de registros
-
-// --- ErrorMiddleware (fallback se não existir) ---
-let ErrorMiddleware;
-try {
-  ErrorMiddleware = require('./middlewares/errorMiddleware');
-  console.log('🧩 ErrorMiddleware carregado do projeto.');
-} catch (e) {
-  console.warn('⚠️ ErrorMiddleware não encontrado. Usando fallback mínimo.');
-  ErrorMiddleware = {
-    sanitizeHeaders: (req, _res, next) => next(),
-    validateContentType: (req, _res, next) => next(),
-    limitBodySize: (req, _res, next) => next(),
-    logRequest: (req, _res, next) => {
-      // console.log(`${req.method} ${req.url}`);
-      next();
-    },
-    handleTimeout: (req, _res, next) => next(),
-    handleSyntaxError: (err, _req, res, next) =>
-      err instanceof SyntaxError
-        ? res.status(400).json({ message: 'JSON inválido' })
-        : next(err),
-    handleValidationError: (err, _req, res, next) =>
-      err?.name === 'ValidationError'
-        ? res.status(422).json({ message: err.message })
-        : next(err),
-    handleDatabaseError: (err, _req, res, next) =>
-      err?.name === 'DatabaseError'
-        ? res.status(500).json({ message: 'Erro de banco de dados' })
-        : next(err),
-    handleJWTError: (err, _req, res, next) =>
-      err?.name === 'JsonWebTokenError'
-        ? res.status(401).json({ message: 'Token inválido' })
-        : next(err),
-    handleNotFound: (req, res) => res.status(404).json({ message: 'Rota não encontrada' }),
-    handleGenericError: (err, _req, res, _next) => {
-      console.error('❌ Erro não tratado:', err);
-      res.status(500).json({ message: 'Erro interno do servidor' });
-    },
-  };
-}
+const medicamentoRoutes = require('./routes/medicamentoRoutes');
+const doencaRoutes = require('./routes/doencaRoutes');
+const vacinaRoutes = require('./routes/vacinaRoutes');
+const temperaturaRoutes = require('./routes/temperaturaRoute');
+const frequenciaCardiacaRoutes = require('./routes/frequenciaCardiacaRoute');
+const registroConsultaRoutes = require('./routes/registroConsultaRoutes');
+const ErrorMiddleware = require('./middleware/errorMiddleware'); // Ajuste o caminho se necessário
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -79,8 +48,14 @@ app.use(ErrorMiddleware.handleTimeout);
 
 // --- Rotas da API ---
 app.use('/api/users', userRoutes);
-app.use('/api/profile', ProfileRoutes);
-// app.use('/api/pressao-arterial', registroPressaoArterialRoutes);
+app.use('/api/perfil', perfilRoutes);
+app.use('/api/registros-pressao', registroPressaoArterialRoutes); 
+app.use('/api/medicamentos', medicamentoRoutes);
+app.use('/api/doencas', doencaRoutes);
+app.use('/api/vacinas', vacinaRoutes);
+app.use('/api/temperatura', temperaturaRoutes);
+app.use('/api/frequencia-cardiaca', frequenciaCardiacaRoutes);
+app.use('/api/consultas', registroConsultaRoutes);
 
 // --- Health checks ---
 app.get('/api/health', (_req, res) => {
@@ -96,6 +71,9 @@ const startServer = async () => {
     console.log('🔗 Tentando conectar ao banco de dados...');
     await testConnection();
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
+
+    console.log('📦 Verificando conexão com banco de dados...');
+    console.log('✅ Banco de dados pronto para uso');
 
     // --- Middlewares finais de erro (depois das rotas) ---
     app.use(ErrorMiddleware.handleSyntaxError);

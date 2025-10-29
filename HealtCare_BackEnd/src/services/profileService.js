@@ -15,6 +15,7 @@ class PerfilService {
     const dataToSave = {
       ...profileData,
       usuario_id: usuario_id,
+      nome: profileData.nome_perfil, // Mapear nome_perfil para nome
       cpf: profileData.cpf ? String(profileData.cpf).replace(/\D/g, '') : null,
       celular: profileData.celular ? String(profileData.celular).replace(/\D/g, '') : null,
     };

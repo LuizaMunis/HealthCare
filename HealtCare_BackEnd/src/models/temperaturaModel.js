@@ -1,5 +1,5 @@
 // backend/src/models/temperaturaModel.js
-const pool = require('../config/db');
+const { pool } = require('../config/database');
 
 class TemperaturaModel {
   static async create(dadosRegistro) {

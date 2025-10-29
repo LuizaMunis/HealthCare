@@ -1,6 +1,6 @@
 // backend/src/services/consultaService.js
 
-const ConsultaModel = require('../models/consultaModel');
+const ConsultaModel = require('../models/registroConsultaModel');
 const PerfilModel = require('../models/perfilModel');
 
 class ConsultaService {

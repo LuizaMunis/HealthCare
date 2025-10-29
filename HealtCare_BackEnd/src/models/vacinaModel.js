@@ -1,5 +1,5 @@
 // backend/src/models/vacinaModel.js
-const pool = require('../config/db');
+const { pool } = require('../config/database');
 
 class VacinaModel {
   static async create(dadosVacina) {
