@@ -123,11 +123,11 @@ export const useAccount = () => {
 
       // 2. Busca a lista de todos os perfis associados a esta conta
       const profilesResult = await ApiService.getAllProfiles();
-      if (!profilesResult.success || !profilesResult.data?.data) {
+      if (!profilesResult.success || !profilesResult.data) {
         throw new Error('Falha ao buscar a lista de perfis.');
       }
       
-      const profilesArray = profilesResult.data.data || []; 
+      const profilesArray = Array.isArray(profilesResult.data) ? profilesResult.data : []; 
 
       const fetchedProfiles: Profile[] = profilesArray.map((p: BackendProfile) => ({
           id: p.id.toString(),
@@ -144,8 +144,8 @@ export const useAccount = () => {
         setActiveProfile(active);
         // 4. Busca os dados detalhados (CPF, etc.) do perfil que está ativo
         const activePerfilDataResult = await ApiService.getProfileById(active.id);
-        if (activePerfilDataResult.success && activePerfilDataResult.data?.data) {
-            const { data_nascimento, celular, genero, cpf, peso, altura } = activePerfilDataResult.data.data;
+        if (activePerfilDataResult.success && activePerfilDataResult.data) {
+            const { data_nascimento, celular, genero, cpf, peso, altura } = activePerfilDataResult.data;
             setPerfilData({
                 birthDate: data_nascimento ? formatDateForDisplay(data_nascimento) : '',
                 phone: celular ? formatCelular(celular) : '',
@@ -233,8 +233,8 @@ export const useAccount = () => {
       peso: newData.weight ? parseFormattedNumber(newData.weight) : null,
       altura: newData.height ? parseInt(newData.height, 10) : null,
     };
-    // A função savePerfilData precisa do ID do perfil
-    const result = await ApiService.savePerfilData(activeProfile.id, payload);
+    // Se temos um profileId, usamos PUT; caso contrário, criamos/completamos com POST
+    const result = activeProfile.id ? await ApiService.updatePerfilDataById(activeProfile.id, payload as any) : await ApiService.savePerfilData(payload as any);
     if (result.success) {
       await fetchData();
       Alert.alert('Sucesso', 'Os seus dados foram salvos!');

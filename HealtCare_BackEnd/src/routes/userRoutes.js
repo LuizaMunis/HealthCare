@@ -17,6 +17,11 @@ router.post('/login',
   UserController.login
 );
 
+router.get('/profile', 
+  authMiddleware, 
+  UserController.getProfile
+);
+
 router.get('/profiles', 
   authMiddleware, 
   UserController.getUserProfiles 

@@ -6,7 +6,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG } from '../../constants/api';
+import { API_CONFIG, ENDPOINTS } from '../../constants/api';
 
 export default function GlicemiaScreen() {
   const router = useRouter();
@@ -68,15 +68,15 @@ export default function GlicemiaScreen() {
     }
 
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) {
         Alert.alert('Erro de Autenticação', 'Você não está logado. Por favor, faça o login novamente.');
         return;
       }
 
       const url = isEditMode
-        ? `${API_CONFIG.BASE_URL}/glicemia/${params.id}` // URL para ATUALIZAR
-        : `${API_CONFIG.BASE_URL}/glicemia`;  
+        ? `${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}/${params.id}`
+        : `${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}`;  
       const method = isEditMode ? 'PUT' : 'POST'; // Método PUT para atualizar, POST para criar
 
       const response = await fetch(url, {
@@ -87,7 +87,7 @@ export default function GlicemiaScreen() {
         },
         body: JSON.stringify({
           glicose_mg_dl: glicose,
-          data_hora_medicao: `${dateISO} ${new Date().toTimeString().slice(0, 8)}` // Envia a hora atual
+          data_hora_medicao: `${dateISO}T${new Date().toTimeString().slice(0, 8)}`
         }),
       });
 

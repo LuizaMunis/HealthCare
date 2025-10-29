@@ -82,9 +82,9 @@ export default function PressureScreen() {
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const seconds = String(now.getSeconds()).padStart(2, '0');
       
-      // Usar a data selecionada pelo usuário + hora atual no formato YYYY-MM-DD HH:MM:SS
+      // Usar a data selecionada + hora atual no formato ISO 8601 (YYYY-MM-DDTHH:MM:SS)
       const [yearSelected, monthSelected, daySelected] = dateISO.split('-');
-      const measurementDateTime = `${yearSelected}-${monthSelected}-${daySelected} ${hours}:${minutes}:${seconds}`;
+      const measurementDateTime = `${yearSelected}-${monthSelected}-${daySelected}T${hours}:${minutes}:${seconds}`;
       
       const response = await fetch(url, {
         method: 'POST',

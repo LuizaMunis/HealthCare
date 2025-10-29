@@ -44,7 +44,7 @@ export default function RegistrosScreen() {
             
           <TouchableOpacity 
             style={styles.quickAccessCard} 
-            onPress={() => router.push('/monitor/heart-rate')}
+            onPress={() => router.push('/monitor/frequencia')}
           >
             <Feather name="heart" size={32} color="#004A61" />
             <Text style={styles.quickAccessTitle}>Frequência Cardíaca</Text>
@@ -90,7 +90,7 @@ export default function RegistrosScreen() {
         <View style={styles.quickAccessContainer}>
           <TouchableOpacity 
             style={styles.quickAccessCard} 
-            onPress={() => router.push('/monitor/vacina')}
+            onPress={() => router.push('/monitor/nova-vacina')}
           >
             <Feather name="shield" size={32} color="#004A61" />
             <Text style={styles.quickAccessTitle}>Vacinação</Text>

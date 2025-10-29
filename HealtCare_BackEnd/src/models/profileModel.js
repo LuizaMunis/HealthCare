@@ -99,6 +99,13 @@ class PerfilModel {
     return rows[0];
   }
 
+  // Retorna TODOS os perfis do usuário (para telas que listam múltiplos)
+  static async findAllByUserId(usuario_id) {
+    const query = 'SELECT * FROM perfil WHERE usuario_id = ? ORDER BY id ASC';
+    const [rows] = await executeWithRetry(query, [usuario_id]);
+    return rows;
+  }
+
   static async findByCpf(cpf) {
     const query = 'SELECT * FROM perfil WHERE cpf = ? LIMIT 1';
     const [rows] = await pool.execute(query, [cpf]);
@@ -106,7 +113,7 @@ class PerfilModel {
   }
 
   static async createOrUpdate(usuario_id, data) {
-    const { nome_perfil, data_nascimento, celular, genero, cpf, peso, altura } = data;
+    const { nome_perfil, parentesco, data_nascimento, celular, genero, cpf, peso, altura } = data;
     
     // Tratar peso e altura corretamente
     let pesoProcessado = null;
@@ -166,20 +173,20 @@ class PerfilModel {
         // UPDATE - perfil já existe
         const updateQuery = `
           UPDATE perfil 
-          SET nome_perfil = ?, data_nascimento = ?, celular = ?, genero = ?, cpf = ?, peso = ?, altura = ?
+          SET nome_perfil = ?, parentesco = ?, data_nascimento = ?, celular = ?, genero = ?, cpf = ?, peso = ?, altura = ?
           WHERE usuario_id = ?
         `;
-        const updateValues = [nome_perfil, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada, usuario_id];
+        const updateValues = [nome_perfil, parentesco || null, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada, usuario_id];
         
         console.log('Executando UPDATE com valores:', updateValues);
         await executeWithRetry(updateQuery, updateValues);
       } else {
         // INSERT - perfil não existe
         const insertQuery = `
-          INSERT INTO perfil (usuario_id, nome, data_nascimento, celular, genero, cpf, peso, altura)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO perfil (usuario_id, nome_perfil, parentesco, data_nascimento, celular, genero, cpf, peso, altura)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        const insertValues = [usuario_id, nome_perfil, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada];
+        const insertValues = [usuario_id, nome_perfil, parentesco || null, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada];
         
         console.log('Executando INSERT com valores:', insertValues);
         await executeWithRetry(insertQuery, insertValues);

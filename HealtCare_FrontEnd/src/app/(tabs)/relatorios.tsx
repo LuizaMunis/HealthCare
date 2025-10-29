@@ -64,7 +64,7 @@ export default function HomeScreen() {
             
           <TouchableOpacity 
               style={styles.quickAccessCard} 
-              onPress={() => router.push('/history/heart-rate')}
+              onPress={() => router.push('/history/frequencia')}
             >
                 <Feather name="heart" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Frequência Cardíaca</Text>
@@ -76,20 +76,20 @@ export default function HomeScreen() {
               onPress={() => router.push('/history/temperature')}
             >
               <Feather name="thermometer" size={32} color="#004A61" />
-              <Text style={styles.quickAccessTitle}>Tempetatura</Text>
+              <Text style={styles.quickAccessTitle}>Temperatura</Text>
           </TouchableOpacity>
           <TouchableOpacity 
               style={styles.quickAccessCard} 
-              onPress={() => router.push('/history/symptoms')}
+              onPress={() => router.push('/history/sintomas')}
             >
-              <Feather name="loader" size={32} color="#004A61" />
+              <Feather name="activity" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Sintomas</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.quickAccessContainer}>
           <TouchableOpacity 
               style={styles.quickAccessCard} 
-              onPress={() => router.push('/history/blood-sugar')}
+              onPress={() => router.push('/history/glicemia')}
             >
               <Feather name="droplet" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Glicemia</Text>

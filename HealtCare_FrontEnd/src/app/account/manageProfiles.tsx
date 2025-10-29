@@ -92,8 +92,8 @@ export default function GerenciarPerfilScreen() {
       const fetchProfileData = async () => {
         try {
           const result = await ApiService.getProfileById(profileIdToEdit);
-          if (result.success && result.data?.data) {
-            const data = result.data.data;
+          if (result.success && result.data) {
+            const data = result.data;
             setNomePerfil(data.nome_perfil || '');
             setParentesco(data.parentesco || '');
             setCpf(data.cpf ? formatCPF(data.cpf) : '');

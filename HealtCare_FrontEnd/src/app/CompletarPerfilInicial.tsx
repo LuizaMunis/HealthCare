@@ -38,34 +38,46 @@ export default function CompletarPerfilInicialScreen() {
 
   const [showGeneroModal, setShowGeneroModal] = useState(false);
 
-  // Crie um useEffect para carregar o nome do usuário dinamicamente
+  // Carrega o nome do usuário priorizando: parâmetro da rota -> backend (perfil) -> AsyncStorage
   useEffect(() => {
     const loadUserName = async () => {
-      let finalName = 'Usuário'; // Valor padrão final
-
+      let finalName = 'Usuário';
       try {
-        // 1. Tenta pegar do AsyncStorage (fonte mais confiável)
-        const userInfoString = await AsyncStorage.getItem('userInfo');
-        if (userInfoString) {
-          const userInfo = JSON.parse(userInfoString);
-          if (userInfo.nome_completo) {
-            finalName = userInfo.nome_completo;
-          }
-        } else if (params.accountName) {
-          // 2. Se não houver no AsyncStorage, usa o parâmetro da rota como fallback
-          finalName = params.accountName as string;
-        }
-      } catch (error) {
-        console.error("Falha ao carregar nome do usuário.", error);
-        // Se der erro, ainda podemos usar o parâmetro da rota se ele existir
+        // 1) Parâmetro vindo do fluxo de cadastro (sempre prevalece)
         if (params.accountName) {
           finalName = params.accountName as string;
         }
+
+        // 2) Se já houver perfil no backend, usa o nome_perfil do primeiro perfil
+        try {
+          const token = await AsyncStorage.getItem('healthcare_auth_token');
+          if (token) {
+            // Reutiliza ApiService via fetch simples para evitar ciclos de import
+            const base = require('@/constants/api').API_CONFIG.BASE_URL;
+            const res = await fetch(`${base}${require('@/constants/api').ENDPOINTS.PROFILE.GET_SAVE}`, { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            if (res.ok && Array.isArray(data.data) && data.data.length > 0 && data.data[0]?.nome_perfil) {
+              // Só usa o nome do backend se não veio um accountName explícito
+              if (!params.accountName) {
+                finalName = data.data[0].nome_perfil;
+              }
+            }
+          }
+        } catch {}
+
+        // 3) Fallback: AsyncStorage userInfo (garante que não use cache antigo de outro usuário)
+        const userInfoString = await AsyncStorage.getItem('userInfo');
+        if (userInfoString && !params.accountName) {
+          const userInfo = JSON.parse(userInfoString);
+          if (userInfo?.nome_completo) {
+            finalName = finalName || userInfo.nome_completo;
+          }
+        }
+      } catch (error) {
+        console.error('Falha ao carregar nome do usuário.', error);
       }
-      
       setNomePerfil(finalName);
     };
-
     loadUserName();
   }, [params.accountName]);
 

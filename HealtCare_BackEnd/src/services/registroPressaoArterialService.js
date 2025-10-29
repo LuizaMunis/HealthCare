@@ -46,11 +46,14 @@ class RegistroPressaoArterialService {
       throw new Error('Pressão sistólica não pode ser menor que a diastólica');
     }
 
+    // Normaliza a data para o formato aceito pelo MySQL (YYYY-MM-DD HH:MM:SS)
+    const normalizedDateTime = String(data_hora_medicao).replace('T', ' ');
+
     const newRegistroData = {
       perfil_id,
       sistolica_mmhg: sistolica_mmhg || null,
       diastolica_mmhg: diastolica_mmhg || null,
-      data_hora_medicao
+      data_hora_medicao: normalizedDateTime
     };
 
     return await RegistroPressaoArterialModel.create(newRegistroData);
