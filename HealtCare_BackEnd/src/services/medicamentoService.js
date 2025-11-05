@@ -2,8 +2,7 @@
 
 const MedicamentoModel = require('../models/medicamentoModel');
 const RegistroUsoMedicamentoModel = require('../models/registroUsoMedicamentoModel');
-const PerfilModel = require('../models/perfilModel');
-
+const ProfileModel = require('../models/profileModel');
 class MedicamentoService {
   // --- MÉTODOS PARA O MEDICAMENTO (CRUD) ---
 

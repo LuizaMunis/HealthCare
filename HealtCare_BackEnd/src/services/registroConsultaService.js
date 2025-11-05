@@ -1,8 +1,7 @@
 // backend/src/services/consultaService.js
 
 const ConsultaModel = require('../models/registroConsultaModel');
-const PerfilModel = require('../models/perfilModel');
-
+const ProfileModel = require('../models/profileModel');
 class ConsultaService {
 
   static async createConsulta(usuarioId, profileId, dadosConsulta) {

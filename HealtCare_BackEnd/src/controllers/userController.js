@@ -3,7 +3,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/userModel');
-const ProfileModel = require('../models/perfilModel'); // Importa o novo modelo de perfil
+const ProfileModel = require('../models/profileModel');
 
 class UserController {
   /**

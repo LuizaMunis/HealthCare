@@ -1,8 +1,7 @@
 // backend/src/services/vacinaService.js
 
 const VacinaModel = require('../models/vacinaModel');
-const PerfilModel = require('../models/perfilModel');
-
+const ProfileModel = require('../models/profileModel');
 class VacinaService {
   /**
    * Helper para obter o perfil_id a partir do usuario_id.

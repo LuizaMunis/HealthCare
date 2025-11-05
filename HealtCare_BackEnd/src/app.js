@@ -50,7 +50,7 @@ app.use(ErrorMiddleware.handleTimeout);
 
 // --- Rotas da API ---
 app.use('/api/users', userRoutes);
-app.use('/api/perfil', perfilRoutes);
+app.use('/api/perfil', ProfileRoutes);
 app.use('/api/registros-pressao', registroPressaoArterialRoutes); 
 app.use('/api/medicamentos', medicamentoRoutes);
 app.use('/api/doencas', doencaRoutes);

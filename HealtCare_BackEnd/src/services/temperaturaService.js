@@ -1,7 +1,6 @@
 // backend/src/services/temperaturaService.js
 const TemperaturaModel = require('../models/temperaturaModel');
-const PerfilModel = require('../models/perfilModel');
-
+const ProfileModel = require('../models/profileModel');
 class TemperaturaService {
   static async getPerfilIdOrThrow(usuario_id) {
     if (!usuario_id) throw new Error('ID do usuário é obrigatório');
