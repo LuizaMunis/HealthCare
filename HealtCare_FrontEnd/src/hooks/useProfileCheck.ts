@@ -18,21 +18,22 @@ export const useProfileCheck = () => {
         return;
       }
 
-      // Buscar perfil do usuário
+      // Buscar perfis do usuário (backend retorna { success, data: Perfil[] })
       const result = await ApiService.getAdditionalProfile();
-      
-      if (result.success && result.data && result.data.data) {
-        const profileData = result.data.data;
-        
-        // Verificar se o perfil tem dados essenciais preenchidos
-        const hasEssentialData = profileData.cpf && 
-                                profileData.celular && 
-                                profileData.data_nascimento && 
-                                profileData.peso && 
-                                profileData.altura && 
-                                profileData.genero;
-        
-        setHasProfile(!!hasEssentialData);
+      const profiles = result?.data;
+
+      if (result.success && Array.isArray(profiles) && profiles.length > 0) {
+        const p = profiles[0];
+        // Verificar dados essenciais
+        const hasEssentialData = Boolean(
+          (p?.cpf && String(p.cpf).trim() !== '') &&
+          (p?.celular && String(p.celular).trim() !== '') &&
+          (p?.data_nascimento && String(p.data_nascimento).trim() !== '') &&
+          (p?.peso !== null && p?.peso !== undefined && String(p.peso).trim() !== '') &&
+          (p?.altura !== null && p?.altura !== undefined && String(p.altura).trim() !== '') &&
+          (p?.genero && String(p.genero).trim() !== '')
+        );
+        setHasProfile(hasEssentialData);
       } else {
         setHasProfile(false);
       }
