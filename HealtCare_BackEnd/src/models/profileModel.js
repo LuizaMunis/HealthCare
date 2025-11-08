@@ -211,8 +211,8 @@ class PerfilModel {
     if (peso === null || peso === undefined || String(peso).trim() === '') return null;
     const pesoString = String(peso).replace(/[^\d,.]/g, '').replace(',', '.');
     const pesoProcessado = parseFloat(pesoString);
-    if (isNaN(pesoProcessado) || pesoProcessado < 40 || pesoProcessado > 200) {
-      throw new Error('Peso inválido. Deve estar entre 40 e 200 kg.');
+    if (isNaN(pesoProcessado) || pesoProcessado < 2 || pesoProcessado > 500) {
+      throw new Error('Peso inválido. Deve estar entre 2 e 500 kg.');
     }
     return pesoProcessado;
   }

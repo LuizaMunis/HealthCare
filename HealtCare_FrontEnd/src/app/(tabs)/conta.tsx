@@ -41,7 +41,7 @@ export default function AccountScreen() {
   const themeColors = Colors[colorScheme];
 
   const menuItems = [
-    { key: 'personalInfo', icon: 'user', label: 'Informações pessoais' },
+    { key: 'personalInfo', icon: 'user', label: 'Dados da Conta' },
     { key: 'perfil', icon: 'clipboard', label: 'Perfil' },
     { key: 'changePassword', icon: 'key', label: 'Alterar senha' },
     { key: 'logout', icon: 'log-out', label: 'Sair' },

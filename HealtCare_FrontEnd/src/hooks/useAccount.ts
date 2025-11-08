@@ -33,6 +33,7 @@ export interface PerfilData {
   cpf: string;
   weight: string;
   height: string;
+  nome_perfil?: string; 
 }
 
 export interface ChangePasswordData {
@@ -185,10 +186,10 @@ export const useAccount = () => {
     useCallback(() => {
       // Busca os dados mais recentes toda vez que a tela é focada
       fetchData();
-      
+
       // Abre o modal de seleção de perfil toda vez que a aba 'Conta' é acessada
-      openModal('changeProfile');
-    }, [])
+      //setActiveModal('changeProfile');
+    }, [fetchData]) // <-- adiciona fetchData aqui
   );
   // --- Funções de Manipulação ---
 
@@ -232,6 +233,7 @@ export const useAccount = () => {
       cpf: newData.cpf ? newData.cpf.replace(/\D/g, '') : null,
       peso: newData.weight ? parseFormattedNumber(newData.weight) : null,
       altura: newData.height ? parseInt(newData.height, 10) : null,
+      nome_perfil: newData.nome_perfil || activeProfile.name,
     };
     // Se temos um profileId, usamos PUT; caso contrário, criamos/completamos com POST
     const result = activeProfile.id ? await ApiService.updatePerfilDataById(activeProfile.id, payload as any) : await ApiService.savePerfilData(payload as any);

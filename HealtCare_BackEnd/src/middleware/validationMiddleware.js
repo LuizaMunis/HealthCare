@@ -113,10 +113,10 @@ class ValidationMiddleware {
         }),
       
       body('data_nascimento')
-        .optional()
+        .optional({ checkFalsy: true })
         .isISO8601()
         .withMessage('Data de nascimento deve estar no formato YYYY-MM-DD')
-        .custom((value) => {
+        .custom((value, { req }) => {           
           if (value) {
             const data = new Date(value);
             const hoje = new Date();
@@ -126,8 +126,14 @@ class ValidationMiddleware {
               throw new Error('Data de nascimento inválida');
             }
             
-            if (idade < 13) {
-              throw new Error('Usuário deve ter pelo menos 13 anos');
+            const parentesco = req.body.parentesco;
+
+            // Só aplica a regra de 13 anos se for o perfil principal
+            // (ou seja, se o parentesco for 'Principal', 'Eu mesmo', ou não definido)
+            if (!parentesco || parentesco.toLowerCase() === 'principal' || parentesco.toLowerCase() === 'eu mesmo') {
+              if (idade < 13) {
+                throw new Error('O perfil principal deve ter pelo menos 13 anos');
+              }
             }
           }
           return true;
@@ -140,8 +146,8 @@ class ValidationMiddleware {
       
       body('peso')
         .optional()
-        .isFloat({ min: 20, max: 500 })
-        .withMessage('Peso deve estar entre 20 e 500 kg'),
+        .isFloat({ min: 2, max: 500 })
+        .withMessage('Peso deve estar entre 2 e 500 kg'),
       
       body('altura')
         .optional()
@@ -384,5 +390,3 @@ class ValidationMiddleware {
 }
 
 module.exports = ValidationMiddleware;
-
-
