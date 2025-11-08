@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,11 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Modal,
+  FlatList,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -17,11 +21,14 @@ export default function NovaConsultaScreen() {
   const router = useRouter();
   const [especialidade, setEspecialidade] = useState('');
   const [endereco, setEndereco] = useState('');
-  const [hora, setHora] = useState('08:00');
-  const [data, setData] = useState('12/12/2024');
+  const [hora, setHora] = useState('');
+  const [data, setData] = useState(new Date());
   const [nomeMedico, setNomeMedico] = useState('');
   const [descricao, setDescricao] = useState('');
   const [arquivosAnexados, setArquivosAnexados] = useState<DocumentPicker.DocumentResult[]>([]);
+  const [showEspecialidadeModal, setShowEspecialidadeModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dataTexto, setDataTexto] = useState('');
 
   const especialidades = [
     'Cardiologista',
@@ -37,6 +44,93 @@ export default function NovaConsultaScreen() {
     'Urologista'
   ];
 
+  // Formatar data para exibição
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  // Parsear data do texto (DD/MM/YYYY)
+  const parseDate = (text: string): Date | null => {
+    const cleaned = text.replace(/\D/g, '');
+    if (cleaned.length !== 8) return null;
+    
+    const day = parseInt(cleaned.slice(0, 2), 10);
+    const month = parseInt(cleaned.slice(2, 4), 10) - 1; // month é 0-indexed
+    const year = parseInt(cleaned.slice(4, 8), 10);
+    
+    if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900) {
+      return null;
+    }
+    
+    const parsedDate = new Date(year, month, day);
+    // Verificar se a data é válida
+    if (parsedDate.getDate() !== day || parsedDate.getMonth() !== month || parsedDate.getFullYear() !== year) {
+      return null;
+    }
+    
+    return parsedDate;
+  };
+
+  // Formatar data digitada (DD/MM/YYYY)
+  const formatDataTexto = (text: string) => {
+    const numbers = text.replace(/\D/g, '');
+    const limited = numbers.slice(0, 8);
+    
+    if (limited.length === 0) return '';
+    if (limited.length <= 2) return limited;
+    if (limited.length <= 4) return `${limited.slice(0, 2)}/${limited.slice(2, 4)}`;
+    return `${limited.slice(0, 2)}/${limited.slice(2, 4)}/${limited.slice(4, 8)}`;
+  };
+
+  // Inicializar dataTexto quando o componente carrega
+  useEffect(() => {
+    setDataTexto(formatDate(data));
+  }, []);
+
+  const handleDataTextoChange = (text: string) => {
+    const formatted = formatDataTexto(text);
+    setDataTexto(formatted);
+    
+    // Tentar parsear a data
+    if (formatted.length === 10) {
+      const parsed = parseDate(formatted);
+      if (parsed) {
+        setData(parsed);
+      }
+    }
+  };
+
+  // Validar e formatar hora (HH:mm)
+  const formatHora = (text: string) => {
+    // Remove tudo que não é número
+    const numbers = text.replace(/\D/g, '');
+    
+    // Limita a 4 dígitos
+    const limited = numbers.slice(0, 4);
+    
+    // Formata como HH:mm
+    if (limited.length === 0) return '';
+    if (limited.length <= 2) return limited;
+    return `${limited.slice(0, 2)}:${limited.slice(2, 4)}`;
+  };
+
+  const handleHoraChange = (text: string) => {
+    const formatted = formatHora(text);
+    setHora(formatted);
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setData(selectedDate);
+      setDataTexto(formatDate(selectedDate));
+    } else if (event.type === 'dismissed') {
+      setShowDatePicker(false);
+    }
+  };
+
   const handleSave = () => {
     if (!especialidade.trim()) {
       Alert.alert('Erro', 'Por favor, selecione uma especialidade');
@@ -48,13 +142,21 @@ export default function NovaConsultaScreen() {
       return;
     }
 
-    if (!hora.trim()) {
-      Alert.alert('Erro', 'Por favor, selecione a hora');
+    // Validar formato de hora (HH:mm)
+    const horaRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!hora.trim() || !horaRegex.test(hora)) {
+      Alert.alert('Erro', 'Por favor, insira uma hora válida no formato HH:mm (ex: 14:30)');
       return;
     }
 
-    if (!data.trim()) {
-      Alert.alert('Erro', 'Por favor, selecione a data');
+    // Validar data
+    if (!dataTexto.trim() || dataTexto.length !== 10) {
+      Alert.alert('Erro', 'Por favor, insira uma data válida no formato DD/MM/AAAA');
+      return;
+    }
+    const parsedData = parseDate(dataTexto);
+    if (!parsedData) {
+      Alert.alert('Erro', 'Por favor, insira uma data válida no formato DD/MM/AAAA');
       return;
     }
 
@@ -66,67 +168,6 @@ export default function NovaConsultaScreen() {
     // Aqui você implementaria a lógica para salvar no backend
     Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
     router.back();
-  };
-
-  const showEspecialidadePicker = () => {
-    Alert.alert(
-      'Especialidade',
-      'Selecione a especialidade:',
-      [
-        ...especialidades.map(esp => ({
-          text: esp,
-          onPress: () => setEspecialidade(esp)
-        })),
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
-  };
-
-  const showHoraPicker = () => {
-    const horas = [];
-    for (let h = 6; h <= 22; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const horaStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        horas.push(horaStr);
-      }
-    }
-
-    Alert.alert(
-      'Hora',
-      'Selecione a hora:',
-      [
-        ...horas.slice(0, 20).map(h => ({ // Limitando para não sobrecarregar o alert
-          text: h,
-          onPress: () => setHora(h)
-        })),
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
-  };
-
-  const showDataPicker = () => {
-    const hoje = new Date();
-    const datas = [];
-    
-    // Gerar próximas 30 datas
-    for (let i = 0; i < 30; i++) {
-      const data = new Date(hoje);
-      data.setDate(hoje.getDate() + i);
-      const dataStr = data.toLocaleDateString('pt-BR');
-      datas.push(dataStr);
-    }
-
-    Alert.alert(
-      'Data',
-      'Selecione a data:',
-      [
-        ...datas.slice(0, 15).map(d => ({ // Limitando para não sobrecarregar o alert
-          text: d,
-          onPress: () => setData(d)
-        })),
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
   };
 
   const handleAttachFiles = async () => {
@@ -178,7 +219,7 @@ export default function NovaConsultaScreen() {
           {/* Especialidade */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Especialidade</Text>
-            <TouchableOpacity style={styles.input} onPress={showEspecialidadePicker}>
+            <TouchableOpacity style={styles.input} onPress={() => setShowEspecialidadeModal(true)}>
               <Text style={[styles.inputText, !especialidade && styles.placeholder]}>
                 {especialidade || 'especialidade'}
               </Text>
@@ -190,7 +231,7 @@ export default function NovaConsultaScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Endereço</Text>
             <TextInput
-              style={styles.input}
+              style={styles.textInput}
               value={endereco}
               onChangeText={setEndereco}
               placeholder="endereço"
@@ -201,26 +242,52 @@ export default function NovaConsultaScreen() {
           {/* Hora */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Hora</Text>
-            <TouchableOpacity style={styles.input} onPress={showHoraPicker}>
-              <Text style={styles.inputText}>{hora}</Text>
-              <Feather name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
+            <TextInput
+              style={styles.textInput}
+              value={hora}
+              onChangeText={handleHoraChange}
+              placeholder="HH:mm (ex: 14:30)"
+              placeholderTextColor="#999"
+              keyboardType="numeric"
+              maxLength={5}
+            />
           </View>
 
           {/* Data */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Data</Text>
-            <TouchableOpacity style={styles.input} onPress={showDataPicker}>
-              <Text style={styles.inputText}>{data}</Text>
-              <Feather name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
+            <View style={styles.dataInputContainer}>
+              <TextInput
+                style={[styles.textInput, styles.dataInput]}
+                value={dataTexto}
+                onChangeText={handleDataTextoChange}
+                placeholder="DD/MM/AAAA"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+                maxLength={10}
+              />
+              <TouchableOpacity 
+                style={styles.calendarButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Feather name="calendar" size={20} color="#004A61" />
+              </TouchableOpacity>
+            </View>
+            {showDatePicker && (
+              <DateTimePicker
+                value={data}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+              />
+            )}
           </View>
 
           {/* Nome do médico */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Nome do médico</Text>
             <TextInput
-              style={styles.input}
+              style={styles.textInput}
               value={nomeMedico}
               onChangeText={setNomeMedico}
               placeholder="Alfredo"
@@ -232,7 +299,7 @@ export default function NovaConsultaScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Descrição</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.textInput, styles.textArea]}
               value={descricao}
               onChangeText={setDescricao}
               placeholder="descrição"
@@ -286,6 +353,51 @@ export default function NovaConsultaScreen() {
           <Text style={styles.saveButtonText}>Salvar</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal de Especialidade */}
+      <Modal
+        visible={showEspecialidadeModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEspecialidadeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione a especialidade</Text>
+              <TouchableOpacity onPress={() => setShowEspecialidadeModal(false)}>
+                <Feather name="x" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={especialidades}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.modalItem,
+                    especialidade === item && styles.modalItemSelected
+                  ]}
+                  onPress={() => {
+                    setEspecialidade(item);
+                    setShowEspecialidadeModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.modalItemText,
+                    especialidade === item && styles.modalItemTextSelected
+                  ]}>
+                    {item}
+                  </Text>
+                  {especialidade === item && (
+                    <Feather name="check" size={20} color="#004A61" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -342,6 +454,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    fontSize: 16,
+    color: '#333',
+  },
+  dataInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingRight: 8,
+  },
+  dataInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingRight: 8,
+  },
+  calendarButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   textArea: {
     minHeight: 100,
@@ -418,5 +559,51 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 4,
     marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  modalItemSelected: {
+    backgroundColor: '#F0F8FF',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalItemTextSelected: {
+    color: '#004A61',
+    fontWeight: '600',
   },
 });

@@ -39,17 +39,20 @@ export default function LoginScreen() {
         console.log('Resultado do perfil adicional:', JSON.stringify(profileResult, null, 2));
 
         if (profileResult.success && profileResult.data) {
-          const profileData = profileResult.data;
+          const payload = profileResult.data;
+          const p = Array.isArray(payload) ? payload[0] : payload;
           
-          console.log('Dados do perfil a serem verificados:', profileData);
+          console.log('Dados do perfil a serem verificados:', p);
 
           // Verificar se o perfil tem dados essenciais preenchidos
-          const hasEssentialData = profileData.cpf && 
-                                  profileData.celular && 
-                                  profileData.data_nascimento && 
-                                  profileData.peso != null && // Checa se não é nulo ou undefined
-                                  profileData.altura != null && // Checa se não é nulo ou undefined
-                                  profileData.genero;
+          const hasEssentialData = Boolean(
+            (p?.cpf && String(p.cpf).trim() !== '') &&
+            (p?.celular && String(p.celular).trim() !== '') &&
+            (p?.data_nascimento && String(p.data_nascimento).trim() !== '') &&
+            (p?.peso !== null && p?.peso !== undefined && String(p.peso).trim() !== '') &&
+            (p?.altura !== null && p?.altura !== undefined && String(p.altura).trim() !== '') &&
+            (p?.genero && String(p.genero).trim() !== '')
+          );
           
           console.log('O perfil tem dados essenciais?', hasEssentialData);
 
