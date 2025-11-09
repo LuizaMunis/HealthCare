@@ -20,9 +20,7 @@ class PerfilService {
       celular: profileData.celular ? String(profileData.celular).replace(/\D/g, '') : null,
     };
 
-    // Usa createOrUpdate para completar dados do perfil existente do usuário,
-    // evitando criar uma nova linha duplicada.
-    const savedProfile = await PerfilModel.createOrUpdate(usuario_id, dataToSave);
+    const savedProfile = await PerfilModel.create(dataToSave);    
     return savedProfile;
   }
 
