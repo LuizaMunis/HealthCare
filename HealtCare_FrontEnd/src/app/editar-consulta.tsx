@@ -15,6 +15,8 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 interface Consulta {
   id: string;
@@ -34,6 +36,8 @@ export default function EditarConsultaScreen() {
   const [hora, setHora] = useState('');
   const [data, setData] = useState('');
   const [descricao, setDescricao] = useState('');
+  const [nomeMedico, setNomeMedico] = useState('');
+  const [saving, setSaving] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedHour, setSelectedHour] = useState(8);
   const [selectedMinute, setSelectedMinute] = useState(0);
@@ -49,16 +53,16 @@ export default function EditarConsultaScreen() {
   const HOUR_MIN = 0;
   const HOUR_MAX = 23;
   const MINUTE_MIN = 0;
-  const MINUTE_MAX = 45;
+  const MINUTE_MAX = 55;
   const DAY_MIN = 1;
   const DAY_MAX = 31;
   const MONTH_MIN = 0;
   const MONTH_MAX = 11;
   const YEAR_MIN = 2024;
-  const YEAR_MAX = 2030; // Intervalos de 15 minutos
+  const YEAR_MAX = 2030; // Intervalos de 5 minutos
 
   const hourValues = useMemo(() => Array.from({ length: HOUR_MAX - HOUR_MIN + 1 }, (_, i) => HOUR_MIN + i), []);
-  const minuteValues = useMemo(() => Array.from({ length: (MINUTE_MAX - MINUTE_MIN) / 15 + 1 }, (_, i) => MINUTE_MIN + i * 15), []);
+  const minuteValues = useMemo(() => Array.from({ length: (MINUTE_MAX - MINUTE_MIN) / 5 + 1 }, (_, i) => MINUTE_MIN + i * 5), []);
   const dayValues = useMemo(() => Array.from({ length: DAY_MAX - DAY_MIN + 1 }, (_, i) => DAY_MIN + i), []);
   const monthValues = useMemo(() => Array.from({ length: MONTH_MAX - MONTH_MIN + 1 }, (_, i) => MONTH_MIN + i), []);
   const yearValues = useMemo(() => Array.from({ length: YEAR_MAX - YEAR_MIN + 1 }, (_, i) => YEAR_MIN + i), []);
@@ -93,51 +97,59 @@ export default function EditarConsultaScreen() {
       try {
         const parsedConsulta = JSON.parse(consulta as string);
         setConsultaData(parsedConsulta);
-        setEspecialidade(parsedConsulta.especialidade);
-        setEndereco(parsedConsulta.endereco || 'Hospital Anchieta, Taguatinga Norte');
-        setHora(parsedConsulta.horario || '11:30');
+        setEspecialidade(parsedConsulta.especialidade || '');
+        setEndereco(parsedConsulta.endereco || '');
+        setHora(parsedConsulta.horario || parsedConsulta.hora || '11:30');
         setData(parsedConsulta.data || '03/11/2024');
-        setDescricao(parsedConsulta.descricao || 'Levar carteirinha');
+        setDescricao(parsedConsulta.descricao || '');
+        setNomeMedico(parsedConsulta.nomeMedico || parsedConsulta.nome_medico || '');
         
         // Inicializar valores do seletor de hora
-        const horaAtual = parsedConsulta.horario || '11:30';
-        const [hour, minute] = horaAtual.split(':').map(Number);
-        setSelectedHour(hour);
-        setSelectedMinute(minute);
+        const horaAtual = parsedConsulta.horario || parsedConsulta.hora || '11:30';
+        // Converter "11h30" para "11:30" se necessário
+        const horaFormatada = horaAtual.replace('h', ':');
+        const [hour, minute] = horaFormatada.split(':').map(Number);
+        
+        if (!isNaN(hour) && !isNaN(minute)) {
+          setSelectedHour(hour);
+          // Arredondar o minuto para o múltiplo de 5 mais próximo
+          const minuteRounded = Math.round(minute / 5) * 5;
+          setSelectedMinute(Math.min(55, Math.max(0, minuteRounded)));
+        } else {
+          setSelectedHour(11);
+          setSelectedMinute(30);
+        }
         
         // Inicializar data selecionada
         const dataAtual = parsedConsulta.data || '03/11/2024';
-        const [day, month, year] = dataAtual.split('/').map(Number);
-        setSelectedDate(new Date(year, month - 1, day));
-        setSelectedDay(day);
-        setSelectedMonth(month - 1); // 0-indexed
-        setSelectedYear(year);
+        // Verificar se a data está no formato DD/MM/AAAA
+        if (dataAtual.includes('/')) {
+          const [day, month, year] = dataAtual.split('/').map(Number);
+          if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+            setSelectedDate(new Date(year, month - 1, day));
+            setSelectedDay(day);
+            setSelectedMonth(month - 1); // 0-indexed
+            setSelectedYear(year);
+          } else {
+            // Se não conseguir fazer parse, usar data atual
+            const hoje = new Date();
+            setSelectedDate(hoje);
+            setSelectedDay(hoje.getDate());
+            setSelectedMonth(hoje.getMonth());
+            setSelectedYear(hoje.getFullYear());
+          }
+        } else {
+          // Se a data não estiver no formato esperado, usar data atual
+          const hoje = new Date();
+          setSelectedDate(hoje);
+          setSelectedDay(hoje.getDate());
+          setSelectedMonth(hoje.getMonth());
+          setSelectedYear(hoje.getFullYear());
+        }
       } catch (error) {
         console.error('Erro ao parsear consulta:', error);
-        // Dados mockados para demonstração
-        setConsultaData({
-          id: '1',
-          especialidade: 'Reumatologista',
-          endereco: 'Hospital Anchieta, Taguatinga Norte',
-          hora: '11:30',
-          data: '03/11/2024',
-          descricao: 'Levar carteirinha'
-        });
-        setEspecialidade('Reumatologista');
-        setEndereco('Hospital Anchieta, Taguatinga Norte');
-        setHora('11:30');
-        setData('03/11/2024');
-        setDescricao('Levar carteirinha');
-        
-        // Inicializar valores do seletor de hora
-        setSelectedHour(11);
-        setSelectedMinute(30);
-        
-        // Inicializar data selecionada
-        setSelectedDate(new Date(2024, 10, 3)); // 3 de novembro de 2024
-        setSelectedDay(3);
-        setSelectedMonth(10); // 0-indexed (novembro = 10)
-        setSelectedYear(2024);
+        Alert.alert('Erro', 'Não foi possível carregar os dados da consulta. Por favor, tente novamente.');
+        router.back();
       }
     }
   }, [consulta]);
@@ -146,7 +158,7 @@ export default function EditarConsultaScreen() {
   useEffect(() => {
     if (showTimePicker) {
       const initialHourIndex = Math.min(Math.max(selectedHour - HOUR_MIN, 0), hourValues.length - 1);
-      const initialMinuteIndex = Math.min(Math.max(selectedMinute / 15, 0), minuteValues.length - 1);
+      const initialMinuteIndex = Math.min(Math.max(selectedMinute / 5, 0), minuteValues.length - 1);
       const t = setTimeout(() => {
         hourScrollRef.current?.scrollTo({ y: initialHourIndex * ITEM_HEIGHT, animated: false });
         minuteScrollRef.current?.scrollTo({ y: initialMinuteIndex * ITEM_HEIGHT, animated: false });
@@ -170,7 +182,10 @@ export default function EditarConsultaScreen() {
     }
   }, [showDatePicker, selectedDay, selectedMonth, selectedYear]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    console.log('handleSave chamado na edição');
+
+    // Validações
     if (!especialidade.trim()) {
       Alert.alert('Erro', 'Por favor, selecione uma especialidade');
       return;
@@ -181,19 +196,112 @@ export default function EditarConsultaScreen() {
       return;
     }
 
-    if (!hora.trim()) {
-      Alert.alert('Erro', 'Por favor, selecione a hora');
+    // Validar formato de hora (HH:mm)
+    const horaRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!hora.trim() || !horaRegex.test(hora)) {
+      Alert.alert('Erro', 'Por favor, insira uma hora válida no formato HH:mm (ex: 14:30)');
       return;
     }
 
-    if (!data.trim()) {
-      Alert.alert('Erro', 'Por favor, selecione a data');
+    // Validar data
+    if (!data.trim() || data.length !== 10) {
+      Alert.alert('Erro', 'Por favor, insira uma data válida no formato DD/MM/AAAA');
       return;
     }
 
-    // Aqui você implementaria a lógica para salvar no backend
-    Alert.alert('Sucesso', 'Consulta atualizada com sucesso!');
-    router.back();
+    // Parsear data DD/MM/AAAA
+    const [day, month, year] = data.split('/').map(Number);
+    if (isNaN(day) || isNaN(month) || isNaN(year)) {
+      Alert.alert('Erro', 'Por favor, insira uma data válida no formato DD/MM/AAAA');
+      return;
+    }
+
+    if (!nomeMedico.trim()) {
+      Alert.alert('Erro', 'Por favor, insira o nome do médico');
+      return;
+    }
+
+    if (!consultaData || !consultaData.id) {
+      Alert.alert('Erro', 'ID da consulta não encontrado');
+      return;
+    }
+
+    setSaving(true);
+    console.log('Iniciando atualização...');
+
+    try {
+      // Combinar data e hora em um objeto Date
+      const [horas, minutos] = hora.split(':').map(Number);
+      const dataHoraConsulta = new Date(year, month - 1, day, horas, minutos, 0, 0);
+
+      // Verificar se a data/hora não é no passado
+      const agora = new Date();
+      if (dataHoraConsulta < agora) {
+        Alert.alert('Erro', 'A data e hora da consulta não podem ser no passado');
+        setSaving(false);
+        return;
+      }
+
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
+
+      if (!token) {
+        setSaving(false);
+        Alert.alert('Erro', 'Você precisa estar logado para atualizar uma consulta');
+        return;
+      }
+
+      // Preparar dados para enviar ao backend
+      const dadosUpdate = {
+        especialidade: especialidade.trim(),
+        data_hora_consulta: dataHoraConsulta.toISOString(), // Formato ISO para o backend
+        nome_medico: nomeMedico.trim(),
+        local: endereco.trim(),
+        observacoes: descricao.trim() || null,
+      };
+
+      console.log('Dados a serem enviados:', dadosUpdate);
+      console.log('URL:', `${API_CONFIG.BASE_URL}${ENDPOINTS.CONSULTAS}/${consultaData.id}`);
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.CONSULTAS}/${consultaData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dadosUpdate),
+      });
+
+      console.log('Status da resposta:', response.status);
+
+      const result = await response.json();
+      console.log('Resposta do servidor:', result);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setSaving(false);
+          Alert.alert('Erro', 'Sessão expirada. Por favor, faça login novamente');
+          return;
+        }
+        throw new Error(result.message || 'Erro ao atualizar consulta');
+      }
+
+      if (result.success) {
+        setSaving(false);
+        Alert.alert('Sucesso', 'Consulta atualizada com sucesso!', [
+          {
+            text: 'OK',
+            onPress: () => router.push('/consultas'),
+          },
+        ]);
+      } else {
+        setSaving(false);
+        throw new Error(result.message || 'Erro ao atualizar consulta');
+      }
+    } catch (error: any) {
+      setSaving(false);
+      console.error('Erro ao atualizar consulta:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível atualizar a consulta. Tente novamente.');
+    }
   };
 
   const showEspecialidadePicker = () => {
@@ -311,6 +419,18 @@ export default function EditarConsultaScreen() {
               <Text style={styles.inputText}>{data}</Text>
               <Feather name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
+          </View>
+
+          {/* Nome do médico */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Nome do médico</Text>
+            <TextInput
+              style={styles.input}
+              value={nomeMedico}
+              onChangeText={setNomeMedico}
+              placeholder="Alfredo"
+              placeholderTextColor="#999"
+            />
           </View>
 
           {/* Descrição */}
@@ -450,7 +570,7 @@ export default function EditarConsultaScreen() {
                           const offsetY = ev.nativeEvent.contentOffset.y;
                           const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
                           const clampedIndex = Math.min(Math.max(rawIndex, 0), minuteValues.length - 1);
-                          setSelectedMinute(MINUTE_MIN + clampedIndex * 15);
+                          setSelectedMinute(MINUTE_MIN + clampedIndex * 5);
                         }}
                         contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
                       >
@@ -782,16 +902,14 @@ const styles = StyleSheet.create({
     borderTopColor: '#E0E0E0',
   },
   saveButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#004A61',
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
   },
   saveButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   // Estilos do Modal
