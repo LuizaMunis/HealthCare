@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+// HealtCare_FrontEnd/src/app/consultas.tsx
+
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -10,13 +11,8 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
