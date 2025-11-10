@@ -52,7 +52,11 @@ export default function DetalhesConsultaScreen() {
         setConsultaData(parsedConsulta);
         setEspecialidade(parsedConsulta.especialidade);
         setEndereco(parsedConsulta.endereco || 'Hospital Anchieta, Taguatinga Norte');
-        setHora(parsedConsulta.hora);
+        // Aceitar tanto 'hora' quanto 'horario' como campo de horário
+        // Converter "11h30" para "11:30" se necessário
+        const horarioRaw = parsedConsulta.horario || parsedConsulta.hora || '';
+        const horarioFormatado = horarioRaw.replace('h', ':');
+        setHora(horarioFormatado);
         setData(parsedConsulta.data);
         setDescricao(parsedConsulta.descricao || 'Levar carteirinha');
       } catch (error) {
@@ -134,7 +138,7 @@ export default function DetalhesConsultaScreen() {
             <Text style={styles.label}>Hora</Text>
             <View style={[styles.input, styles.inputDisabled]}>
               <Text style={[styles.inputText, styles.inputTextDisabled]}>
-                {hora}
+                {hora || 'Não informado'}
               </Text>
             </View>
           </View>

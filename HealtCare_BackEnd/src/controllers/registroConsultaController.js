@@ -13,7 +13,7 @@ class ConsultaController {
       const usuarioId = req.user.id;
       const dadosConsulta = req.body;
 
-      const novaConsulta = await ConsultaService.createConsulta(usuarioId, dadosConsulta);
+      const novaConsulta = await ConsultaService.createConsultaByUsuario(usuarioId, dadosConsulta);
       
       res.status(201).json({ 
         success: true, 
@@ -47,9 +47,9 @@ class ConsultaController {
   static async getConsultaById(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { id: consultaId } = req.params;
+      const { consultaId } = req.params;
 
-      const consulta = await ConsultaService.getConsultaById(usuarioId, consultaId);
+      const consulta = await ConsultaService.getConsultaByIdByUsuario(usuarioId, consultaId);
 
       // O Service deve lançar um erro se a consulta não for encontrada ou não pertencer ao usuário
       res.status(200).json({ success: true, data: consulta });
@@ -67,10 +67,10 @@ class ConsultaController {
   static async updateConsulta(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { id: consultaId } = req.params;
+      const { consultaId } = req.params;
       const dadosUpdate = req.body;
 
-      const consultaAtualizada = await ConsultaService.updateConsulta(usuarioId, consultaId, dadosUpdate);
+      const consultaAtualizada = await ConsultaService.updateConsultaByUsuario(usuarioId, consultaId, dadosUpdate);
 
       res.status(200).json({ 
         success: true, 
@@ -90,9 +90,9 @@ class ConsultaController {
   static async deleteConsulta(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { id: consultaId } = req.params;
+      const { consultaId } = req.params;
 
-      await ConsultaService.deleteConsulta(usuarioId, consultaId);
+      await ConsultaService.deleteConsultaByUsuario(usuarioId, consultaId);
 
       res.status(200).json({ success: true, message: 'Consulta deletada com sucesso!' });
     } catch (error) {
