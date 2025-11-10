@@ -49,6 +49,7 @@ class UserController {
         senha_hash,
       });
 
+      /**
       // Cria o primeiro perfil para o novo usuário na tabela 'perfil'
       const createdProfile = await ProfileModel.create({
         usuario_id: createdUser.id,
@@ -61,6 +62,7 @@ class UserController {
         peso: null,
         altura: null
       });
+      **/
 
       // Gera o token JWT com o ID do usuário
       const token = jwt.sign(
@@ -79,7 +81,6 @@ class UserController {
             nome_completo: createdUser.nome_completo,
             email: createdUser.email,
           },
-          profiles: [createdProfile] // Retorna o perfil recém-criado em uma lista
         }
       });
     } catch (error) {
