@@ -3,12 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   Alert,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -166,7 +166,7 @@ export default function VacinaScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.loaderContainer}>
           <Text>Carregando...</Text>
         </View>
@@ -178,7 +178,7 @@ export default function VacinaScreen() {
   try {
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -259,7 +259,7 @@ export default function VacinaScreen() {
   } catch (error) {
     console.error('Erro na renderização da tela de vacinação:', error);
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.loaderContainer}>
           <Text style={{ color: 'red', textAlign: 'center' }}>
             Erro ao carregar a tela. Tente novamente.

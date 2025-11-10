@@ -12,9 +12,8 @@ import { StyleSheet } from 'react-native';
 export default function BlurTabBarBackground() {
   return (
     <BlurView
-      // A propriedade 'tint' com 'systemChromeMaterial' adapta-se automaticamente
-      // ao tema do sistema (claro ou escuro), espelhando a aparência nativa do iOS.
-      tint="systemChromeMaterial"
+      // Forçado para modo claro (light) para manter barra branca
+      tint="light"
       intensity={100} // Intensidade do efeito de desfoque.
       style={StyleSheet.absoluteFill} // Faz o BlurView preencher todo o espaço do componente pai (a TabBar).
     />

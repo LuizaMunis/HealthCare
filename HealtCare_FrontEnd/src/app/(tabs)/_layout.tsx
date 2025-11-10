@@ -9,17 +9,15 @@ import { HapticTab } from '@/components/ui/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import ApiService from '@/services/apiService';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
   
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors['light'].tint,
         tabBarInactiveTintColor: '#8e8e93',
         headerShown: false,
         tabBarButton: HapticTab,
@@ -28,8 +26,11 @@ export default function TabLayout() {
           ios: {
             // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
+            backgroundColor: '#FFFFFF',
           },
-          default: {},
+          default: {
+            backgroundColor: '#FFFFFF',
+          },
         }),
       }}>
 
