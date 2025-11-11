@@ -234,7 +234,7 @@ export default function EditarVacinaScreen() {
       };
 
       const vacinaId = JSON.parse(vacina as string).id;
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.VACCINE_RECORDS}/${vacinaId}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.VACCINE_RECORDS}/${vacinaId}?perfil_id=${activeProfileId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

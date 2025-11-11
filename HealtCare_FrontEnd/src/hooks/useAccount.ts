@@ -45,7 +45,7 @@ export interface ChangePasswordData {
 type ModalType = 'personalInfo' | 'perfil' | 'changePassword' | 'logout' | 'changeProfile' | null;
 
 // --- Chave de Armazenamento Local ---
-const ACTIVE_PROFILE_KEY = 'healthcare_active_profile_id';
+const ACTIVE_PROFILE_KEY = 'active_profile_id';
 
 // --- Funções Auxiliares de Conversão ---
 const genderToBackend = (gender: string): 'M' | 'F' | 'O' | null => {

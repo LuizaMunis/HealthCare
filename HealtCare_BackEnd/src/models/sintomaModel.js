@@ -10,10 +10,15 @@ class SintomaModel {
     `;
     const values = [doenca_id, descricao_sintoma, intensidade, data_hora_inicio];
     try {
+      console.log('🗄️ [DEBUG] Executando query SQL:', query);
+      console.log('🗄️ [DEBUG] Valores:', values);
       const [result] = await pool.execute(query, values);
+      console.log('✅ [DEBUG] Sintoma criado com sucesso. ID:', result.insertId);
       return { id: result.insertId, ...dadosSintoma };
     } catch (error) {
-      console.error('Erro ao criar sintoma:', error);
+      console.error('❌ [DEBUG] Erro ao criar sintoma:', error);
+      console.error('❌ [DEBUG] Código do erro:', error.code);
+      console.error('❌ [DEBUG] Mensagem do erro:', error.message);
       throw error;
     }
   }

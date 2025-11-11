@@ -40,8 +40,29 @@ export default function LoginScreen() {
 
         if (profileResult.success && profileResult.data) {
           const payload = profileResult.data;
-          const p = Array.isArray(payload) ? payload[0] : payload;
+          const profiles = Array.isArray(payload) ? payload : [payload];
           
+          // Salvar o primeiro perfil como ativo (ou o perfil retornado no login se existir)
+          let activeProfileId = null;
+          
+          // Se o login retornou um perfil específico, usar esse
+          if (result.data.profiles && result.data.profiles.id) {
+            activeProfileId = result.data.profiles.id.toString();
+            console.log('🔍 [DEBUG Login] Usando perfil do login:', activeProfileId);
+          } else if (profiles.length > 0) {
+            // Caso contrário, usar o primeiro perfil da lista
+            activeProfileId = profiles[0].id.toString();
+            console.log('🔍 [DEBUG Login] Usando primeiro perfil da lista:', activeProfileId);
+          }
+          
+          if (activeProfileId) {
+            await AsyncStorage.setItem('active_profile_id', activeProfileId);
+            console.log('✅ [DEBUG Login] active_profile_id salvo:', activeProfileId);
+          } else {
+            console.warn('⚠️ [DEBUG Login] Nenhum perfil encontrado para salvar');
+          }
+          
+          const p = profiles[0];
           console.log('Dados do perfil a serem verificados:', p);
 
           // Verificar se o perfil tem dados essenciais preenchidos

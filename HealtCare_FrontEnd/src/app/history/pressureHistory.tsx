@@ -59,7 +59,12 @@ export default function PressureHistoryScreen() {
           throw new Error('Token de autenticação não encontrado.');
         }
 
-        const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}`, {
+        const profileId = await AsyncStorage.getItem('active_profile_id');
+        if (!profileId) {
+          throw new Error('Nenhum perfil ativo encontrado.');
+        }
+
+        const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}?perfil_id=${profileId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -120,7 +125,13 @@ export default function PressureHistoryScreen() {
             try {
               const token = await AsyncStorage.getItem('healthcare_auth_token');
 
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${id}`, {
+              const profileId = await AsyncStorage.getItem('active_profile_id');
+              if (!profileId) {
+                Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+                return;
+              }
+
+              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${id}?perfil_id=${profileId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json' 
@@ -172,16 +183,23 @@ export default function PressureHistoryScreen() {
 
     try {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
-      const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${editingRecord.id}`;
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+        return;
+      }
+      const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${editingRecord.id}?perfil_id=${profileId}`;
       const method = 'PUT';
 
+      const time = new Date(editingRecord.data_hora_medicao).toTimeString().slice(0, 8);
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           sistolica_mmhg: systolic,
           diastolica_mmhg: diastolic,
-          data_hora_medicao: `${date} ${new Date(editingRecord.data_hora_medicao).toTimeString().slice(0, 8)}`,
+          data_hora_medicao: `${date}T${time}`,
+          perfil_id: parseInt(profileId)
         }),
       });
 

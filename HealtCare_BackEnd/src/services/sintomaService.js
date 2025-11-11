@@ -1,13 +1,31 @@
 // backend/src/services/sintomaService.js
 const SintomaModel = require('../models/sintomaModel');
 const DoencaModel = require('../models/doencaModel');
+const ProfileModel = require('../models/profileModel');
 
 class SintomaService {
-  static async createSintoma(usuarioId, profileId, doencaId, sintomaData) {
+  /**
+   * Verifica se o perfil pertence ao usuário.
+   */
+  static async _verifyProfileOwnership(usuarioId, perfilId) {
+    const perfil = await ProfileModel.findById(perfilId);
+    if (!perfil) {
+      throw new Error('Perfil não encontrado.');
+    }
+    if (perfil.usuario_id !== Number(usuarioId)) {
+      throw new Error('Acesso não autorizado a este perfil.');
+    }
+    return perfil;
+  }
+
+  static async createSintoma(usuarioId, perfilId, doencaId, sintomaData) {
     try {
+      // Verificar se o perfil pertence ao usuário
+      await this._verifyProfileOwnership(usuarioId, perfilId);
+
       // Verificar se a doença pertence ao perfil do usuário
       const doenca = await DoencaModel.findById(doencaId);
-      if (!doenca || doenca.perfil_id !== parseInt(profileId)) {
+      if (!doenca || doenca.perfil_id !== parseInt(perfilId)) {
         throw new Error('Doença não encontrada ou não pertence ao perfil');
       }
 
@@ -30,13 +48,34 @@ class SintomaService {
         throw new Error('Data e hora de início são obrigatórias');
       }
 
+      // Converter data para formato MySQL (YYYY-MM-DD HH:MM:SS)
+      let dataHoraFormatada;
+      if (typeof data_hora_inicio === 'string') {
+        // Se já está em formato ISO (YYYY-MM-DDTHH:MM:SS), converter para MySQL
+        dataHoraFormatada = data_hora_inicio.replace('T', ' ').substring(0, 19);
+      } else {
+        // Se for um objeto Date, converter para formato MySQL
+        const date = new Date(data_hora_inicio);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        dataHoraFormatada = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      }
+
+      console.log('📅 [DEBUG] Data formatada para MySQL:', dataHoraFormatada);
+
       // Criar dados para inserção
       const dadosSintoma = {
         doenca_id: parseInt(doencaId),
         descricao_sintoma: descricao_sintoma.trim(),
         intensidade,
-        data_hora_inicio: new Date(data_hora_inicio)
+        data_hora_inicio: dataHoraFormatada
       };
+
+      console.log('📝 [DEBUG] Dados do sintoma a serem inseridos:', dadosSintoma);
 
       const novoSintoma = await SintomaModel.create(dadosSintoma);
       return novoSintoma;
@@ -48,8 +87,11 @@ class SintomaService {
 
   static async getAllSintomasByProfile(usuarioId, profileId) {
     try {
+      // Verificar se o perfil pertence ao usuário
+      await this._verifyProfileOwnership(usuarioId, profileId);
+      
       // Buscar todas as doenças do perfil
-      const doencas = await DoencaModel.findByProfileId(profileId);
+      const doencas = await DoencaModel.findByPerfilId(profileId);
       const doencaIds = doencas.map(doenca => doenca.id);
 
       if (doencaIds.length === 0) {

@@ -74,8 +74,14 @@ export default function GlicemiaScreen() {
         return;
       }
 
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
+        return;
+      }
+
       const url = isEditMode
-        ? `${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}/${params.id}`
+        ? `${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}/${params.id}?perfil_id=${profileId}`
         : `${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}`;  
       const method = isEditMode ? 'PUT' : 'POST'; // Método PUT para atualizar, POST para criar
 
@@ -87,7 +93,9 @@ export default function GlicemiaScreen() {
         },
         body: JSON.stringify({
           glicose_mg_dl: glicose,
-          data_hora_medicao: `${dateISO}T${new Date().toTimeString().slice(0, 8)}`
+          valor_mg_dl: glicose,
+          data_hora_medicao: `${dateISO}T${new Date().toTimeString().slice(0, 8)}`,
+          perfil_id: parseInt(profileId)
         }),
       });
 

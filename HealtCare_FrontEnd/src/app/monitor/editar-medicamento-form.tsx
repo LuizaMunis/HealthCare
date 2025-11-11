@@ -181,11 +181,12 @@ export default function EditarMedicamentoFormScreen() {
         frequencia_horas: parseInt(frequenciaHoras),
         duracao_dias_tratamento: parseInt(duracaoTratamento),
         data_inicio_tratamento: dataInicio || new Date().toISOString().split('T')[0],
-        uso_continuo: usoContinuo,
-        lembretes_ativos: lembretesAtivos,
+        uso_continuo: usoContinuo ? 1 : 0,
+        lembretes_ativos: lembretesAtivos ? 1 : 0,
+        perfil_id: parseInt(profileId)
       };
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}/${medicamentoData.id}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}/${medicamentoData.id}?perfil_id=${profileId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

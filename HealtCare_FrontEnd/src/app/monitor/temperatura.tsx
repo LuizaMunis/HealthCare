@@ -70,6 +70,12 @@ export default function TemperaturaScreen() {
         return;
       }
 
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
+        return;
+      }
+
       const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.TEMPERATURE_RECORDS}` , {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -77,6 +83,7 @@ export default function TemperaturaScreen() {
           graus_celsius: temperature,
           // ISO 8601 no app; o backend normaliza para MySQL automaticamente
           data_hora_medicao: `${dateISO}T${new Date().toTimeString().slice(0,8)}`,
+          perfil_id: parseInt(profileId),
         }),
       });
       const result = await response.json();

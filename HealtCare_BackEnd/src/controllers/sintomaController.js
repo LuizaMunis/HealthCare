@@ -5,41 +5,79 @@ class SintomaController {
   static async createSintoma(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, doencaId } = req.params;
+      const { doencaId } = req.params;
+      const perfilId = req.body.perfil_id || req.query.perfil_id;
       const sintomaData = req.body;
 
-      const novoSintoma = await SintomaService.createSintoma(usuarioId, profileId, doencaId, sintomaData);
+      console.log('📥 [DEBUG] Requisição recebida - createSintoma');
+      console.log('📥 [DEBUG] usuarioId:', usuarioId);
+      console.log('📥 [DEBUG] doencaId:', doencaId);
+      console.log('📥 [DEBUG] perfilId:', perfilId);
+      console.log('📥 [DEBUG] sintomaData:', JSON.stringify(sintomaData, null, 2));
+
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      if (!doencaId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'doencaId é obrigatório nos parâmetros da URL.' 
+        });
+      }
+
+      const novoSintoma = await SintomaService.createSintoma(usuarioId, perfilId, doencaId, sintomaData);
+      console.log('✅ [DEBUG] Sintoma criado com sucesso:', JSON.stringify(novoSintoma, null, 2));
       res.status(201).json({ 
         success: true, 
         message: 'Sintoma criado com sucesso!', 
         data: novoSintoma 
       });
     } catch (error) {
-      this.handleError(res, error);
+      console.error('❌ [DEBUG] Erro no controller createSintoma:', error);
+      SintomaController.handleError(res, error);
     }
   }
 
   static async getAllSintomasByProfile(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      const sintomas = await SintomaService.getAllSintomasByProfile(usuarioId, profileId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const sintomas = await SintomaService.getAllSintomasByProfile(usuarioId, perfilId);
       res.json({ 
         success: true, 
         data: sintomas 
       });
     } catch (error) {
-      this.handleError(res, error);
+      SintomaController.handleError(res, error);
     }
   }
 
   static async getSintomaById(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, sintomaId } = req.params;
+      const { sintomaId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      const sintoma = await SintomaService.getSintomaById(usuarioId, profileId, sintomaId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const sintoma = await SintomaService.getSintomaById(usuarioId, perfilId, sintomaId);
       if (!sintoma) {
         return res.status(404).json({ 
           success: false, 
@@ -52,17 +90,25 @@ class SintomaController {
         data: sintoma 
       });
     } catch (error) {
-      this.handleError(res, error);
+      SintomaController.handleError(res, error);
     }
   }
 
   static async updateSintoma(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, sintomaId } = req.params;
+      const { sintomaId } = req.params;
+      const perfilId = req.body.perfil_id || req.query.perfil_id;
       const updateData = req.body;
 
-      const sintomaAtualizado = await SintomaService.updateSintoma(usuarioId, profileId, sintomaId, updateData);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const sintomaAtualizado = await SintomaService.updateSintoma(usuarioId, perfilId, sintomaId, updateData);
       if (!sintomaAtualizado) {
         return res.status(404).json({ 
           success: false, 
@@ -76,16 +122,24 @@ class SintomaController {
         data: sintomaAtualizado 
       });
     } catch (error) {
-      this.handleError(res, error);
+      SintomaController.handleError(res, error);
     }
   }
 
   static async deleteSintoma(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, sintomaId } = req.params;
+      const { sintomaId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      const deletado = await SintomaService.deleteSintoma(usuarioId, profileId, sintomaId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const deletado = await SintomaService.deleteSintoma(usuarioId, perfilId, sintomaId);
       if (!deletado) {
         return res.status(404).json({ 
           success: false, 
@@ -98,22 +152,30 @@ class SintomaController {
         message: 'Sintoma excluído com sucesso!' 
       });
     } catch (error) {
-      this.handleError(res, error);
+      SintomaController.handleError(res, error);
     }
   }
 
   static async getAllSintomasByDoenca(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, doencaId } = req.params;
+      const { doencaId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      const sintomas = await SintomaService.getAllSintomasByDoenca(usuarioId, profileId, doencaId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const sintomas = await SintomaService.getAllSintomasByDoenca(usuarioId, perfilId, doencaId);
       res.json({ 
         success: true, 
         data: sintomas 
       });
     } catch (error) {
-      this.handleError(res, error);
+      SintomaController.handleError(res, error);
     }
   }
 

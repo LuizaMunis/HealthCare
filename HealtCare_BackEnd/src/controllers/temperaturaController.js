@@ -6,9 +6,16 @@ class TemperaturaController {
     try {
       const usuarioId = req.user.id;
       const registroData = req.body || {};
-      const payload = { usuario_id: usuarioId, ...registroData };
+      const perfilId = registroData.perfil_id;
 
-      const novoRegistro = await TemperaturaService.createRegistro(payload);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório no corpo da requisição.' 
+        });
+      }
+
+      const novoRegistro = await TemperaturaService.createRegistro(usuarioId, perfilId, registroData);
 
       res.status(201).json({
         success: true,
@@ -23,7 +30,16 @@ class TemperaturaController {
   static async getAllRegistrosByProfile(req, res) {
     try {
       const usuarioId = req.user.id;
-      const registros = await TemperaturaService.getRegistrosByUsuario(usuarioId);
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
+
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const registros = await TemperaturaService.getRegistrosByProfile(usuarioId, perfilId);
 
       res.json({
         success: true,
@@ -38,8 +54,16 @@ class TemperaturaController {
     try {
       const usuarioId = req.user.id;
       const { registroId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      const registro = await TemperaturaService.getRegistroById(registroId, usuarioId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const registro = await TemperaturaService.getRegistroById(usuarioId, perfilId, registroId);
 
       res.json({
         success: true,
@@ -54,9 +78,17 @@ class TemperaturaController {
     try {
       const usuarioId = req.user.id;
       const { registroId } = req.params;
+      const perfilId = req.body.perfil_id || req.query.perfil_id;
       const updateData = req.body;
 
-      const registroAtualizado = await TemperaturaService.updateRegistro(registroId, usuarioId, updateData);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const registroAtualizado = await TemperaturaService.updateRegistro(usuarioId, perfilId, registroId, updateData);
 
       res.json({
         success: true,
@@ -72,8 +104,16 @@ class TemperaturaController {
     try {
       const usuarioId = req.user.id;
       const { registroId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      await TemperaturaService.deleteRegistro(registroId, usuarioId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      await TemperaturaService.deleteRegistro(usuarioId, perfilId, registroId);
 
       res.json({
         success: true,

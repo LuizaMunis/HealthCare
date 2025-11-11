@@ -49,7 +49,7 @@ export default function EditarMedicamentoScreen() {
         return;
       }
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}?perfil_id=${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

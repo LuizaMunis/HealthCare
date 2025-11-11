@@ -4,18 +4,22 @@ const VacinaModel = require('../models/vacinaModel');
 const ProfileModel = require('../models/profileModel');
 class VacinaService {
   /**
-   * Helper para obter o perfil_id a partir do usuario_id.
+   * Verifica se o perfil pertence ao usuário.
    */
-  static async _getPerfilId(usuarioId) {
-    const perfil = await PerfilModel.findByUserId(usuarioId);
+  static async _verifyProfileOwnership(usuarioId, perfilId) {
+    const perfil = await ProfileModel.findById(perfilId);
     if (!perfil) {
-      throw new Error('Perfil de usuário não encontrado. Complete seu perfil para continuar.');
+      throw new Error('Perfil não encontrado.');
     }
-    return perfil.id;
+    if (perfil.usuario_id !== Number(usuarioId)) {
+      throw new Error('Acesso não autorizado a este perfil.');
+    }
+    return perfil;
   }
 
-  static async createVacina(usuarioId, dadosVacina) {
-    const perfilId = await this._getPerfilId(usuarioId);
+  static async createVacina(usuarioId, perfilId, dadosVacina) {
+    // Verificar se o perfil pertence ao usuário
+    await this._verifyProfileOwnership(usuarioId, perfilId);
 
     const { nome_vacina, nome, dose, data_vacinacao } = dadosVacina;
     const finalNome = nome_vacina || nome;
@@ -23,23 +27,27 @@ class VacinaService {
       throw new Error('Nome da vacina, dose e data de vacinação são obrigatórios.');
     }
 
+    if (!perfilId) {
+      throw new Error('perfil_id é obrigatório.');
+    }
+
     const normalizedDate = String(data_vacinacao).includes('T') ? String(data_vacinacao).replace('T',' ') : String(data_vacinacao);
     const dadosParaCriar = { perfil_id: perfilId, nome: finalNome, dose, data_vacinacao: normalizedDate };
     return await VacinaModel.create(dadosParaCriar);
   }
 
-  static async getAllVacinasByUsuario(usuarioId) {
-    const perfilId = await this._getPerfilId(usuarioId);
+  static async getAllVacinasByProfile(usuarioId, perfilId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
     return await VacinaModel.findByPerfilId(perfilId);
   }
 
-  static async getVacinaById(usuarioId, vacinaId) {
-    const perfilId = await this._getPerfilId(usuarioId);
+  static async getVacinaById(usuarioId, perfilId, vacinaId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
     return await this._verifyVacinaOwnership(perfilId, vacinaId);
   }
 
-  static async updateVacina(usuarioId, vacinaId, dadosUpdate) {
-    const perfilId = await this._getPerfilId(usuarioId);
+  static async updateVacina(usuarioId, perfilId, vacinaId, dadosUpdate) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
     await this._verifyVacinaOwnership(perfilId, vacinaId);
     
     if (Object.keys(dadosUpdate).length === 0) {
@@ -59,8 +67,8 @@ class VacinaService {
     return await VacinaModel.findById(vacinaId);
   }
 
-  static async deleteVacina(usuarioId, vacinaId) {
-    const perfilId = await this._getPerfilId(usuarioId);
+  static async deleteVacina(usuarioId, perfilId, vacinaId) {
+    await this._verifyProfileOwnership(usuarioId, perfilId);
     await this._verifyVacinaOwnership(perfilId, vacinaId);
 
     const sucesso = await VacinaModel.delete(vacinaId);
@@ -69,8 +77,6 @@ class VacinaService {
     }
     return true;
   }
-
-  // Mantido _getPerfilId acima; verificação por perfil específico não é mais necessária nos métodos públicos
 
   static async _verifyVacinaOwnership(profileId, vacinaId) {
     const vacina = await VacinaModel.findById(vacinaId);

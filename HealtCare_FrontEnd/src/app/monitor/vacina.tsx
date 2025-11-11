@@ -52,7 +52,13 @@ export default function VacinaScreen() {
         return;
       }
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.VACCINE_RECORDS}`, {
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
+        return;
+      }
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.VACCINE_RECORDS}?perfil_id=${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +108,13 @@ export default function VacinaScreen() {
               const token = await AsyncStorage.getItem('healthcare_auth_token');
               if (!token) return;
 
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.VACCINE_RECORDS}/${id}`, {
+              const profileId = await AsyncStorage.getItem('active_profile_id');
+              if (!profileId) {
+                Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+                return;
+              }
+
+              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.VACCINE_RECORDS}/${id}?perfil_id=${profileId}`, {
                 method: 'DELETE',
                 headers: {
                   'Authorization': `Bearer ${token}`,

@@ -105,6 +105,7 @@ const ApiService = {
     await AsyncStorage.removeItem('userInfo');
     // Limpa também possíveis restos de perfis armazenados por telas
     await AsyncStorage.removeItem('selectedProfileId');
+    await AsyncStorage.removeItem('active_profile_id');
   },
 
   // --- PROFILE & USER ---

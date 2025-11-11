@@ -23,10 +23,16 @@ export default function NovoMedicamentoScreen() {
   const [frequenciaHoras, setFrequenciaHoras] = useState('8');
   const [duracaoDias, setDuracaoDias] = useState('');
   const [dataInicial, setDataInicial] = useState('');
+  const [dataInicialISO, setDataInicialISO] = useState('');
   const [usoContinuo, setUsoContinuo] = useState(false);
   const [lembretesAtivos, setLembretesAtivos] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showDosagemModal, setShowDosagemModal] = useState(false);
+  const [showDataInicialModal, setShowDataInicialModal] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   const handleSave = () => {
     // Validações básicas
@@ -45,8 +51,8 @@ export default function NovoMedicamentoScreen() {
       return;
     }
 
-    if (!duracaoDias || parseInt(duracaoDias) < 1) {
-      Alert.alert('Erro', 'Por favor, insira a duração do tratamento em dias');
+    if (!usoContinuo && (!duracaoDias || parseInt(duracaoDias) < 1)) {
+      Alert.alert('Erro', 'Por favor, insira a duração do tratamento em dias ou marque como uso contínuo');
       return;
     }
 
@@ -65,25 +71,58 @@ export default function NovoMedicamentoScreen() {
         return;
       }
 
-      // Obter o profileId do usuário (assumindo que existe um perfil ativo)
+      // Obter o perfil_id ativo do usuário
       const profileId = await AsyncStorage.getItem('active_profile_id');
+      console.log('🔍 [DEBUG] ProfileId do AsyncStorage:', profileId, 'Tipo:', typeof profileId);
       if (!profileId) {
+        console.error('❌ [DEBUG] ProfileId não encontrado no AsyncStorage');
         Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
+        setLoading(false);
         return;
       }
 
+      // Usar data ISO armazenada ou converter se necessário
+      let dataInicioISO = '';
+      if (dataInicialISO) {
+        // Usar o valor ISO armazenado
+        dataInicioISO = dataInicialISO;
+      } else if (dataInicial) {
+        // Se já está em formato ISO (YYYY-MM-DD), usar diretamente
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dataInicial)) {
+          dataInicioISO = dataInicial;
+        } else {
+          // Converter de pt-BR (DD/MM/YYYY) para ISO (YYYY-MM-DD)
+          const partes = dataInicial.split('/');
+          if (partes.length === 3) {
+            dataInicioISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
+          } else {
+            dataInicioISO = new Date().toISOString().split('T')[0];
+          }
+        }
+      } else {
+        dataInicioISO = new Date().toISOString().split('T')[0];
+      }
+
       // Preparar dados para envio
+      const perfilIdParsed = parseInt(profileId);
+      console.log('🔍 [DEBUG] ProfileId parseado:', perfilIdParsed, 'É NaN?', isNaN(perfilIdParsed));
+      
       const medicamentoData = {
         nome_medicamento: nome.trim(),
         dosagem: dosagem.trim(),
         frequencia_horas: parseInt(frequenciaHoras),
-        duracao_dias_tratamento: parseInt(duracaoDias),
-        data_inicio_tratamento: dataInicial || new Date().toISOString().split('T')[0],
-        uso_continuo: usoContinuo,
-        lembretes_ativos: lembretesAtivos,
-        perfil_id: parseInt(profileId)
+        duracao_dias_tratamento: usoContinuo ? 0 : parseInt(duracaoDias),
+        data_inicio_tratamento: dataInicioISO,
+        uso_continuo: usoContinuo ? 1 : 0, // Converter para número (1 ou 0)
+        lembretes_ativos: lembretesAtivos ? 1 : 0, // Converter para número (1 ou 0)
+        perfil_id: perfilIdParsed
       };
 
+      console.log('📤 [DEBUG] Enviando dados do medicamento:', JSON.stringify(medicamentoData, null, 2));
+      console.log('🔍 [DEBUG] URL da requisição:', `${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}`);
+      console.log('🔍 [DEBUG] Token presente?', token ? 'Sim' : 'Não');
+
+      console.log('📡 [DEBUG] Iniciando requisição POST...');
       const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}`, {
         method: 'POST',
         headers: {
@@ -93,112 +132,199 @@ export default function NovoMedicamentoScreen() {
         body: JSON.stringify(medicamentoData),
       });
 
+      console.log('📥 [DEBUG] Resposta recebida:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       const result = await response.json();
+      console.log('📥 [DEBUG] Corpo da resposta:', JSON.stringify(result, null, 2));
 
       if (!response.ok) {
-        throw new Error(result.message || 'Erro ao salvar medicamento.');
+        console.error('❌ [DEBUG] Erro na resposta do servidor:', {
+          status: response.status,
+          statusText: response.statusText,
+          result: JSON.stringify(result, null, 2)
+        });
+        throw new Error(result.message || `Erro ao salvar medicamento. Status: ${response.status}`);
       }
 
+      console.log('✅ [DEBUG] Medicamento salvo com sucesso:', JSON.stringify(result, null, 2));
       Alert.alert('Sucesso!', 'Medicamento registrado com sucesso!');
       router.back();
     } catch (error: any) {
-      console.error('Erro ao salvar medicamento:', error);
+      console.error('❌ [DEBUG] Erro completo ao salvar medicamento:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        error: error
+      });
       Alert.alert('Erro', error.message || 'Não foi possível salvar o medicamento.');
     } finally {
       setLoading(false);
     }
   };
 
-  const showDosesPicker = () => {
-    Alert.alert(
-      'Número de ingestões por dia',
-      'Selecione o número de doses:',
-      [
-        { text: '1', onPress: () => setDosesPorDia('1') },
-        { text: '2', onPress: () => setDosesPorDia('2') },
-        { text: '3', onPress: () => setDosesPorDia('3') },
-        { text: '4', onPress: () => setDosesPorDia('4') },
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
-  };
+
+  const dosagens = ['50 mg', '100 mg', '150 mg', '200 mg', '250 mg', '500 mg'];
 
   const showDosagemPicker = () => {
-    const dosagens = ['50 mg', '100 mg', '150 mg', '200 mg', '250 mg', '500 mg'];
-    Alert.alert(
-      'Dosagem',
-      'Selecione a dosagem:',
-      [
-        ...dosagens.map(d => ({
-          text: d,
-          onPress: () => setDosagem(d)
-        })),
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
+    setShowDosagemModal(true);
+  };
+
+  const selectDosagem = (dosagemSelecionada: string) => {
+    setDosagem(dosagemSelecionada);
+    setShowDosagemModal(false);
   };
 
   const showDataInicialPicker = () => {
-    const hoje = new Date();
-    const datas = [];
-    
-    for (let i = 0; i < 365; i++) {
-      const data = new Date(hoje);
-      data.setDate(hoje.getDate() + i);
-      const dataStr = data.toLocaleDateString('pt-BR');
-      datas.push(dataStr);
+    // Inicializar com a data atual ou a data já selecionada
+    if (dataInicialISO) {
+      const date = new Date(dataInicialISO);
+      setSelectedCalendarDate(date);
+      setCurrentMonth(date.getMonth());
+      setCurrentYear(date.getFullYear());
+    }
+    setShowDataInicialModal(true);
+  };
+
+  const confirmDateSelection = () => {
+    const dataFormatada = selectedCalendarDate.toLocaleDateString('pt-BR');
+    const dataISO = selectedCalendarDate.toISOString().split('T')[0];
+    setDataInicial(dataFormatada);
+    setDataInicialISO(dataISO);
+    setShowDataInicialModal(false);
+  };
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (month: number, year: number) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const isToday = (day: number, month: number, year: number) => {
+    const today = new Date();
+    return (
+      day === today.getDate() &&
+      month === today.getMonth() &&
+      year === today.getFullYear()
+    );
+  };
+
+  const isSelected = (day: number, month: number, year: number) => {
+    const selected = selectedCalendarDate;
+    return (
+      day === selected.getDate() &&
+      month === selected.getMonth() &&
+      year === selected.getFullYear()
+    );
+  };
+
+  const handleDayPress = (day: number) => {
+    const newDate = new Date(currentYear, currentMonth, day);
+    setSelectedCalendarDate(newDate);
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    } else {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    }
+  };
+
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+    const days = [];
+    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    // Adicionar dias vazios no início
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
     }
 
-    Alert.alert(
-      'Data inicial',
-      'Selecione a data:',
-      [
-        ...datas.slice(0, 20).map(d => ({
-          text: d,
-          onPress: () => setDataInicial(d)
-        })),
-        { text: 'Cancelar', style: 'cancel' },
-      ]
+    // Adicionar os dias do mês
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
+    }
+
+    return (
+      <View style={styles.calendarContainer}>
+        {/* Header do Calendário */}
+        <View style={styles.calendarHeader}>
+          <TouchableOpacity onPress={() => navigateMonth('prev')} style={styles.calendarNavButton}>
+            <Feather name="chevron-left" size={24} color="#004A61" />
+          </TouchableOpacity>
+          <Text style={styles.calendarMonthText}>
+            {monthNames[currentMonth]} {currentYear}
+          </Text>
+          <TouchableOpacity onPress={() => navigateMonth('next')} style={styles.calendarNavButton}>
+            <Feather name="chevron-right" size={24} color="#004A61" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Dias da semana */}
+        <View style={styles.weekDaysContainer}>
+          {weekDays.map((day, index) => (
+            <View key={index} style={styles.weekDay}>
+              <Text style={styles.weekDayText}>{day}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Dias do mês */}
+        <View style={styles.daysContainer}>
+          {days.map((day, index) => {
+            if (day === null) {
+              return <View key={index} style={styles.dayCell} />;
+            }
+            const isTodayDate = isToday(day, currentMonth, currentYear);
+            const isSelectedDate = isSelected(day, currentMonth, currentYear);
+            
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.dayCell,
+                  isTodayDate && styles.todayCell,
+                  isSelectedDate && styles.selectedDayCell
+                ]}
+                onPress={() => handleDayPress(day)}
+              >
+                <Text style={[
+                  styles.dayText,
+                  isTodayDate && styles.todayText,
+                  isSelectedDate && styles.selectedDayText
+                ]}>
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
     );
   };
 
-  const showDuracaoPicker = () => {
-    const duracoes = ['1 semana', '2 semanas', '1 mês', '3 meses', '6 meses', '1 ano', '2 anos'];
-    Alert.alert(
-      'Duração do tratamento',
-      'Selecione a duração:',
-      [
-        ...duracoes.map(d => ({
-          text: d,
-          onPress: () => setDuracaoTratamento(d)
-        })),
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
-  };
-
-  const showFrequenciaPicker = () => {
-    const frequencias = [
-      'Todo dia - 8:00',
-      'Todo dia - 12:00',
-      'Todo dia - 18:00',
-      'A cada 8 horas',
-      'A cada 12 horas',
-      '2 vezes ao dia',
-      '3 vezes ao dia'
-    ];
-    Alert.alert(
-      'Frequência do lembrete',
-      'Selecione a frequência:',
-      [
-        ...frequencias.map(f => ({
-          text: f,
-          onPress: () => setFrequenciaLembrete(f)
-        })),
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
-  };
 
 
   return (
@@ -223,7 +349,7 @@ export default function NovoMedicamentoScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Nome do medicamento</Text>
             <TextInput
-              style={styles.input}
+              style={styles.textInput}
               value={nome}
               onChangeText={setNome}
               placeholder="Digite o nome do medicamento"
@@ -235,7 +361,7 @@ export default function NovoMedicamentoScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Frequência (horas)</Text>
             <TextInput
-              style={styles.input}
+              style={styles.textInput}
               value={frequenciaHoras}
               onChangeText={setFrequenciaHoras}
               placeholder="Ex: 8 (a cada 8 horas)"
@@ -248,7 +374,9 @@ export default function NovoMedicamentoScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Dosagem</Text>
             <TouchableOpacity style={styles.input} onPress={showDosagemPicker}>
-              <Text style={styles.inputText}>{dosagem}</Text>
+              <Text style={[styles.inputText, !dosagem && styles.inputTextPlaceholder]}>
+                {dosagem || 'Selecione a dosagem'}
+              </Text>
               <Feather name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
           </View>
@@ -257,16 +385,19 @@ export default function NovoMedicamentoScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Data inicial</Text>
             <TouchableOpacity style={styles.input} onPress={showDataInicialPicker}>
-              <Text style={styles.inputText}>{dataInicial}</Text>
+              <Text style={[styles.inputText, !dataInicial && styles.inputTextPlaceholder]}>
+                {dataInicial || 'Selecione a data inicial'}
+              </Text>
               <Feather name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
           </View>
 
           {/* Duração do tratamento em dias */}
+          {!usoContinuo && (
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Duração do tratamento (dias)</Text>
             <TextInput
-              style={styles.input}
+                style={styles.textInput}
               value={duracaoDias}
               onChangeText={setDuracaoDias}
               placeholder="Ex: 30 (30 dias)"
@@ -274,6 +405,7 @@ export default function NovoMedicamentoScreen() {
               keyboardType="numeric"
             />
           </View>
+          )}
 
           {/* Checkbox Uso contínuo */}
           <View style={styles.checkboxContainer}>
@@ -400,6 +532,101 @@ export default function NovoMedicamentoScreen() {
         </View>
       </Modal>
 
+      {/* Modal de Seleção de Dosagem */}
+      <Modal
+        visible={showDosagemModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDosagemModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.dosagemModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione a Dosagem</Text>
+              <TouchableOpacity
+                onPress={() => setShowDosagemModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.dosagemModalContent}>
+              {dosagens.map((dosagemItem, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dosagemOption,
+                    dosagem === dosagemItem && styles.dosagemOptionSelected
+                  ]}
+                  onPress={() => selectDosagem(dosagemItem)}
+                >
+                  <Text style={[
+                    styles.dosagemOptionText,
+                    dosagem === dosagemItem && styles.dosagemOptionTextSelected
+                  ]}>
+                    {dosagemItem}
+                  </Text>
+                  {dosagem === dosagemItem && (
+                    <Feather name="check" size={20} color="#004A61" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowDosagemModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Seleção de Data Inicial - Calendário */}
+      <Modal
+        visible={showDataInicialModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDataInicialModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione a Data Inicial</Text>
+              <TouchableOpacity
+                onPress={() => setShowDataInicialModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.calendarModalContent}>
+              {renderCalendar()}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowDataInicialModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={confirmDateSelection}
+              >
+                <Text style={styles.modalConfirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -465,10 +692,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    fontSize: 16,
+    color: '#333',
+  },
   inputText: {
     fontSize: 16,
     color: '#333',
     flex: 1,
+  },
+  inputTextPlaceholder: {
+    color: '#999',
   },
   saveButton: {
     backgroundColor: '#004A61',
@@ -607,6 +847,126 @@ const styles = StyleSheet.create({
   },
   modalConfirmButtonText: {
     fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  // Estilos do Modal de Dosagem
+  dosagemModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '70%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  dosagemModalContent: {
+    padding: 20,
+    maxHeight: 300,
+  },
+  dosagemOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+  },
+  dosagemOptionSelected: {
+    backgroundColor: '#E8F4F8',
+    borderColor: '#004A61',
+    borderWidth: 2,
+  },
+  dosagemOptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  dosagemOptionTextSelected: {
+    color: '#004A61',
+    fontWeight: 'bold',
+  },
+  // Estilos do Calendário
+  calendarModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    width: '90%',
+    maxWidth: 400,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  calendarModalContent: {
+    padding: 20,
+  },
+  calendarContainer: {
+    width: '100%',
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  calendarNavButton: {
+    padding: 8,
+  },
+  calendarMonthText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#004A61',
+  },
+  weekDaysContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  weekDay: {
+    width: 40,
+    alignItems: 'center',
+  },
+  weekDayText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  dayCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  dayText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  todayCell: {
+    backgroundColor: '#E8F4F8',
+    borderRadius: 20,
+  },
+  todayText: {
+    color: '#004A61',
+    fontWeight: 'bold',
+  },
+  selectedDayCell: {
+    backgroundColor: '#004A61',
+    borderRadius: 20,
+  },
+  selectedDayText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
   },

@@ -37,6 +37,12 @@ export default function SintomaScreen() {
   });
   const [doencas, setDoencas] = useState<{id: number, nome_doenca: string}[]>([]);
   const [loadingDoencas, setLoadingDoencas] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [touched, setTouched] = useState<{[key: string]: boolean}>({});
+  const [showDataInicioModal, setShowDataInicioModal] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   const loadDoencas = async () => {
     setLoadingDoencas(true);
@@ -76,7 +82,7 @@ export default function SintomaScreen() {
       const profileId = await AsyncStorage.getItem('active_profile_id');
       if (!profileId) return;
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}?perfil_id=${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -190,11 +196,15 @@ export default function SintomaScreen() {
         doenca_id: newSintoma.doenca_id,
         descricao_sintoma: newSintoma.descricao_sintoma.trim(),
         intensidade: newSintoma.intensidade,
-        data_hora_inicio: `${newSintoma.data_hora_inicio}T00:00:00`
+        data_hora_inicio: `${newSintoma.data_hora_inicio}T00:00:00`,
+        perfil_id: parseInt(profileId)
       };
 
+      console.log('📤 [DEBUG] Enviando dados do sintoma:', JSON.stringify(sintomaData, null, 2));
+      console.log('📤 [DEBUG] URL:', `${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms?perfil_id=${profileId}`);
+
       // Usar a rota de sintomas
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms?perfil_id=${profileId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,8 +213,11 @@ export default function SintomaScreen() {
         body: JSON.stringify(sintomaData)
       });
 
+      console.log('📥 [DEBUG] Status da resposta:', response.status);
+      const result = await response.json();
+      console.log('📥 [DEBUG] Resposta do servidor:', JSON.stringify(result, null, 2));
+
       if (response.ok) {
-        const result = await response.json();
         const novoSintoma = {
           id: result.data.id,
           ...sintomaData
@@ -223,8 +236,7 @@ export default function SintomaScreen() {
 
         Alert.alert('Sucesso!', 'Sintoma registrado com sucesso!');
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao registrar sintoma');
+        throw new Error(result.message || 'Erro ao registrar sintoma');
       }
     } catch (error: any) {
       console.error('Erro ao salvar sintoma:', error);
@@ -257,7 +269,7 @@ export default function SintomaScreen() {
                 return;
               }
 
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}`, {
+              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}?perfil_id=${profileId}`, {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',
@@ -294,6 +306,153 @@ export default function SintomaScreen() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR');
+  };
+
+  // Funções do calendário
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (month: number, year: number) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const isToday = (day: number, month: number, year: number) => {
+    const today = new Date();
+    return (
+      day === today.getDate() &&
+      month === today.getMonth() &&
+      year === today.getFullYear()
+    );
+  };
+
+  const isSelected = (day: number, month: number, year: number) => {
+    const selected = selectedCalendarDate;
+    return (
+      day === selected.getDate() &&
+      month === selected.getMonth() &&
+      year === selected.getFullYear()
+    );
+  };
+
+  const handleDayPress = (day: number) => {
+    const newDate = new Date(currentYear, currentMonth, day);
+    setSelectedCalendarDate(newDate);
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    } else {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    }
+  };
+
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+    const days = [];
+    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    // Adicionar dias vazios no início
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
+
+    // Adicionar os dias do mês
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
+    }
+
+    return (
+      <View style={styles.calendarContainer}>
+        {/* Header do Calendário */}
+        <View style={styles.calendarHeader}>
+          <TouchableOpacity onPress={() => navigateMonth('prev')} style={styles.calendarNavButton}>
+            <Feather name="chevron-left" size={24} color="#004A61" />
+          </TouchableOpacity>
+          <Text style={styles.calendarMonthText}>
+            {monthNames[currentMonth]} {currentYear}
+          </Text>
+          <TouchableOpacity onPress={() => navigateMonth('next')} style={styles.calendarNavButton}>
+            <Feather name="chevron-right" size={24} color="#004A61" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Dias da semana */}
+        <View style={styles.weekDaysContainer}>
+          {weekDays.map((day, index) => (
+            <View key={index} style={styles.weekDay}>
+              <Text style={styles.weekDayText}>{day}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Dias do mês */}
+        <View style={styles.daysContainer}>
+          {days.map((day, index) => {
+            if (day === null) {
+              return <View key={index} style={styles.dayCell} />;
+            }
+            const isTodayDate = isToday(day, currentMonth, currentYear);
+            const isSelectedDate = isSelected(day, currentMonth, currentYear);
+            
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.dayCell,
+                  isTodayDate && styles.todayCell,
+                  isSelectedDate && styles.selectedDayCell
+                ]}
+                onPress={() => handleDayPress(day)}
+              >
+                <Text style={[
+                  styles.dayText,
+                  isTodayDate && styles.todayText,
+                  isSelectedDate && styles.selectedDayText
+                ]}>
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+
+  const showDataInicioPicker = () => {
+    // Inicializar com a data atual ou a data já selecionada
+    if (newSintoma.data_hora_inicio) {
+      const date = new Date(newSintoma.data_hora_inicio);
+      if (!isNaN(date.getTime())) {
+        setSelectedCalendarDate(date);
+        setCurrentMonth(date.getMonth());
+        setCurrentYear(date.getFullYear());
+      }
+    }
+    setShowDataInicioModal(true);
+  };
+
+  const confirmDateSelection = () => {
+    const dataISO = selectedCalendarDate.toISOString().split('T')[0];
+    handleFieldChange('data_hora_inicio', dataISO);
+    setShowDataInicioModal(false);
   };
 
   return (
@@ -488,22 +647,71 @@ export default function SintomaScreen() {
               <Text style={styles.label}>
                 Data de Início <Text style={styles.required}>*</Text>
               </Text>
-              <TextInput
+              <TouchableOpacity
                 style={[
-                  styles.input,
+                  styles.dateInput,
                   errors.data_hora_inicio && touched.data_hora_inicio && styles.inputError
                 ]}
-                value={newSintoma.data_hora_inicio}
-                onChangeText={(text) => handleFieldChange('data_hora_inicio', text)}
+                onPress={showDataInicioPicker}
                 onBlur={() => handleFieldBlur('data_hora_inicio')}
-                placeholder="YYYY-MM-DD"
-              />
+              >
+                <Text style={[
+                  styles.dateInputText,
+                  !newSintoma.data_hora_inicio && styles.dateInputTextPlaceholder
+                ]}>
+                  {newSintoma.data_hora_inicio 
+                    ? new Date(newSintoma.data_hora_inicio).toLocaleDateString('pt-BR')
+                    : 'Selecione a data de início'}
+                </Text>
+                <Feather name="calendar" size={20} color="#666" />
+              </TouchableOpacity>
               {errors.data_hora_inicio && touched.data_hora_inicio && (
                 <Text style={styles.errorText}>{errors.data_hora_inicio}</Text>
               )}
             </View>
           </ScrollView>
         </SafeAreaView>
+      </Modal>
+
+      {/* Modal de Seleção de Data de Início - Calendário */}
+      <Modal
+        visible={showDataInicioModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDataInicioModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione a Data de Início</Text>
+              <TouchableOpacity
+                onPress={() => setShowDataInicioModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.calendarModalContent}>
+              {renderCalendar()}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowDataInicioModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={confirmDateSelection}
+              >
+                <Text style={styles.modalConfirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -742,6 +950,140 @@ const styles = StyleSheet.create({
   },
   selectOptionTextSelected: {
     color: '#004A61',
+    fontWeight: '600',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  dateInputText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  dateInputTextPlaceholder: {
+    color: '#999',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
+  calendarModalContent: {
+    padding: 20,
+  },
+  calendarContainer: {
+    width: '100%',
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  calendarNavButton: {
+    padding: 8,
+  },
+  calendarMonthText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#004A61',
+  },
+  weekDaysContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  weekDay: {
+    width: 40,
+    alignItems: 'center',
+  },
+  weekDayText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  dayCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  dayText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  todayCell: {
+    backgroundColor: '#E8F4F8',
+    borderRadius: 20,
+  },
+  todayText: {
+    color: '#004A61',
+    fontWeight: 'bold',
+  },
+  selectedDayCell: {
+    backgroundColor: '#004A61',
+    borderRadius: 20,
+  },
+  selectedDayText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: '#F0F0F0',
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  modalCancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: '#004A61',
+    alignItems: 'center',
+  },
+  modalConfirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

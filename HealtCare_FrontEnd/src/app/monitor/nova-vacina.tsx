@@ -150,11 +150,16 @@ export default function NovaVacinaScreen() {
     }
 
     try {
-
-    try {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) {
         Alert.alert('Erro de Autenticação', 'Você não está logado.');
+        return;
+      }
+
+      // Obter o perfil_id ativo do usuário
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
         return;
       }
 
@@ -176,6 +181,7 @@ export default function NovaVacinaScreen() {
           nome: nomeVacina,
           dose: dose,
           data_vacinacao: dataISO,
+          perfil_id: parseInt(profileId),
         }),
       });
 
@@ -190,10 +196,6 @@ export default function NovaVacinaScreen() {
     } catch (error: any) {
       console.error('Erro ao salvar vacina:', error);
       Alert.alert('Erro', error.message || 'Não foi possível salvar a vacina.');
-    }
-    } catch (error: any) {
-      console.error('Erro geral na função handleSave:', error);
-      Alert.alert('Erro', 'Ocorreu um erro inesperado. Tente novamente.');
     }
   };
 

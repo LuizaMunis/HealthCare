@@ -3,26 +3,20 @@ const RegistroPressaoArterialModel = require('../models/registroPressaoArterialM
 const RegistroPressaoArterialService = require('../services/registroPressaoArterialService');
 const ProfileModel = require('../models/profileModel');
 class RegistroPressaoArterialController {
-  /**
-   * Helper privado para obter o perfil_id do usuário autenticado.
-   * @param {number} usuarioId - ID do usuário autenticado.
-   * @returns {number|null} O perfil_id se encontrado, ou null.
-   */
-  static async _getPerfilIdFromUserId(usuarioId) {
-    const perfil = await PerfilModel.findByUserId(usuarioId);
-    return perfil ? perfil.id : null;
-  }
-
   static async createRegistro(req, res) {
     try {
       const usuarioId = req.user?.id;
       const registroData = req.body || {};
+      const perfilId = registroData.perfil_id;
 
-      // O service espera um único objeto com os dados. Incluímos o usuario_id
-      // para que ele possa resolver o perfil_id quando necessário.
-      const payload = { usuario_id: usuarioId, ...registroData };
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório no corpo da requisição.' 
+        });
+      }
 
-      const newRegistro = await RegistroPressaoArterialService.createRegistro(payload);
+      const newRegistro = await RegistroPressaoArterialService.createRegistro(usuarioId, perfilId, registroData);
 
       res.status(201).json({
         success: true,
@@ -38,9 +32,16 @@ class RegistroPressaoArterialController {
   static async getRegistrosByProfile(req, res) {
     try {
       const usuarioId = req.user.id;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      // Endpoint não recebe profileId; buscar pelos registros do usuário autenticado
-      const registros = await RegistroPressaoArterialService.getRegistrosByUsuario(usuarioId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const registros = await RegistroPressaoArterialService.getRegistrosByProfile(usuarioId, perfilId);
 
       res.json({
         success: true,
@@ -57,9 +58,17 @@ class RegistroPressaoArterialController {
     try {
       const usuarioId = req.user.id;
       const { registroId } = req.params;
+      const perfilId = req.body.perfil_id || req.query.perfil_id;
       const updateData = req.body;
 
-      const updatedRegistro = await RegistroPressaoArterialService.updateRegistro(registroId, usuarioId, updateData);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const updatedRegistro = await RegistroPressaoArterialService.updateRegistro(usuarioId, perfilId, registroId, updateData);
 
       res.json({
         success: true,
@@ -76,8 +85,16 @@ class RegistroPressaoArterialController {
     try {
       const usuarioId = req.user.id;
       const { registroId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      await RegistroPressaoArterialService.deleteRegistro(registroId, usuarioId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      await RegistroPressaoArterialService.deleteRegistro(usuarioId, perfilId, registroId);
 
       res.json({
         success: true,

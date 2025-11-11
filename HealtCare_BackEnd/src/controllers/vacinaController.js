@@ -7,7 +7,18 @@ class VacinaController {
    */
   static async createVacina(req, res) {
     try {
-      const novaVacina = await VacinaService.createVacina(req.user.id, req.body);
+      const usuarioId = req.user.id;
+      const dadosVacina = req.body;
+      const perfilId = dadosVacina.perfil_id;
+
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório no corpo da requisição.' 
+        });
+      }
+
+      const novaVacina = await VacinaService.createVacina(usuarioId, perfilId, dadosVacina);
       res.status(201).json({
         success: true,
         message: 'Vacina registrada com sucesso!',
@@ -24,7 +35,17 @@ class VacinaController {
    */
   static async getAllVacinas(req, res) {
     try {
-      const vacinas = await VacinaService.getAllVacinasByUsuario(req.user.id);
+      const usuarioId = req.user.id;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
+
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const vacinas = await VacinaService.getAllVacinasByProfile(usuarioId, perfilId);
       res.status(200).json({ success: true, data: vacinas });
     } catch (error) {
       console.error('Erro ao buscar vacinas:', error);
@@ -37,8 +58,18 @@ class VacinaController {
    */
   static async getVacinaById(req, res) {
     try {
+      const usuarioId = req.user.id;
       const { id } = req.params;
-      const vacina = await VacinaService.getVacinaById(req.user.id, id);
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
+
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const vacina = await VacinaService.getVacinaById(usuarioId, perfilId, id);
       res.status(200).json({ success: true, data: vacina });
     } catch (error) {
       console.error('Erro ao buscar vacina por ID:', error);
@@ -52,8 +83,19 @@ class VacinaController {
    */
   static async updateVacina(req, res) {
     try {
+      const usuarioId = req.user.id;
       const { id } = req.params;
-      const vacinaAtualizada = await VacinaService.updateVacina(req.user.id, id, req.body);
+      const perfilId = req.body.perfil_id || req.query.perfil_id;
+      const dadosUpdate = req.body;
+
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const vacinaAtualizada = await VacinaService.updateVacina(usuarioId, perfilId, id, dadosUpdate);
       res.status(200).json({
         success: true,
         message: 'Registro de vacina atualizado com sucesso!',
@@ -71,8 +113,18 @@ class VacinaController {
    */
   static async deleteVacina(req, res) {
     try {
+      const usuarioId = req.user.id;
       const { id } = req.params;
-      await VacinaService.deleteVacina(req.user.id, id);
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
+
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      await VacinaService.deleteVacina(usuarioId, perfilId, id);
       res.status(200).json({ success: true, message: 'Registro de vacina deletado com sucesso!' });
     } catch (error) {
       console.error('Erro ao deletar vacina:', error);

@@ -118,7 +118,7 @@ export default function SintomasHistoryScreen() {
         return;
       }
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}?perfil_id=${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -178,13 +178,18 @@ export default function SintomasHistoryScreen() {
         data_hora_inicio: `${editForm.data_hora_inicio}T00:00:00`
       };
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${editingSintoma.id}`, {
+      const updateDataWithPerfil = {
+        ...updateData,
+        perfil_id: parseInt(profileId)
+      };
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${editingSintoma.id}?perfil_id=${profileId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(updateData)
+        body: JSON.stringify(updateDataWithPerfil)
       });
 
       if (response.ok) {
@@ -233,7 +238,7 @@ export default function SintomasHistoryScreen() {
                 return;
               }
 
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}`, {
+              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}?perfil_id=${profileId}`, {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',

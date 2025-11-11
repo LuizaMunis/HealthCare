@@ -65,10 +65,15 @@ export default function PressureScreen() {
     }
 
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) {
         Alert.alert('Erro de Autenticação', 'Você não está logado. Por favor, faça o login novamente.');
-        router.push('/login'); 
+        return;
+      }
+
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
         return;
       }
 
@@ -95,7 +100,8 @@ export default function PressureScreen() {
         body: JSON.stringify({
           sistolica_mmhg: systolic,
           diastolica_mmhg: diastolic,
-          data_hora_medicao: measurementDateTime
+          data_hora_medicao: measurementDateTime,
+          perfil_id: parseInt(profileId)
         }),
       });
 

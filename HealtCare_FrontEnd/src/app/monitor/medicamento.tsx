@@ -58,7 +58,7 @@ export default function MedicamentoScreen() {
         return;
       }
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}?perfil_id=${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -124,15 +124,22 @@ export default function MedicamentoScreen() {
         return;
       }
 
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+        return;
+      }
+
       const statusUso = estavaTomado ? 'Pulado' : 'Tomado';
       
       const registroData = {
         medicamento_id: id,
         data_hora_registro: new Date().toISOString(),
-        status_uso: statusUso
+        status_uso: statusUso,
+        perfil_id: parseInt(profileId)
       };
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_USAGE_RECORDS}/${id}/usage-logs`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_USAGE_RECORDS}/${id}/usage-logs?perfil_id=${profileId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -193,7 +200,13 @@ export default function MedicamentoScreen() {
                 return;
               }
 
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}/${id}`, {
+              const profileId = await AsyncStorage.getItem('active_profile_id');
+              if (!profileId) {
+                Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+                return;
+              }
+
+              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}/${id}?perfil_id=${profileId}`, {
                 method: 'DELETE',
                 headers: {
                   'Authorization': `Bearer ${token}`,

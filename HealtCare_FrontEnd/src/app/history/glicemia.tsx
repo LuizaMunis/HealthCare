@@ -46,7 +46,10 @@ export default function GlycemiaHistoryScreen() {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) throw new Error('Token de autenticação não encontrado.');
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) throw new Error('Nenhum perfil ativo encontrado.');
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}?perfil_id=${profileId}`, { headers: { 'Authorization': `Bearer ${token}` } });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Falha ao buscar o histórico.');
 
@@ -68,7 +71,12 @@ export default function GlycemiaHistoryScreen() {
       { text: 'Excluir', style: 'destructive', onPress: async () => {
           try {
             const token = await AsyncStorage.getItem('healthcare_auth_token');
-            const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            const profileId = await AsyncStorage.getItem('active_profile_id');
+            if (!profileId) {
+              Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+              return;
+            }
+            const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}/${id}?perfil_id=${profileId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) {
               const data = await response.json().catch(() => ({}));
               throw new Error(data.message || 'Falha ao excluir o registro.');
@@ -98,12 +106,17 @@ export default function GlycemiaHistoryScreen() {
     }
     try {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
-      const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}/${editingRecord.id}`;
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+        return;
+      }
+      const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.GLYCEMIA_RECORDS}/${editingRecord.id}?perfil_id=${profileId}`;
       const time = new Date(editingRecord.data_hora_medicao).toTimeString().slice(0,8);
       const response = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ valor_mg_dl: v, data_hora_medicao: `${date}T${time}` })
+        body: JSON.stringify({ valor_mg_dl: v, data_hora_medicao: `${date}T${time}`, perfil_id: parseInt(profileId) })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Falha ao atualizar o registro.');
