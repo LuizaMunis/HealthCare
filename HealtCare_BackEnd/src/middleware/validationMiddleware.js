@@ -23,15 +23,21 @@ class ValidationMiddleware {
       body('password')
         .isLength({ min: 6 })
         .withMessage('Senha deve ter pelo menos 6 caracteres')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-        .withMessage('Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número')
         .custom((value) => {
-          // Permitir caracteres especiais comuns (opcional)
-          const specialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
-          if (!specialChars.test(value)) {
-            // Aviso em vez de erro
-            console.warn('Senha não contém caracteres especiais - recomendado para maior segurança');
+          // Validação mais flexível - apenas verificar se tem pelo menos 6 caracteres
+          if (value.length < 6) {
+            throw new Error('Senha deve ter pelo menos 6 caracteres');
           }
+          
+          // Aviso opcional para senhas mais seguras
+          const hasUpperCase = /[A-Z]/.test(value);
+          const hasLowerCase = /[a-z]/.test(value);
+          const hasNumbers = /\d/.test(value);
+          
+          if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+            console.warn('Senha recomendada: use letras maiúsculas, minúsculas e números para maior segurança');
+          }
+          
           return true;
         }),
       
@@ -62,6 +68,14 @@ class ValidationMiddleware {
    */
   static validateProfileData() {
     return [
+
+      body('nome_perfil')
+        .trim()
+        .notEmpty()
+        .withMessage('O nome do perfil é obrigatório.')
+        .isLength({ min: 2, max: 100 })
+        .withMessage('O nome do perfil deve ter entre 2 e 100 caracteres'),
+      
       body('cpf')
         .optional()
         .isLength({ min: 11, max: 14 })
@@ -143,11 +157,24 @@ class ValidationMiddleware {
    */
   static validateBloodPressure() {
     return [
+      // Aceita ambos os esquemas de nomenclatura para compatibilidade
       body('pressao_sistolica')
+        .optional()
+        .isInt({ min: 70, max: 300 })
+        .withMessage('Pressão sistólica deve estar entre 70 e 300 mmHg'),
+      
+      body('sistolica_mmhg')
+        .optional()
         .isInt({ min: 70, max: 300 })
         .withMessage('Pressão sistólica deve estar entre 70 e 300 mmHg'),
       
       body('pressao_diastolica')
+        .optional()
+        .isInt({ min: 40, max: 200 })
+        .withMessage('Pressão diastólica deve estar entre 40 e 200 mmHg'),
+      
+      body('diastolica_mmhg')
+        .optional()
         .isInt({ min: 40, max: 200 })
         .withMessage('Pressão diastólica deve estar entre 40 e 200 mmHg'),
       
@@ -161,10 +188,36 @@ class ValidationMiddleware {
         .isISO8601()
         .withMessage('Data e hora devem estar no formato ISO 8601'),
       
+      body('data_hora_medicao')
+        .optional()
+        .isISO8601()
+        .withMessage('Data e hora da medição devem estar no formato ISO 8601'),
+      
       body('observacoes')
         .optional()
         .isLength({ max: 500 })
         .withMessage('Observações devem ter no máximo 500 caracteres'),
+      
+      // Validação customizada para garantir que pelo menos um dos campos de pressão esteja presente
+      (req, res, next) => {
+        const { pressao_sistolica, sistolica_mmhg, pressao_diastolica, diastolica_mmhg } = req.body;
+        
+        if (!pressao_sistolica && !sistolica_mmhg) {
+          return res.status(400).json({
+            success: false,
+            message: 'Pressão sistólica é obrigatória'
+          });
+        }
+        
+        if (!pressao_diastolica && !diastolica_mmhg) {
+          return res.status(400).json({
+            success: false,
+            message: 'Pressão diastólica é obrigatória'
+          });
+        }
+        
+        next();
+      },
       
       ValidationMiddleware.handleValidationErrors
     ];

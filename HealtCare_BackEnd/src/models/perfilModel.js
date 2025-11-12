@@ -1,49 +1,119 @@
 // HealthCare_Backend/src/models/perfilModel.js
 
-const { pool } = require('../config/database');
+const { pool } = require('../config/database'); 
+
+// Executa queries com uma tentativa de retry em caso de ECONNRESET
+async function executeWithRetry(query, params = []) {
+  try {
+    return await pool.execute(query, params);
+  } catch (error) {
+    if (error && (error.code === 'ECONNRESET' || error.errno === -4077)) {
+      console.warn('⚠️ Conexão MySQL foi resetada. Tentando novamente uma vez...');
+      await new Promise((r) => setTimeout(r, 200));
+      return await pool.execute(query, params);
+    }
+    throw error;
+  }
+}
 
 class PerfilModel {
-  static async createTable() {
+  static async create(profileData) {
+    const { usuario_id, nome_perfil, parentesco, data_nascimento, celular, genero, cpf, peso, altura } = profileData;
+
+    const pesoProcessado = this.processWeight(peso);
+    const alturaProcessada = this.processHeight(altura);
+
     const query = `
-      CREATE TABLE IF NOT EXISTS perfil (
-        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        usuario_id INT NOT NULL UNIQUE,
-        data_nascimento DATE NULL,
-        celular VARCHAR(20) NULL,
-        genero VARCHAR(20) NULL,
-        cpf VARCHAR(14) NULL UNIQUE,
-        peso DECIMAL(5, 2) NULL,
-        altura INT NULL,
-        CONSTRAINT fk_perfil_usuario
-          FOREIGN KEY (usuario_id)
-          REFERENCES usuario (id) -- --- MESCLADO: Garante consistência com a tabela 'usuario'
-          ON DELETE CASCADE
-      ) ENGINE = InnoDB;
+      INSERT INTO perfil (usuario_id, nome_perfil, parentesco, data_nascimento, celular, genero, cpf, peso, altura)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    await pool.execute(query);
+    const values = [
+      usuario_id, 
+      nome_perfil, 
+      parentesco || null,
+      data_nascimento || null, 
+      celular || null, 
+      genero || null, 
+      cpf || null, 
+      pesoProcessado, 
+      alturaProcessada
+    ];
+    
+    try {
+      if (cpf) {
+        const existingCpfProfile = await this.findByCpf(cpf);
+        if (existingCpfProfile) {
+          console.warn(`Aviso: CPF ${cpf} já existe no sistema.`);
+        }
+      }
+
+      const [result] = await pool.execute(query, values);
+      return { id: result.insertId, ...profileData };
+    } catch (error) {
+      console.error('❌ Erro ao criar perfil:', error);
+      throw error;
+    }
+  }
+
+  static async update(perfilId, profileData) {
+    const { nome_perfil, parentesco, data_nascimento, celular, genero, cpf, peso, altura } = profileData;
+
+    const pesoProcessado = this.processWeight(peso);
+    const alturaProcessada = this.processHeight(altura);
+
+    const query = `
+      UPDATE perfil 
+      SET nome_perfil = ?, parentesco = ?, data_nascimento = ?, celular = ?, genero = ?, cpf = ?, peso = ?, altura = ?
+      WHERE id = ?
+    `;
+    const values = [
+      nome_perfil,
+      parentesco || null,
+      data_nascimento || null,
+      celular || null,
+      genero || null,
+      cpf || null,
+      pesoProcessado,
+      alturaProcessada,
+      perfilId
+    ];
+
+    try {
+      const [result] = await pool.execute(query, values);
+      return result.affectedRows;
+    } catch (error) {
+      console.error('❌ Erro ao atualizar perfil:', error);
+      throw error;
+    }
+  }
+
+  static async findById(id) {
+    const query = 'SELECT * FROM perfil WHERE id = ?';
+    const [rows] = await pool.execute(query, [id]);
+    return rows[0];
   }
 
   static async findByUserId(usuario_id) {
     const query = 'SELECT * FROM perfil WHERE usuario_id = ?';
-    const [rows] = await pool.execute(query, [usuario_id]);
+    const [rows] = await executeWithRetry(query, [usuario_id]);
     return rows[0];
   }
 
-  static async findByCpf(cpf, excludeUserId = null) {
-    let query = 'SELECT * FROM perfil WHERE cpf = ?';
-    let params = [cpf];
-    
-    if (excludeUserId) {
-      query += ' AND usuario_id != ?';
-      params.push(excludeUserId);
-    }
-    
-    const [rows] = await pool.execute(query, params);
+  // Retorna TODOS os perfis do usuário (para telas que listam múltiplos)
+  static async findAllByUserId(usuario_id) {
+    const query = 'SELECT * FROM perfil WHERE usuario_id = ? ORDER BY id ASC';
+    const [rows] = await executeWithRetry(query, [usuario_id]);
+    return rows;
+  }
+
+  static async findByCpf(cpf) {
+    const query = 'SELECT * FROM perfil WHERE cpf = ? LIMIT 1';
+    const [rows] = await pool.execute(query, [cpf]);
     return rows[0];
   }
 
   static async createOrUpdate(usuario_id, data) {
-    const { data_nascimento, celular, genero, cpf, peso, altura } = data;
+    const { nome_perfil, parentesco, data_nascimento, celular, genero, cpf, peso, altura } = data;
     
     // Tratar peso e altura corretamente
     let pesoProcessado = null;
@@ -56,9 +126,9 @@ class PerfilModel {
         const pesoComPonto = cleanPeso.replace(',', '.');
         pesoProcessado = parseFloat(pesoComPonto);
         
-        // Validação: peso deve estar entre 20 e 500 kg
-        if (isNaN(pesoProcessado) || pesoProcessado < 20 || pesoProcessado > 500) {
-          throw new Error('Peso deve estar entre 20 e 500 kg');
+        // Validação: peso deve estar entre 2 e 500 kg
+        if (isNaN(pesoProcessado) || pesoProcessado < 2 || pesoProcessado > 500) {
+          throw new Error('Peso deve estar entre 2 e 500 kg');
         }
       }
     }
@@ -103,23 +173,23 @@ class PerfilModel {
         // UPDATE - perfil já existe
         const updateQuery = `
           UPDATE perfil 
-          SET data_nascimento = ?, celular = ?, genero = ?, cpf = ?, peso = ?, altura = ?
+          SET nome_perfil = ?, parentesco = ?, data_nascimento = ?, celular = ?, genero = ?, cpf = ?, peso = ?, altura = ?
           WHERE usuario_id = ?
         `;
-        const updateValues = [data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada, usuario_id];
+        const updateValues = [nome_perfil, parentesco || null, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada, usuario_id];
         
         console.log('Executando UPDATE com valores:', updateValues);
-        await pool.execute(updateQuery, updateValues);
+        await executeWithRetry(updateQuery, updateValues);
       } else {
         // INSERT - perfil não existe
         const insertQuery = `
-          INSERT INTO perfil (usuario_id, data_nascimento, celular, genero, cpf, peso, altura)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO perfil (usuario_id, nome_perfil, parentesco, data_nascimento, celular, genero, cpf, peso, altura)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        const insertValues = [usuario_id, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada];
+        const insertValues = [usuario_id, nome_perfil, parentesco || null, data_nascimento || null, celular || null, generoProcessado, cpf || null, pesoProcessado, alturaProcessada];
         
         console.log('Executando INSERT com valores:', insertValues);
-        await pool.execute(insertQuery, insertValues);
+        await executeWithRetry(insertQuery, insertValues);
       }
       
       return this.findByUserId(usuario_id);
@@ -133,6 +203,28 @@ class PerfilModel {
     const query = 'DELETE FROM perfil WHERE id = ?';
     const [result] = await pool.execute(query, [id]);
     return result.affectedRows > 0;
+  }
+
+  // --- Métodos de Utilitários ---
+
+  static processWeight(peso) {
+    if (peso === null || peso === undefined || String(peso).trim() === '') return null;
+    const pesoString = String(peso).replace(/[^\d,.]/g, '').replace(',', '.');
+    const pesoProcessado = parseFloat(pesoString);
+    if (isNaN(pesoProcessado) || pesoProcessado < 40 || pesoProcessado > 200) {
+      throw new Error('Peso inválido. Deve estar entre 40 e 200 kg.');
+    }
+    return pesoProcessado;
+  }
+
+  static processHeight(altura) {
+    if (altura === null || altura === undefined || String(altura).trim() === '') return null;
+    const alturaString = String(altura).replace(/[^\d]/g, '');
+    const alturaProcessada = parseInt(alturaString, 10);
+    if (isNaN(alturaProcessada) || alturaProcessada < 50 || alturaProcessada > 250) {
+      throw new Error('Altura inválida. Deve estar entre 50 e 250 cm.');
+    }
+    return alturaProcessada;
   }
 }
 

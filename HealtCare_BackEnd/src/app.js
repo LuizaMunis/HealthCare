@@ -2,89 +2,84 @@
 
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+// Garante que as variáveis sejam lidas do arquivo config.env na raiz do backend
+require('dotenv').config({ path: path.resolve(__dirname, '../config.env') });
 
-// Verificar se as variáveis de ambiente estão carregadas
+// --- Logs iniciais de ambiente ---
 console.log('🔧 Verificando variáveis de ambiente:');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Definido' : 'NÃO DEFINIDO');
 console.log('DB_HOST:', process.env.DB_HOST);
 console.log('DB_NAME:', process.env.DB_NAME);
 console.log('PORT:', process.env.PORT);
 
-// Importa funções e modelos necessários
+// --- Imports de infraestrutura/modelos ---
 const { testConnection } = require('./config/database');
 const UserModel = require('./models/userModel');
 const PerfilModel = require('./models/perfilModel');
 const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel'); 
 
-// Importa as rotas da aplicação
+// --- Rotas ---
 const userRoutes = require('./routes/userRoutes');
 const perfilRoutes = require('./routes/perfilRoutes');
-const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes');
-
-// Importa middlewares de erro
-const ErrorMiddleware = require('./middleware/errorMiddleware');
+const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // Importa as rotas de registros
+const medicamentoRoutes = require('./routes/medicamentoRoutes');
+const doencaRoutes = require('./routes/doencaRoutes');
+const sintomaRoutes = require('./routes/sintomaRoutes');
+const vacinaRoutes = require('./routes/vacinaRoutes');
+const temperaturaRoutes = require('./routes/temperaturaRoute');
+const frequenciaCardiacaRoutes = require('./routes/frequenciaCardiacaRoute');
+const registroConsultaRoutes = require('./routes/registroConsultaRoutes');
+const glicemiaRoutes = require('./routes/glicemiaRoutes');
+const ErrorMiddleware = require('./middleware/errorMiddleware'); // Ajuste o caminho se necessário
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
-// Middlewares globais da aplicação
+// --- Middlewares globais ---
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// Middlewares de segurança e validação
+// --- Middlewares de segurança/validação ---
 app.use(ErrorMiddleware.sanitizeHeaders);
 app.use(ErrorMiddleware.validateContentType);
 app.use(ErrorMiddleware.limitBodySize);
 app.use(ErrorMiddleware.logRequest);
 app.use(ErrorMiddleware.handleTimeout);
 
-// Definição das rotas da API
+// --- Rotas da API ---
 app.use('/api/users', userRoutes);
 app.use('/api/perfil', perfilRoutes);
-app.use('/api/pressao-arterial', registroPressaoArterialRoutes); 
+app.use('/api/registros-pressao', registroPressaoArterialRoutes); 
+app.use('/api/medicamentos', medicamentoRoutes);
+app.use('/api/doencas', doencaRoutes);
+app.use('/api/sintomas', sintomaRoutes);
+app.use('/api/vacinas', vacinaRoutes);
+app.use('/api/temperatura', temperaturaRoutes);
+app.use('/api/frequencia-cardiaca', frequenciaCardiacaRoutes);
+app.use('/api/glicemia', glicemiaRoutes);
+app.use('/api/consultas', registroConsultaRoutes);
 
-// Rota base para /api
-// Esta rota responderá quando alguém acessar http://seu_ip:3000/api
-app.get('/api', (req, res) => {
-    res.json({
-        success: true,
-        message: 'Bem-vindo à API HealthCare!',
-        availableEndpoints: [
-            '/api/health',
-            '/api/users',
-            '/api/perfil',
-            '/api/pressao-arterial' // Lembre-se de descomentar a rota abaixo se for usá-la
-        ]
-    });
+// --- Health checks ---
+app.get('/api/health', (_req, res) => {
+  res.json({ success: true, message: 'API funcionando e saudável!', timestamp: new Date().toISOString() });
+});
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, message: 'alive', ts: Date.now() });
 });
 
-// Rota de teste de saúde da API
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'API funcionando e saudável!',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Função para iniciar o servidor e configurar o banco de dados
+// --- Boot do servidor ---
 const startServer = async () => {
   try {
     console.log('🔗 Tentando conectar ao banco de dados...');
     await testConnection();
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
 
-    // Criar ou verificar a existência das tabelas na ordem correta
-    console.log('📦 Verificando/criando tabela de usuários...');
-    await UserModel.createTable();
-    console.log('📦 Verificando/criando tabela de perfis...');
-    await PerfilModel.createTable();
-    console.log('📦 Verificando/criando tabela de registros de pressão arterial...');
-    await RegistroPressaoArterialModel.createTable(); // NOVO: Chama a criação da tabela de registros
+    console.log('📦 Verificando conexão com banco de dados...');
+    console.log('✅ Banco de dados pronto para uso');
 
-
-    // Middlewares de tratamento de erro (devem ser os últimos)
+    // --- Middlewares finais de erro (depois das rotas) ---
     app.use(ErrorMiddleware.handleSyntaxError);
     app.use(ErrorMiddleware.handleValidationError);
     app.use(ErrorMiddleware.handleDatabaseError);
@@ -92,9 +87,9 @@ const startServer = async () => {
     app.use(ErrorMiddleware.handleNotFound);
     app.use(ErrorMiddleware.handleGenericError);
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Servidor rodando na porta ${PORT}`);
-      console.log(`📡 API disponível em: http://localhost:${PORT}/api`);
+    app.listen(PORT, HOST, () => {
+      console.log(`🚀 Servidor rodando em http://${HOST}:${PORT}`);
+      console.log(`📡 API disponível em: http://${HOST}:${PORT}/api`);
     });
   } catch (error) {
     console.error('❌ Erro fatal ao iniciar servidor:', error);

@@ -1,32 +1,36 @@
 // backend/src/routes/registrosPressaoArterialRoutes.js
 const express = require('express');
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 const RegistroPressaoArterialController = require('../controllers/registroPressaoArterialController');
 const authMiddleware = require('../middleware/authMiddleware');
 const ValidationMiddleware = require('../middleware/validationMiddleware');
 
-// Todas as rotas abaixo são protegidas por autenticação
-
-// Rota para criar um novo registro de pressão arterial para o perfil do usuário autenticado
-router.post('/', 
+router.post(
+  '/',
   authMiddleware,
   ValidationMiddleware.sanitizeInput,
   ValidationMiddleware.validateBloodPressure(),
   RegistroPressaoArterialController.createRegistro
 );
 
-// Rota para obter todos os registros de pressão arterial do perfil do usuário autenticado
-router.get('/', authMiddleware, RegistroPressaoArterialController.getRegistros);
+router.get(
+  '/',
+  authMiddleware,
+  RegistroPressaoArterialController.getRegistrosByProfile
+);
 
-// Rota para atualizar um registro de pressão arterial específico (/:id refere-se ao ID do registro)
-router.put('/:id', 
+router.put(
+  '/:registroId',
   authMiddleware,
   ValidationMiddleware.sanitizeInput,
   ValidationMiddleware.validateBloodPressure(),
   RegistroPressaoArterialController.updateRegistro
 );
 
-// Rota para deletar um registro de pressão arterial específico (/:id refere-se ao ID do registro)
-router.delete('/:id', authMiddleware, RegistroPressaoArterialController.deleteRegistro);
+router.delete(
+  '/:registroId',
+  authMiddleware,
+  RegistroPressaoArterialController.deleteRegistro
+);
 
 module.exports = router;

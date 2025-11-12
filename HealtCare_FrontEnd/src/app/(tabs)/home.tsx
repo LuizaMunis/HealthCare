@@ -1,18 +1,23 @@
 // HealthCare_FrontEnd/src/app/(tabs)/index.tsx
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import { useUserData } from '@/hooks/useUserData';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useRouter } from 'expo-router';
+
+const EllipseImage = require('../../assets/images/Ellipse 44.png');
 
 
 export default function HomeScreen() {
   
   const { userName, loading } = useUserData();
+  const router = useRouter();
 
   const colorScheme = useColorScheme() ?? 'light';
   const themeColors = Colors[colorScheme];
@@ -26,11 +31,13 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Bolas azuis de fundo */}
+      <Image source={EllipseImage} style={styles.ellipseTopLeft} resizeMode="contain" pointerEvents="none" />
+      <Image source={EllipseImage} style={styles.ellipseBottomRight} resizeMode="contain" pointerEvents="none" />
+      
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.logoText}>HEALTHCARE <Text style={styles.logoIcon}>+</Text></Text>
-        </View>
+        {/* Cabeçalho removido conforme solicitação */}
 
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeStripe} />
@@ -61,14 +68,20 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Acesso rápido</Text>
         <View style={styles.quickAccessContainer}>
-            <View style={styles.quickAccessCard}>
-                <Feather name="bell" size={32} color="#004A61" />
+            <TouchableOpacity 
+              style={styles.quickAccessCard}
+              onPress={() => router.push('/consultas')}
+            >
+                <Feather name="calendar" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Consultas</Text>
-            </View>
-            <View style={styles.quickAccessCard}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.quickAccessCard}
+              onPress={() => router.push('/notificacoes')}
+            >
                 <Feather name="bell" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Notificações</Text>
-            </View>
+            </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -76,8 +89,26 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#E3F2F5' },
-    scrollContainer: { padding: 20 },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    scrollContainer: { padding: 20, zIndex: 1 },
+    ellipseTopLeft: {
+        position: 'absolute',
+        top: -80,
+        left: -80,
+        width: 300,
+        height: 300,
+        opacity: 0.4,
+        zIndex: 0,
+    },
+    ellipseBottomRight: {
+        position: 'absolute',
+        bottom: 50,
+        right: -60,
+        width: 280,
+        height: 280,
+        opacity: 0.4,
+        zIndex: 0,
+    },
     header: { alignItems: 'center', marginBottom: 20 },
     logoText: { fontSize: 24, fontWeight: 'bold', color: '#004A61' },
     logoIcon: { color: '#00B8D4' },
@@ -99,6 +130,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#E3F2F5'
+        backgroundColor: '#FFFFFF'
     }
 });

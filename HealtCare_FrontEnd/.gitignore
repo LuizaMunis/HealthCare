@@ -53,3 +53,6 @@ __tests__/
 *.test.tsx
 *.spec.ts
 *.spec.tsx
+
+# Arquivos de configuração local (é uma boa prática usar comentários)
+HealtCare_FrontEnd/src/constants/api.ts

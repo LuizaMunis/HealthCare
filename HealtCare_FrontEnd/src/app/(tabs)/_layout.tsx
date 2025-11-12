@@ -9,59 +9,15 @@ import { HapticTab } from '@/components/ui/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import ApiService from '@/services/apiService';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
-
-  // Verificar se o perfil foi preenchido ao entrar nas tabs
-  useEffect(() => {
-    const checkProfileAndRedirect = async () => {
-      try {
-        // Verificar se há token
-        const token = await AsyncStorage.getItem('healthcare_auth_token');
-        if (!token) {
-          router.replace('/login');
-          return;
-        }
-
-        // Buscar perfil do usuário
-        const result = await ApiService.getAdditionalProfile();
-        
-        if (result.success && result.data && result.data.data) {
-          const profileData = result.data.data;
-          
-          // Verificar se o perfil tem dados essenciais preenchidos
-          const hasEssentialData = profileData.cpf && 
-                                  profileData.celular && 
-                                  profileData.data_nascimento && 
-                                  profileData.peso && 
-                                  profileData.altura && 
-                                  profileData.genero;
-          
-          if (!hasEssentialData) {
-            // Perfil incompleto, redirecionar para perfil
-            router.replace('/Perfil');
-          }
-        } else {
-          // Erro ao buscar perfil ou perfil não existe, redirecionar para perfil
-          router.replace('/Perfil');
-        }
-      } catch (error) {
-        console.error('Erro ao verificar perfil:', error);
-        router.replace('/Perfil');
-      }
-    };
-
-    checkProfileAndRedirect();
-  }, [router]);
-
+  
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors['light'].tint,
         tabBarInactiveTintColor: '#8e8e93',
         headerShown: false,
         tabBarButton: HapticTab,
@@ -70,8 +26,11 @@ export default function TabLayout() {
           ios: {
             // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
+            backgroundColor: '#FFFFFF',
           },
-          default: {},
+          default: {
+            backgroundColor: '#FFFFFF',
+          },
         }),
       }}>
 

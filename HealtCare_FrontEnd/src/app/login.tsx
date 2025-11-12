@@ -3,14 +3,18 @@
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '@/services/apiService';
+
+// Branding removido conforme solicitação
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); 
   const router = useRouter();
 
   const handleLogin = async () => {
@@ -18,38 +22,51 @@ export default function LoginScreen() {
       Alert.alert('Erro', 'Por favor, preencha o email e a senha.');
       return;
     }
+    setIsLoading(true);
 
     try {
       const result = await ApiService.login({ email, password });
 
       if (result.success) {
+        console.log('Resposta completa da API:', JSON.stringify(result, null, 2));
+
         // Salvar informações do usuário
-        await AsyncStorage.setItem('userInfo', JSON.stringify(result.data.data.user));
+        await AsyncStorage.setItem('userInfo', JSON.stringify(result.data.user));
 
         // Verificar se o perfil foi preenchido
+        console.log('Buscando dados do perfil adicional...');
         const profileResult = await ApiService.getAdditionalProfile();
-        
-        if (profileResult.success && profileResult.data && profileResult.data.data) {
-          const profileData = profileResult.data.data;
+        console.log('Resultado do perfil adicional:', JSON.stringify(profileResult, null, 2));
+
+        if (profileResult.success && profileResult.data) {
+          const payload = profileResult.data;
+          const p = Array.isArray(payload) ? payload[0] : payload;
           
+          console.log('Dados do perfil a serem verificados:', p);
+
           // Verificar se o perfil tem dados essenciais preenchidos
-          const hasEssentialData = profileData.cpf && 
-                                  profileData.celular && 
-                                  profileData.data_nascimento && 
-                                  profileData.peso && 
-                                  profileData.altura && 
-                                  profileData.genero;
+          const hasEssentialData = Boolean(
+            (p?.cpf && String(p.cpf).trim() !== '') &&
+            (p?.celular && String(p.celular).trim() !== '') &&
+            (p?.data_nascimento && String(p.data_nascimento).trim() !== '') &&
+            (p?.peso !== null && p?.peso !== undefined && String(p.peso).trim() !== '') &&
+            (p?.altura !== null && p?.altura !== undefined && String(p.altura).trim() !== '') &&
+            (p?.genero && String(p.genero).trim() !== '')
+          );
           
+          console.log('O perfil tem dados essenciais?', hasEssentialData);
+
           if (hasEssentialData) {
-            // Perfil completo, navegar para home
+            console.log('DECISÃO: Perfil completo. Navegando para /home.');
             router.replace('/(tabs)/home');
           } else {
-            // Perfil incompleto, navegar para perfil
-            router.replace('/Perfil');
+            console.log('DECISÃO: Perfil incompleto. Navegando para /CompletarPerfilInicial.');
+            router.replace('/CompletarPerfilInicial');
           }
         } else {
-          // Erro ao buscar perfil ou perfil não existe, navegar para perfil
-          router.replace('/Perfil');
+          // Isso acontece se a API falhar ou se a estrutura de dados não for a esperada.
+          console.log('DECISÃO: Falha ao buscar perfil ou perfil não existe. Navegando para /CompletarPerfilInicial.');
+          router.replace('/CompletarPerfilInicial');
         }
       } else {
         Alert.alert('Falha no Login', result.error || 'Credenciais inválidas.');
@@ -57,14 +74,14 @@ export default function LoginScreen() {
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       Alert.alert('Erro', 'Não foi possível conectar ao servidor. Tente novamente mais tarde.');
+    } finally {
+      setIsLoading(false); // Desativa o loading no final
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Login</Text>
-      </View>
+      {/* Branding removido */}
 
       <View style={styles.form}>
         <Text style={styles.welcomeTitle}>Seja bem-vindo de volta!</Text>
@@ -96,9 +113,11 @@ export default function LoginScreen() {
         
         <View style={styles.optionsContainer}>
             <Text>Lembre-me</Text>
-            <TouchableOpacity>
-                <Text style={styles.linkText}>Esqueceu a sua senha?</Text>
-            </TouchableOpacity>
+            <Link href="/forgot-password/forgot-password" asChild>
+                <TouchableOpacity>
+                    <Text style={styles.linkText}>Esqueceu a sua senha?</Text>
+                </TouchableOpacity>
+            </Link>
         </View>
 
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
@@ -123,6 +142,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
     header: { padding: 20, alignItems: 'center' },
     headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#004A61' },
+    
     form: { flex: 1, paddingHorizontal: 25, paddingTop: 20 },
     welcomeTitle: { fontSize: 28, fontWeight: 'bold', color: '#333' },
     welcomeSubtitle: { fontSize: 16, color: 'gray', marginBottom: 30 },

@@ -1,12 +1,15 @@
 // HealthCare_FrontEnd/src/app/(tabs)/index.tsx
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import { useUserData } from '@/hooks/useUserData';
 import { useRouter } from 'expo-router';
+
+const EllipseImage = require('../../assets/images/Ellipse 44.png');
 
 export default function HomeScreen() {
   
@@ -22,11 +25,13 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Bolas azuis de fundo */}
+      <Image source={EllipseImage} style={styles.ellipseTopLeft} resizeMode="contain" pointerEvents="none" />
+      <Image source={EllipseImage} style={styles.ellipseBottomRight} resizeMode="contain" pointerEvents="none" />
+      
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.logoText}>HEALTHCARE <Text style={styles.logoIcon}>+</Text></Text>
-        </View>
+        {/* Cabeçalho removido conforme solicitação */}
 
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeStripe} />
@@ -66,7 +71,7 @@ export default function HomeScreen() {
             
           <TouchableOpacity 
               style={styles.quickAccessCard} 
-              onPress={() => router.push('/history/heart-rate')}
+              onPress={() => router.push('/history/frequencia')}
             >
                 <Feather name="heart" size={32} color="#004A61" />
                 <Text style={styles.quickAccessTitle}>Frequência Cardíaca</Text>
@@ -78,20 +83,20 @@ export default function HomeScreen() {
               onPress={() => router.push('/history/temperature')}
             >
               <Feather name="thermometer" size={32} color="#004A61" />
-              <Text style={styles.quickAccessTitle}>Tempetatura</Text>
+              <Text style={styles.quickAccessTitle}>Temperatura</Text>
           </TouchableOpacity>
           <TouchableOpacity 
               style={styles.quickAccessCard} 
-              onPress={() => router.push('/history/symptoms')}
+              onPress={() => router.push('/history/sintomas')}
             >
-              <Feather name="loader" size={32} color="#004A61" />
+              <Feather name="activity" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Sintomas</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.quickAccessContainer}>
           <TouchableOpacity 
               style={styles.quickAccessCard} 
-              onPress={() => router.push('/history/blood-sugar')}
+              onPress={() => router.push('/history/glicemia')}
             >
               <Feather name="droplet" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Glicemia</Text>
@@ -100,9 +105,20 @@ export default function HomeScreen() {
               style={styles.quickAccessCard} 
               onPress={() => router.push('/history/medication')}
             >
-              <Feather name="circle" size={32} color="#004A61" />
+              <Feather name="pill" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Medicamento</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.quickAccessContainer}>
+          <TouchableOpacity 
+              style={styles.quickAccessCard} 
+              onPress={() => router.push('/history/vaccination')}
+            >
+              <Feather name="shield" size={32} color="#004A61" />
+              <Text style={styles.quickAccessTitle}>Vacinação</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.quickAccessCardPlaceholder} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -110,8 +126,26 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#E3F2F5' },
-    scrollContainer: { padding: 20 },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    scrollContainer: { padding: 20, zIndex: 1 },
+    ellipseTopLeft: {
+        position: 'absolute',
+        top: -80,
+        left: -80,
+        width: 300,
+        height: 300,
+        opacity: 0.4,
+        zIndex: 0,
+    },
+    ellipseBottomRight: {
+        position: 'absolute',
+        bottom: 50,
+        right: -60,
+        width: 280,
+        height: 280,
+        opacity: 0.4,
+        zIndex: 0,
+    },
     header: { alignItems: 'center', marginBottom: 20 },
     logoText: { fontSize: 24, fontWeight: 'bold', color: '#004A61' },
     logoIcon: { color: '#00B8D4' },
@@ -125,14 +159,19 @@ const styles = StyleSheet.create({
     eventTextContainer: { flex: 1 },
     eventTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
     eventSubtitle: { fontSize: 14, color: '#E0E0E0' },
-    quickAccessContainer: { flexDirection: 'row', justifyContent: 'space-between' },
+    quickAccessContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
     quickAccessCard: { backgroundColor: '#FFFFFF', borderRadius: 15, width: '48%', alignItems: 'center', paddingVertical: 30, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
     quickAccessTitle: { marginTop: 10, fontSize: 14, fontWeight: 'bold', color: '#333' },
+    quickAccessCardPlaceholder: {
+        width: '48%',
+        height: 0,
+        opacity: 0
+    },
     // Estilo para o container do loading
     loaderContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#E3F2F5'
+        backgroundColor: '#FFFFFF'
     }
 });

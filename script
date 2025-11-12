@@ -1,0 +1,376 @@
+-- MySQL Workbench Forward Engineering para XAMPP/MariaDB
+-- Script corrigido e otimizado
+
+SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
+-- -----------------------------------------------------
+-- Schema Healthcare
+-- -----------------------------------------------------
+CREATE SCHEMA IF NOT EXISTS Healthcare DEFAULT CHARACTER SET utf8 ;
+USE Healthcare ;
+
+-- -----------------------------------------------------
+-- Tabela usuario
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS usuario ;
+
+CREATE TABLE IF NOT EXISTS usuario (
+  id INT NOT NULL AUTO_INCREMENT,
+  nome_completo VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  senha_hash VARCHAR(255) NOT NULL, -- Aumentado para suportar hashes modernos
+  data_cadastro DATE NOT NULL,
+  token_recuperacao_senha VARCHAR(255) NULL,
+  PRIMARY KEY (id),
+  UNIQUE INDEX email_UNIQUE (email ASC)
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela perfil
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS perfil ;
+
+CREATE TABLE IF NOT EXISTS perfil (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    nome_perfil VARCHAR(255) NOT NULL,
+    parentesco VARCHAR(50) NULL, -- Ex: "Filho", "Pai", "Mãe", "Eu mesmo"
+    data_nascimento DATE NULL,
+    celular VARCHAR(20) NULL,
+    genero VARCHAR(20) NULL,
+    cpf VARCHAR(14) NULL,
+    peso DECIMAL(5, 2) NULL,
+    altura INT NULL,
+    CONSTRAINT uq_usuario_cpf UNIQUE (usuario_id, cpf),
+    CONSTRAINT fk_perfil_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuario (id) -- --- MESCLADO: Garante consistência com a tabela 'usuario'
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- -----------------------------------------------------
+-- Tabela consulta
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS consulta ;
+
+CREATE TABLE IF NOT EXISTS consulta (
+  id INT NOT NULL AUTO_INCREMENT,
+  perfil_id INT NOT NULL,
+  nome_medico VARCHAR(45) NULL,
+  especialidade VARCHAR(45) NOT NULL,
+  data_hora_consulta DATETIME NOT NULL,
+  observacoes VARCHAR(255) NULL,
+  local VARCHAR(45) NULL,
+  PRIMARY KEY (id),
+  INDEX consultas_perfis_id_idx (perfil_id ASC),
+  CONSTRAINT consulta_perfil_id
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela medicamento
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS medicamento ;
+
+CREATE TABLE IF NOT EXISTS medicamento (
+  id INT NOT NULL AUTO_INCREMENT,
+  perfil_id INT NOT NULL,
+  nome_medicamento VARCHAR(100) NOT NULL,
+  dosagem VARCHAR(45) NULL,
+  frequencia_horas INT NOT NULL,
+  duracao_dias_tratamento INT NULL,
+  data_inicio_tratamento DATE NOT NULL,
+  lembretes_ativos TINYINT(1) NOT NULL DEFAULT 1,
+  uso_continuo TINYINT(1) NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  INDEX medicamento_perfis_id_idx (perfil_id ASC),
+  CONSTRAINT medicamento_perfil_id
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela registroUsoMedicamento
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS registroUsoMedicamento ;
+
+CREATE TABLE IF NOT EXISTS registroUsoMedicamento (
+  id INT NOT NULL AUTO_INCREMENT,
+  medicamento_id INT NOT NULL, -- CORRIGIDO: Removido espaço no nome da coluna
+  data_hora_registro DATETIME NOT NULL,
+  status_uso ENUM('Tomado', 'Pulado', 'Adiado') NOT NULL, -- Melhor usar ENUM
+  PRIMARY KEY (id),
+  INDEX registrosUsoMedicamento_medicamento_idx (medicamento_id ASC),
+  CONSTRAINT registroUsoMedicamento_medicamento
+    FOREIGN KEY (medicamento_id)
+    REFERENCES medicamento (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela vacina
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS vacina ;
+
+CREATE TABLE IF NOT EXISTS vacina (
+  id INT NOT NULL AUTO_INCREMENT,
+  perfil_id INT NOT NULL,
+  nome VARCHAR(45) NOT NULL,
+  dose VARCHAR(45) NOT NULL,
+  data_vacinacao DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  INDEX vacina_perfil_id_idx (perfil_id ASC),
+  CONSTRAINT vacina_perfil_id
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela doenca
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS doenca ;
+
+CREATE TABLE IF NOT EXISTS doenca (
+  id INT NOT NULL AUTO_INCREMENT,
+  perfil_id INT NOT NULL,
+  nome_doenca VARCHAR(45) NOT NULL,
+  tipo_doenca VARCHAR(45) NOT NULL,
+  data_diagnostico DATE NULL,
+  data_inicio_sintomas DATE NULL,
+  data_cura DATE NULL,
+  observacoes VARCHAR(255) NULL,
+  PRIMARY KEY (id),
+  INDEX doenca_perfil_id_idx (perfil_id ASC),
+  CONSTRAINT doenca_perfil_id
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela RegistroTemperatura
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS RegistroTemperatura ;
+
+CREATE TABLE IF NOT EXISTS RegistroTemperatura (
+  id INT NOT NULL AUTO_INCREMENT, -- CORRIGIDO: Adicionado AUTO_INCREMENT
+  perfil_id INT NOT NULL,
+  graus_celsius FLOAT NOT NULL,
+  data_hora_medicao DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  INDEX registroTemperatura_perfil_id_idx (perfil_id ASC),
+  CONSTRAINT registroTemperatura_perfil_id
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela registrosFrequenciaCardiaca
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS registrosFrequenciaCardiaca ;
+
+CREATE TABLE IF NOT EXISTS registrosFrequenciaCardiaca (
+  id INT NOT NULL AUTO_INCREMENT,
+  perfil_id INT NOT NULL,
+  bpm INT NOT NULL,
+  data_hora_medicao DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  INDEX RegistrosFrequenciaCardiaca_perfil_id_idx (perfil_id ASC),
+  CONSTRAINT RegistrosFrequenciaCardiaca_perfil_id
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela registrosPressaoArterial
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS registrosPressaoArterial ;
+
+CREATE TABLE IF NOT EXISTS registrosPressaoArterial (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    perfil_id INT NOT NULL, /* Referencia diretamente perfil.id */
+    sistolica_mmhg INT NULL,
+    diastolica_mmhg INT NULL,
+    data_hora_medicao DATETIME NOT NULL,
+    CONSTRAINT fk_registrosPressaoArterial_perfil
+        FOREIGN KEY (perfil_id)
+        REFERENCES perfil (id)
+        ON DELETE CASCADE  /* Se o usuário for deletado, os registros também */
+        ON UPDATE CASCADE  /* Se o ID do usuário mudar, o registro é atualizado */
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela registrosGlicemia
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS registrosGlicemia ;
+
+CREATE TABLE IF NOT EXISTS registrosGlicemia (
+  id INT NOT NULL AUTO_INCREMENT,
+  perfil_id INT NOT NULL,
+  valor_mg_dl INT NOT NULL,
+  data_hora_medicao DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  INDEX registrosGlicemia_idx (perfil_id ASC),
+  CONSTRAINT registrosGlicemia
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela sintomas
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS sintomas ;
+
+CREATE TABLE IF NOT EXISTS sintomas (
+  id INT NOT NULL AUTO_INCREMENT,
+  doenca_id INT NOT NULL,
+  descricao_sintoma VARCHAR(45) NOT NULL,
+  intensidade ENUM('Leve', 'Moderada', 'Intensa') NOT NULL, -- Melhor usar ENUM
+  data_hora_inicio DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  INDEX sintomas_doenca_id_idx (doenca_id ASC),
+  CONSTRAINT sintomas_doenca_id
+    FOREIGN KEY (doenca_id)
+    REFERENCES doenca (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela relatorioGerado
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS relatorioGerado ;
+
+CREATE TABLE IF NOT EXISTS relatorioGerado (
+  id INT NOT NULL AUTO_INCREMENT,
+  perfil_id INT NOT NULL,
+  data_geracao DATE NOT NULL,
+  url_pdf_exportado VARCHAR(255) NULL,
+  parametros_filtros JSON NOT NULL,
+  data_inicio DATE NOT NULL,
+  data_final DATE NOT NULL,
+  PRIMARY KEY (id),
+  INDEX relatorioGerado_perfil_id_idx (perfil_id ASC),
+  CONSTRAINT relatorioGerado_perfil_id
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela preferenciaNotificacao
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS preferenciaNotificacao ;
+
+CREATE TABLE IF NOT EXISTS preferenciaNotificacao (
+  id INT NOT NULL AUTO_INCREMENT,
+  perfil_id INT NOT NULL,
+  tipo_notificacao VARCHAR(45) NOT NULL,
+  habilitada TINYINT(1) NOT NULL,
+  configuracao_especifica JSON NOT NULL,
+  PRIMARY KEY (id),
+  INDEX preferenciaNotificacao_perfil_id_idx (perfil_id ASC),
+  CONSTRAINT preferenciaNotificacao_perfil_id
+    FOREIGN KEY (perfil_id)
+    REFERENCES perfil (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela formatoMedicamento
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS formatoMedicamento ;
+
+CREATE TABLE IF NOT EXISTS formatoMedicamento (
+  id INT NOT NULL AUTO_INCREMENT,
+  medicamento_id INT NOT NULL,
+  nome_formato VARCHAR(45) NULL,
+  unidade_padrao_dosagem VARCHAR(45) NULL,
+  PRIMARY KEY (id),
+  INDEX formatoMedicamento_idx (medicamento_id ASC),
+  CONSTRAINT formatoMedicamento
+    FOREIGN KEY (medicamento_id)
+    REFERENCES medicamento (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela docAnexo
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS docAnexo ;
+
+CREATE TABLE IF NOT EXISTS docAnexo (
+  id INT NOT NULL AUTO_INCREMENT,
+  consulta_id INT NOT NULL,
+  -- ATENÇÃO: Armazenar arquivos (BLOBs) no banco de dados pode impactar a performance.
+  -- A prática recomendada é salvar o arquivo em um diretório e armazenar apenas o caminho/URL aqui.
+  arquivo_anexo BLOB NOT NULL,
+  tipo VARCHAR(45) NOT NULL,
+  PRIMARY KEY (id),
+  INDEX docAnexo_consulta_id_idx (consulta_id ASC),
+  CONSTRAINT docAnexo_consulta_id
+    FOREIGN KEY (consulta_id)
+    REFERENCES consulta (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Tabela docAnexoDoenca
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS docAnexoDoenca ;
+
+CREATE TABLE IF NOT EXISTS docAnexoDoenca (
+  id INT NOT NULL AUTO_INCREMENT,
+  doenca_id INT NOT NULL, -- CORRIGIDO: 'doença_id' para 'doenca_id'
+  tipo VARCHAR(45) NOT NULL,
+  doc_anexado BLOB NOT NULL,
+  PRIMARY KEY (id),
+  INDEX docAnexoDoenca_doenca_id_idx (doenca_id ASC),
+  CONSTRAINT docAnexoDoenca_doenca_id
+    FOREIGN KEY (doenca_id)
+    REFERENCES doenca (id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE = InnoDB;
+
+
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;

@@ -1,3 +1,5 @@
+// HealtCare_FrontEnd/src/services/apiService.ts
+
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
@@ -28,6 +30,7 @@ interface UserData {
   nome_completo: string;
   email: string;
   password: string;
+  nome_perfil: string;
 }
 
 interface Credentials {
@@ -65,11 +68,16 @@ const ApiService = {
         const token = response.data.data.token;
         await AsyncStorage.setItem(TOKEN_KEY, token);
         console.log('✅ Token salvo com sucesso');
+
+        // Salva também o userInfo mais recente para evitar dados antigos
+        if (response.data.data.user) {
+          await AsyncStorage.setItem('userInfo', JSON.stringify(response.data.data.user));
+        }
       } else {
         console.log('❌ Estrutura da resposta não contém token');
       }
       
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       console.error('❌ Erro no registro:', error);
       return { success: false, error: error.response?.data?.message || 'Erro ao registar.' };
@@ -79,26 +87,31 @@ const ApiService = {
   login: async (credentials: Credentials) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.LOGIN, credentials);
-      const { token } = response.data.data;
+      const { token, user } = response.data.data;
       if (token) {
         await AsyncStorage.setItem(TOKEN_KEY, token);
+        if (user) {
+          await AsyncStorage.setItem('userInfo', JSON.stringify(user));
+        }
       }
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Credenciais inválidas.' };
     }
   },
 
-  /*logout: async () => {
+  logout: async () => {
     await AsyncStorage.removeItem(TOKEN_KEY);
     await AsyncStorage.removeItem('userInfo');
-  },*/
+    // Limpa também possíveis restos de perfis armazenados por telas
+    await AsyncStorage.removeItem('selectedProfileId');
+  },
 
   // --- PROFILE & USER ---
   getProfile: async () => {
     try {
       const response = await api.get(ENDPOINTS.USERS.PROFILE);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Sessão expirada.' };
     }
@@ -107,41 +120,102 @@ const ApiService = {
   getAdditionalProfile: async () => {
     try {
       const response = await api.get(ENDPOINTS.PROFILE.GET_SAVE);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados adicionais.' };
+    }
+  },
+
+  /**
+   * Busca a lista de todos os perfis associados à conta do usuário.
+   * Presume a existência de um endpoint GET /api/perfil/all no backend.
+   */
+  getAllProfiles: async () => {
+    try {
+      const response = await api.get(ENDPOINTS.PROFILE.GET_SAVE);
+      return response.data; // backend retorna { success, data: [ ... ] }
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao buscar perfis.' };
+    }
+  },
+  
+  /**
+   * Busca os dados detalhados de um perfil específico pelo seu ID.
+   * Presume a existência de um endpoint GET /api/perfil/:id no backend.
+   */
+  getProfileById: async (profileId: string) => {
+    try {
+      const response = await api.get(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`);
+      return response.data; // backend retorna { success, data: { ... } }
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao buscar dados do perfil.' };
+    }
+  },
+
+  createProfile: async (profileData: ProfileData) => {
+    try {
+      const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, profileData);
+      return response.data;
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao criar perfil.' };
+    }
+  },
+
+  updateProfile: async (profileId: string, profileData: ProfileData) => {
+    try {
+      const response = await api.put(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`, profileData);
+      return response.data;
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao atualizar perfil.' };
+    }
+  },
+
+  deleteProfile: async (profileId: string) => {
+    try {
+      const response = await api.delete(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`);
+      return response.data;
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.message || 'Erro ao excluir perfil.' };
     }
   },
 
   saveProfile: async (profileData: ProfileData) => {
     try {
       const response = await api.put(ENDPOINTS.USERS.PROFILE, profileData);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao salvar perfil.' };
     }
   },
   
+  // Cria/atualiza dados do perfil do usuário autenticado (POST /perfil)
   savePerfilData: async (perfilData: PerfilData) => {
     try {
       const response = await api.post(ENDPOINTS.PROFILE.GET_SAVE, perfilData);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       console.error('Erro no savePerfilData:', error);
-      
-      // Extrair mensagem de erro mais específica
       let errorMessage = 'Erro ao salvar dados adicionais.';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.status === 409) {
-        errorMessage = 'Este CPF já está em uso por outro usuário.';
-      } else if (error.response?.status === 400) {
-        errorMessage = 'Dados inválidos. Verifique as informações fornecidas.';
-      } else if (error.response?.status === 500) {
-        errorMessage = 'Erro interno do servidor. Tente novamente.';
-      }
-      
+      if (error.response?.data?.message) errorMessage = error.response.data.message;
+      else if (error.response?.status === 409) errorMessage = 'Este CPF já está em uso por outro usuário.';
+      else if (error.response?.status === 400) errorMessage = 'Dados inválidos. Verifique as informações fornecidas.';
+      else if (error.response?.status === 500) errorMessage = 'Erro interno do servidor. Tente novamente.';
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Atualiza dados de um perfil específico por ID (PUT /perfil/:id)
+  updatePerfilDataById: async (profileId: string, perfilData: PerfilData) => {
+    try {
+      const response = await api.put(`${ENDPOINTS.PROFILE.GET_SAVE}/${profileId}`, perfilData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro no updatePerfilDataById:', error);
+      let errorMessage = 'Erro ao salvar dados adicionais.';
+      if (error.response?.data?.message) errorMessage = error.response.data.message;
+      else if (error.response?.status === 409) errorMessage = 'Este CPF já está em uso por outro usuário.';
+      else if (error.response?.status === 400) errorMessage = 'Dados inválidos. Verifique as informações fornecidas.';
+      else if (error.response?.status === 500) errorMessage = 'Erro interno do servidor. Tente novamente.';
       return { success: false, error: errorMessage };
     }
   },
@@ -149,7 +223,7 @@ const ApiService = {
   changePassword: async (passwordData: PasswordData) => {
     try {
       const response = await api.post(ENDPOINTS.USERS.CHANGE_PASSWORD, passwordData);
-      return { success: true, data: response.data };
+      return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao alterar a senha.' };
     }
