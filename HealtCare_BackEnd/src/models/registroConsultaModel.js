@@ -35,6 +35,23 @@ class ConsultaModel {
     }
   }
 
+  static async findByUsuarioId(usuarioId) {
+    const query = `
+      SELECT c.id, c.perfil_id, c.nome_medico, c.especialidade, c.data_hora_consulta, c.observacoes, c.local
+      FROM consulta c
+      INNER JOIN perfil p ON c.perfil_id = p.id
+      WHERE p.usuario_id = ?
+      ORDER BY c.data_hora_consulta DESC
+    `;
+    try {
+      const [rows] = await pool.execute(query, [usuarioId]);
+      return rows;
+    } catch (error) {
+      console.error('Erro ao buscar consultas por ID de usuário:', error);
+      throw error;
+    }
+  }
+
   static async findById(consultaId) {
     const query = `
       SELECT id, perfil_id, nome_medico, especialidade, data_hora_consulta, observacoes, local

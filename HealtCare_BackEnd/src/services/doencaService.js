@@ -1,8 +1,7 @@
 // backend/src/services/doencaService.js
 const DoencaModel = require('../models/doencaModel');
 const SintomaModel = require('../models/sintomaModel');
-const PerfilModel = require('../models/perfilModel');
-
+const ProfileModel = require('../models/profileModel');
 class DoencaService {
   static async createDoenca(usuarioId, profileId, doencaData) {
     await this._verifyProfileOwnership(usuarioId, profileId);

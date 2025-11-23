@@ -1,8 +1,7 @@
 // backend/src/services/frequenciaCardiacaService.js
 
 const FrequenciaCardiacaModel = require('../models/frequenciaCardiacaModel');
-const PerfilModel = require('../models/perfilModel');
-
+const ProfileModel = require('../models/profileModel');
 class FrequenciaCardiacaService {
   static async getPerfilIdOrThrow(usuario_id) {
     if (!usuario_id) throw new Error('ID do usuário é obrigatório');

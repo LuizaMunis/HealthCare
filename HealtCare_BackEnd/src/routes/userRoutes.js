@@ -31,16 +31,16 @@ router.put('/update-user',
   authMiddleware,
   ValidationMiddleware.sanitizeInput,
   ValidationMiddleware.validateProfileUpdate(), 
-  UserController.updateProfile
+  //UserController.updateProfile
 );
 
 router.post('/change-password', 
   authMiddleware,
   ValidationMiddleware.sanitizeInput,
   ValidationMiddleware.validatePasswordChange(),
-  UserController.changePassword
+  //UserController.changePassword
 );
 
-router.get('/all', authMiddleware, UserController.getAllUsers);
+//router.get('/all', authMiddleware, UserController.getAllUsers);
 
 module.exports = router;

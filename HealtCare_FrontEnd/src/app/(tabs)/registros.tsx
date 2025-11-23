@@ -20,6 +20,10 @@ export default function RegistrosScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.header}>
+          <Text style={styles.logoText}>Seus registros <Text style={styles.logoIcon}>+</Text></Text>
+        </View>
+
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeStripe} />
           <View>

@@ -1,7 +1,7 @@
 // HealthCare_Backend/src/services/registroPressaoArterialService.js
 
 const RegistroPressaoArterialModel = require('../models/registroPressaoArterialModel');
-const PerfilModel = require('../models/perfilModel');
+const ProfileModel = require('../models/profileModel');
 
 class RegistroPressaoArterialService {
   /**

@@ -1,6 +1,6 @@
 //HealthCare_FrontEnd/src/app/index.tsx
 
-import { Link } from 'expo-router'; // <<< CORREÇÃO: Importa de 'expo-router'
+import { Link } from 'expo-router'; 
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 const HealthLogo = require('../assets/images/iconLogo.png');
@@ -9,11 +9,17 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
-        <View style={styles.brandRow}>
-          <Text style={styles.logoText}>HEALTHCARE</Text>
-          <Image source={HealthLogo} style={styles.logoInlineIcon} resizeMode="contain" />
-        </View>
+        <Text style={styles.logoText}>
+          HEALTHCARE 
+          <Text style={styles.logoIcon}>+</Text>
+        </Text>
         <Text style={styles.tagline}>Aqui, cuidar é uma forma de amar.</Text>
+      </View>
+
+      <View style={styles.content}>
+        <Text style={styles.title}>
+          Descubra uma nova maneira de cuidar de quem mais importa.
+        </Text>
       </View>
 
 
@@ -57,15 +63,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoInlineIcon: {
-    width: 42,
-    height: 42,
-    marginLeft: 8,
-  },
   logoIcon: {
     width: 36,
     height: 36,
     marginBottom: 8,
+    color: '#B2EBF2',
   },
   logoImage: {
     width: 120,
@@ -76,6 +78,11 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     color: '#004A61',
+  },
+  logoInlineIcon: {
+    width: 42,
+    height: 42,
+    marginLeft: 8,
   },
   tagline: {
     fontSize: 16,

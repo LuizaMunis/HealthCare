@@ -57,6 +57,7 @@ export default function PressureScreen() {
     }, 0);
     return () => clearTimeout(t);
   }, []);
+
   const handleSave = async () => {
     if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
       Alert.alert('Atenção', 'Por favor, insira valores de pressão válidos.');
@@ -64,7 +65,7 @@ export default function PressureScreen() {
     }
 
     try {
-      const token = await AsyncStorage.getItem('healthcare_auth_token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
         Alert.alert('Erro de Autenticação', 'Você não está logado. Por favor, faça o login novamente.');
         router.push('/login'); 
@@ -103,13 +104,11 @@ export default function PressureScreen() {
         throw new Error(result.message || 'O servidor retornou um erro ao salvar os dados.');
       }
 
-      console.log('Dados salvos com sucesso no servidor:', result);
-      Alert.alert('Sucesso!', 'Sua pressão arterial foi salva.');
-      router.back(); // Volta para a tela anterior
-
+      Alert.alert('Sucesso!', 'Sua pressão foi salva.');
+      router.back();
     } catch (error: any) {
-      console.error('Erro ao salvar medição:', error);
-      Alert.alert('Erro', error.message || 'Não foi possível conectar ao servidor. Tente novamente.');
+      console.error('Erro ao salvar pressão:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível conectar ao servidor.');
     }
   };
 

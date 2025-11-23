@@ -1,7 +1,6 @@
 // backend/src/services/glicemiaService.js
 const GlicemiaModel = require('../models/glicemiaModel');
-const PerfilModel = require('../models/perfilModel');
-
+const ProfileModel = require('../models/profileModel');
 class GlicemiaService {
   static async getPerfilIdOrThrow(usuario_id) {
     if (!usuario_id) throw new Error('ID do usuário é obrigatório');

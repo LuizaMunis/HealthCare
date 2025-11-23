@@ -16,12 +16,12 @@ console.log('PORT:', process.env.PORT);
 // --- Imports de infraestrutura/modelos ---
 const { testConnection } = require('./config/database');
 const UserModel = require('./models/userModel');
-const PerfilModel = require('./models/perfilModel');
+const ProfileModel = require('./models/profileModel');
 const RegistroPressaoArterialModel = require('./models/registroPressaoArterialModel'); 
 
 // --- Rotas ---
 const userRoutes = require('./routes/userRoutes');
-const perfilRoutes = require('./routes/perfilRoutes');
+const ProfileRoutes = require('./routes/profileRoutes');
 const registroPressaoArterialRoutes = require('./routes/registrosPressaoArterialRoutes'); // Importa as rotas de registros
 const medicamentoRoutes = require('./routes/medicamentoRoutes');
 const doencaRoutes = require('./routes/doencaRoutes');
@@ -50,7 +50,7 @@ app.use(ErrorMiddleware.handleTimeout);
 
 // --- Rotas da API ---
 app.use('/api/users', userRoutes);
-app.use('/api/perfil', perfilRoutes);
+app.use('/api/perfil', ProfileRoutes);
 app.use('/api/registros-pressao', registroPressaoArterialRoutes); 
 app.use('/api/medicamentos', medicamentoRoutes);
 app.use('/api/doencas', doencaRoutes);

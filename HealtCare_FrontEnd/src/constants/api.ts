@@ -65,4 +65,5 @@ export const ENDPOINTS = {
   MEDICATION_RECORDS: '/medicamentos',
   MEDICATION_USAGE_RECORDS: '/medicamentos',
   SYMPTOMS_RECORDS: '/sintomas',
+  CONSULTAS: '/consultas',
 };

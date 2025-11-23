@@ -1,8 +1,7 @@
 // backend/src/controllers/registroPressaoArterialController.js
 const RegistroPressaoArterialModel = require('../models/registroPressaoArterialModel');
 const RegistroPressaoArterialService = require('../services/registroPressaoArterialService');
-const PerfilModel = require('../models/perfilModel'); // Precisamos do PerfilModel para obter o perfil_id
-
+const ProfileModel = require('../models/profileModel');
 class RegistroPressaoArterialController {
   /**
    * Helper privado para obter o perfil_id do usuário autenticado.
