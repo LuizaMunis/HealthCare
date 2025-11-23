@@ -33,15 +33,6 @@ export default function MedicamentoScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  const getCurrentDate = () => {
-    const now = new Date();
-    const months = [
-      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-    ];
-    return `${now.getDate()} de ${months[now.getMonth()]}`;
-  };
-
   const loadMedicamentos = async () => {
     setLoading(true);
     setError(null);
@@ -234,22 +225,6 @@ export default function MedicamentoScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={24} color="#004A61" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Medicamentos</Text>
-          <Text style={styles.date}>{getCurrentDate()}</Text>
-        </View>
-        <TouchableOpacity onPress={handleEdit}>
-          <Text style={styles.editButton}>
-            {isEditMode ? 'concluir' : 'editar'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Loading State */}
       {loading && (
         <View style={styles.loadingContainer}>
@@ -271,7 +246,22 @@ export default function MedicamentoScreen() {
 
       {/* Content */}
       {!loading && !error && (
-        <ScrollView style={styles.content}>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Feather name="arrow-left" size={24} color="#004A61" />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Medicamento</Text>
+              <Text style={styles.headerSubtitle}>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+            </View>
+            <TouchableOpacity onPress={handleEdit} style={styles.editButtonContainer}>
+              <Text style={styles.editButton}>
+                {isEditMode ? 'concluir' : 'editar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           {/* Adicionar Medicamento */}
           <TouchableOpacity 
             style={styles.addButton}
@@ -354,38 +344,40 @@ export default function MedicamentoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F0F4F8',
+  },
+  scrollContainer: {
+    padding: 20,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+    paddingHorizontal: 5,
   },
-  headerContent: {
-    flex: 1,
+  backButton: {},
+  headerTitleContainer: {
     alignItems: 'center',
+    flex: 1,
   },
-  title: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
   },
-  date: {
+  headerSubtitle: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 2,
+    color: 'gray',
+  },
+  editButtonContainer: {
+    minWidth: 60,
+    alignItems: 'flex-end',
   },
   editButton: {
     fontSize: 16,
     color: '#004A61',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
   },
   addButton: {
     flexDirection: 'row',

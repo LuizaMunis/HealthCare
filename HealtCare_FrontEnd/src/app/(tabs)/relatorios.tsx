@@ -92,7 +92,7 @@ export default function HomeScreen() {
               style={styles.quickAccessCard} 
               onPress={() => router.push('/history/sintomas')}
             >
-              <Feather name="activity" size={32} color="#004A61" />
+              <Feather name="alert-triangle" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Sintomas</Text>
           </TouchableOpacity>
         </View>

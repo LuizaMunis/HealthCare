@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,7 +18,6 @@ import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 export default function NovoMedicamentoScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [nome, setNome] = useState('');
   const [dosagem, setDosagem] = useState('');
   const [frequenciaHoras, setFrequenciaHoras] = useState('8');
@@ -329,19 +328,19 @@ export default function NovoMedicamentoScreen() {
 
 
   return (
-    <SafeAreaView style={styles.container} edges={[]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={24} color="#004A61" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Novo medicamento</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color="#004A61" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Medicamento</Text>
+            <Text style={styles.headerSubtitle}>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+          </View>
+          <View style={{ width: 24 }} />
         </View>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <ScrollView style={styles.content}>
         {/* Formulário */}
         <View style={styles.form}>
           {/* Nome do medicamento */}
@@ -633,32 +632,31 @@ export default function NovoMedicamentoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F0F4F8',
+  },
+  scrollContainer: {
+    padding: 20,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+    paddingHorizontal: 5,
   },
-  headerContent: {
-    flex: 1,
+  backButton: {},
+  headerTitleContainer: {
     alignItems: 'center',
   },
-  headerSpacer: {
-    width: 24,
-  },
-  title: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
   },
-  content: {
-    flex: 1,
-    padding: 20,
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'gray',
   },
   form: {
     marginBottom: 20,

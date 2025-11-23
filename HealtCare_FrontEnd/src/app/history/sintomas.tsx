@@ -240,21 +240,25 @@ export default function SintomasHistoryScreen() {
                 return;
               }
 
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}?perfil_id=${profileId}`, {
-                method: 'DELETE',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`,
-                },
-              });
+              const response = await fetch(
+                `${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}?perfil_id=${profileId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                  },
+                }
+              );
 
-              if (response.ok) {
-                setSintomas(prev => prev.filter(s => s.id !== id));
-                Alert.alert('Sucesso!', 'Sintoma excluído com sucesso!');
-              } else {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Erro ao excluir sintoma');
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Erro ao excluir sintoma. Status: ${response.status}`);
               }
+
+              // Atualizar a lista local
+              setSintomas(prev => prev.filter(s => s.id !== id));
+              Alert.alert('Sucesso!', 'Sintoma excluído com sucesso!');
             } catch (error: any) {
               console.error('Erro ao excluir sintoma:', error);
               Alert.alert('Erro', error.message || 'Não foi possível excluir o sintoma');

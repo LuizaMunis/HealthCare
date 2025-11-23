@@ -8,9 +8,9 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Modal,
   Platform,
   Animated,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -21,104 +21,60 @@ import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 interface Sintoma {
   id?: number;
-  doenca_id: number;
+  nome_doenca: string;
+  tipo_doenca: string;
   descricao_sintoma: string;
   intensidade: 'Leve' | 'Moderada' | 'Intensa';
   data_hora_inicio: string;
+  data_diagnostico: string;
+  data_inicio_sintomas: string;
+  data_cura: string;
+  observacoes: string;
 }
 
 export default function SintomaScreen() {
   const router = useRouter();
-  const [sintomas, setSintomas] = useState<Sintoma[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newSintoma, setNewSintoma] = useState<Sintoma>({
-    doenca_id: 0,
+  const [sintoma, setSintoma] = useState<Sintoma>({
+    nome_doenca: '',
+    tipo_doenca: '',
     descricao_sintoma: '',
     intensidade: 'Leve',
     data_hora_inicio: '',
+    data_diagnostico: '',
+    data_inicio_sintomas: '',
+    data_cura: '',
+    observacoes: '',
   });
-  const [doencas, setDoencas] = useState<{id: number, nome_doenca: string}[]>([]);
-  const [loadingDoencas, setLoadingDoencas] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [touched, setTouched] = useState<{[key: string]: boolean}>({});
   
-  // Estados para data e hora
-  const [selectedDateTime, setSelectedDateTime] = useState(new Date());
-  const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+  // Estados para seletores de data - Formato pt-BR (exibição) e ISO (armazenamento)
+  const [dataDiagnosticoBR, setDataDiagnosticoBR] = useState('');
+  const [dataDiagnosticoISO, setDataDiagnosticoISO] = useState('');
+  const [dataInicioSintomasBR, setDataInicioSintomasBR] = useState('');
+  const [dataInicioSintomasISO, setDataInicioSintomasISO] = useState('');
+  const [dataCuraBR, setDataCuraBR] = useState('');
+  const [dataCuraISO, setDataCuraISO] = useState('');
   
-  // Modo rápido para múltiplos sintomas
-  const [fastMode, setFastMode] = useState(false);
+  // Estados para calendário customizado (funciona na WEB)
+  const [showDataHoraInicioModal, setShowDataHoraInicioModal] = useState(false);
+  const [showDataDiagnosticoModal, setShowDataDiagnosticoModal] = useState(false);
+  const [showDataInicioSintomasModal, setShowDataInicioSintomasModal] = useState(false);
+  const [showDataCuraModal, setShowDataCuraModal] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
+  const [selectedDataHoraInicio, setSelectedDataHoraInicio] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [activeCalendarField, setActiveCalendarField] = useState<'diagnostico' | 'inicio_sintomas' | 'cura' | 'data_hora_inicio' | null>(null);
   
   // Animação para alerta de intensidade intensa
   const pulseAnim = useMemo(() => new Animated.Value(1), []);
 
-  const loadDoencas = async () => {
-    setLoadingDoencas(true);
-    try {
-      const token = await AsyncStorage.getItem('healthcare_auth_token');
-      if (!token) return;
-
-      const profileId = await AsyncStorage.getItem('active_profile_id');
-      if (!profileId) return;
-
-      const response = await fetch(`${API_CONFIG.BASE_URL}/doencas?perfil_id=${profileId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const doencasData = Array.isArray(result.data) ? result.data : [];
-        setDoencas(doencasData);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar doenças:', error);
-    } finally {
-      setLoadingDoencas(false);
-    }
-  };
-
-  const loadSintomas = async () => {
-    setLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('healthcare_auth_token');
-      if (!token) return;
-
-      const profileId = await AsyncStorage.getItem('active_profile_id');
-      if (!profileId) return;
-
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}?perfil_id=${profileId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const sintomasData = Array.isArray(result.data) ? result.data : [];
-        setSintomas(sintomasData);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar sintomas:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadDoencas();
-    loadSintomas();
-  }, []);
 
   // Animação de pulso para alerta de intensidade intensa
   useEffect(() => {
-    if (newSintoma.intensidade === 'Intensa') {
+    if (sintoma.intensidade === 'Intensa') {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -136,7 +92,7 @@ export default function SintomaScreen() {
       pulse.start();
       return () => pulse.stop();
     }
-  }, [newSintoma.intensidade]);
+  }, [sintoma.intensidade]);
 
   const intensidadeOptions = [
     { 
@@ -164,6 +120,16 @@ export default function SintomaScreen() {
 
   const validateField = (field: string, value: any): string => {
     switch (field) {
+      case 'nome_doenca':
+        if (!value || value.trim().length < 2) {
+          return 'Nome da doença deve ter pelo menos 2 caracteres';
+        }
+        break;
+      case 'tipo_doenca':
+        if (!value || value.trim().length < 2) {
+          return 'Tipo da doença deve ter pelo menos 2 caracteres';
+        }
+        break;
       case 'descricao_sintoma':
         if (!value || value.trim().length < 3) {
           return 'Descrição deve ter pelo menos 3 caracteres';
@@ -174,14 +140,65 @@ export default function SintomaScreen() {
           return 'Selecione uma intensidade';
         }
         break;
-      case 'doenca_id':
-        if (!value || value === 0) {
-          return 'Selecione uma doença';
-        }
-        break;
       case 'data_hora_inicio':
         if (!value) {
           return 'Selecione data e hora de início';
+        }
+        break;
+      case 'data_diagnostico':
+        // Campo opcional, mas se preenchido deve ser válido
+        if (value && dataDiagnosticoISO) {
+          const data = new Date(dataDiagnosticoISO);
+          if (isNaN(data.getTime())) {
+            return 'Data de diagnóstico inválida';
+          }
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
+          if (data > today) {
+            return 'Data de diagnóstico não pode ser no futuro';
+          }
+        }
+        break;
+      case 'data_inicio_sintomas':
+        // Campo opcional, mas se preenchido deve ser válido
+        if (value && dataInicioSintomasISO) {
+          const data = new Date(dataInicioSintomasISO);
+          if (isNaN(data.getTime())) {
+            return 'Data de início dos sintomas inválida';
+          }
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
+          if (data > today) {
+            return 'Data de início dos sintomas não pode ser no futuro';
+          }
+          // Validar: data_inicio_sintomas não pode ser posterior a data_diagnostico
+          if (dataDiagnosticoISO) {
+            const dataDiagnostico = new Date(dataDiagnosticoISO);
+            if (data > dataDiagnostico) {
+              return 'Data de início dos sintomas não pode ser posterior à data de diagnóstico';
+            }
+          }
+        }
+        break;
+      case 'data_cura':
+        // Campo opcional, mas se preenchido deve ser válido
+        if (value && dataCuraISO) {
+          const data = new Date(dataCuraISO);
+          if (isNaN(data.getTime())) {
+            return 'Data de cura inválida';
+          }
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
+          if (data > today) {
+            return 'Data de cura não pode ser no futuro';
+          }
+          // Validar: data_cura não pode ser anterior a data_diagnostico
+          if (dataDiagnosticoISO) {
+            const dataDiagnostico = new Date(dataDiagnosticoISO);
+            if (data < dataDiagnostico) {
+              return 'Data de cura não pode ser anterior à data de diagnóstico';
+            }
+          }
         }
         break;
     }
@@ -190,15 +207,16 @@ export default function SintomaScreen() {
 
   const isFormValid = useMemo(() => {
     return (
-      newSintoma.doenca_id > 0 &&
-      newSintoma.descricao_sintoma.trim().length >= 3 &&
-      ['Leve', 'Moderada', 'Intensa'].includes(newSintoma.intensidade) &&
-      newSintoma.data_hora_inicio.length > 0
+      sintoma.nome_doenca.trim().length >= 2 &&
+      sintoma.tipo_doenca.trim().length >= 2 &&
+      sintoma.descricao_sintoma.trim().length >= 3 &&
+      ['Leve', 'Moderada', 'Intensa'].includes(sintoma.intensidade) &&
+      sintoma.data_hora_inicio.length > 0
     );
-  }, [newSintoma]);
+  }, [sintoma]);
 
   const handleFieldChange = (field: string, value: any) => {
-    setNewSintoma(prev => ({ ...prev, [field]: value }));
+    setSintoma(prev => ({ ...prev, [field]: value }));
     
     // Validar campo em tempo real
     const error = validateField(field, value);
@@ -208,19 +226,308 @@ export default function SintomaScreen() {
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
-  const handleDateTimeChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDateTimePicker(false);
+  // Funções do calendário customizado (padrão Medicamentos)
+  const showDataHoraInicioPicker = () => {
+    if (sintoma.data_hora_inicio) {
+      const date = new Date(sintoma.data_hora_inicio);
+      setSelectedCalendarDate(date);
+      setSelectedDataHoraInicio(date);
+      setCurrentMonth(date.getMonth());
+      setCurrentYear(date.getFullYear());
+    }
+    setActiveCalendarField('data_hora_inicio');
+    setShowDataHoraInicioModal(true);
+  };
+
+  const showDataDiagnosticoPicker = () => {
+    if (dataDiagnosticoISO) {
+      const date = new Date(dataDiagnosticoISO);
+      setSelectedCalendarDate(date);
+      setCurrentMonth(date.getMonth());
+      setCurrentYear(date.getFullYear());
+    }
+    setActiveCalendarField('diagnostico');
+    setShowDataDiagnosticoModal(true);
+  };
+
+  const showDataInicioSintomasPicker = () => {
+    if (dataInicioSintomasISO) {
+      const date = new Date(dataInicioSintomasISO);
+      setSelectedCalendarDate(date);
+      setCurrentMonth(date.getMonth());
+      setCurrentYear(date.getFullYear());
+    }
+    setActiveCalendarField('inicio_sintomas');
+    setShowDataInicioSintomasModal(true);
+  };
+
+  const showDataCuraPicker = () => {
+    if (dataCuraISO) {
+      const date = new Date(dataCuraISO);
+      setSelectedCalendarDate(date);
+      setCurrentMonth(date.getMonth());
+      setCurrentYear(date.getFullYear());
+    }
+    setActiveCalendarField('cura');
+    setShowDataCuraModal(true);
+  };
+
+  const confirmDateTimeSelection = () => {
+    if (activeCalendarField === 'data_hora_inicio') {
+      // Combinar data selecionada no calendário com hora selecionada
+      const selectedDate = new Date(selectedCalendarDate);
+      selectedDate.setHours(selectedDataHoraInicio.getHours());
+      selectedDate.setMinutes(selectedDataHoraInicio.getMinutes());
+      selectedDate.setSeconds(0);
+      selectedDate.setMilliseconds(0);
+      
+      // Validar que a data/hora não seja no futuro
+      const now = new Date();
+      if (selectedDate > now) {
+        Alert.alert('Data inválida', 'A data e hora não podem ser no futuro.');
+        return;
+      }
+      
+      const isoString = selectedDate.toISOString();
+      handleFieldChange('data_hora_inicio', isoString);
+      setShowDataHoraInicioModal(false);
+    } else if (activeCalendarField === 'diagnostico') {
+      const selectedDate = selectedCalendarDate;
+      
+      // Validar que a data não seja no futuro
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (selectedDate > today) {
+        Alert.alert('Data inválida', 'A data não pode ser no futuro.');
+        return;
+      }
+      
+      const dataFormatada = selectedDate.toLocaleDateString('pt-BR');
+      const dataISO = selectedDate.toISOString().split('T')[0];
+      
+      setDataDiagnosticoBR(dataFormatada);
+      setDataDiagnosticoISO(dataISO);
+      handleFieldChange('data_diagnostico', dataISO);
+      setShowDataDiagnosticoModal(false);
+      
+      // Revalidar outras datas se existirem
+      if (dataCuraISO) {
+        const dataCura = new Date(dataCuraISO);
+        if (dataCura < selectedDate) {
+          setErrors(prev => ({
+            ...prev,
+            data_cura: 'Data de cura não pode ser anterior à data de diagnóstico'
+          }));
+        }
+      }
+      if (dataInicioSintomasISO) {
+        const dataInicio = new Date(dataInicioSintomasISO);
+        if (dataInicio > selectedDate) {
+          setErrors(prev => ({
+            ...prev,
+            data_inicio_sintomas: 'Data de início dos sintomas não pode ser posterior à data de diagnóstico'
+          }));
+        }
+      }
+    } else if (activeCalendarField === 'inicio_sintomas') {
+      const selectedDate = selectedCalendarDate;
+      
+      // Validar que a data não seja no futuro
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (selectedDate > today) {
+        Alert.alert('Data inválida', 'A data não pode ser no futuro.');
+        return;
+      }
+      
+      // Validar: data_inicio_sintomas não pode ser posterior a data_diagnostico
+      if (dataDiagnosticoISO) {
+        const dataDiagnostico = new Date(dataDiagnosticoISO);
+        if (selectedDate > dataDiagnostico) {
+          Alert.alert('Data inválida', 'Data de início dos sintomas não pode ser posterior à data de diagnóstico.');
+          return;
+        }
+      }
+      
+      const dataFormatada = selectedDate.toLocaleDateString('pt-BR');
+      const dataISO = selectedDate.toISOString().split('T')[0];
+      
+      setDataInicioSintomasBR(dataFormatada);
+      setDataInicioSintomasISO(dataISO);
+      handleFieldChange('data_inicio_sintomas', dataISO);
+      setShowDataInicioSintomasModal(false);
+    } else if (activeCalendarField === 'cura') {
+      const selectedDate = selectedCalendarDate;
+      
+      // Validar que a data não seja no futuro
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (selectedDate > today) {
+        Alert.alert('Data inválida', 'A data não pode ser no futuro.');
+        return;
+      }
+      
+      // Validar: data_cura não pode ser anterior a data_diagnostico
+      if (dataDiagnosticoISO) {
+        const dataDiagnostico = new Date(dataDiagnosticoISO);
+        if (selectedDate < dataDiagnostico) {
+          Alert.alert('Data inválida', 'Data de cura não pode ser anterior à data de diagnóstico.');
+          return;
+        }
+      }
+      
+      const dataFormatada = selectedDate.toLocaleDateString('pt-BR');
+      const dataISO = selectedDate.toISOString().split('T')[0];
+      
+      setDataCuraBR(dataFormatada);
+      setDataCuraISO(dataISO);
+      handleFieldChange('data_cura', dataISO);
+      setShowDataCuraModal(false);
     }
     
-    if (event.type === 'set' && date) {
-      setSelectedDateTime(date);
-      // Formatar como ISO string com data e hora
-      const isoString = date.toISOString();
-      handleFieldChange('data_hora_inicio', isoString);
-    } else if (event.type === 'dismissed') {
-      setShowDateTimePicker(false);
+    setActiveCalendarField(null);
+  };
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (month: number, year: number) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const isToday = (day: number, month: number, year: number) => {
+    const today = new Date();
+    return (
+      day === today.getDate() &&
+      month === today.getMonth() &&
+      year === today.getFullYear()
+    );
+  };
+
+  const isSelected = (day: number, month: number, year: number) => {
+    const selected = selectedCalendarDate;
+    return (
+      day === selected.getDate() &&
+      month === selected.getMonth() &&
+      year === selected.getFullYear()
+    );
+  };
+
+  const handleDayPress = (day: number) => {
+    const newDate = new Date(currentYear, currentMonth, day);
+    
+    if (activeCalendarField === 'data_hora_inicio') {
+      // Manter a hora já selecionada
+      newDate.setHours(selectedDataHoraInicio.getHours());
+      newDate.setMinutes(selectedDataHoraInicio.getMinutes());
     }
+    
+    // Validar que a data não seja no futuro
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (newDate > today) {
+      Alert.alert('Data inválida', 'A data não pode ser no futuro.');
+      return;
+    }
+    
+    setSelectedCalendarDate(newDate);
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    } else {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    }
+  };
+
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+    const days = [];
+    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    // Adicionar dias vazios no início
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
+
+    // Adicionar os dias do mês
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
+    }
+
+    return (
+      <View style={styles.calendarContainer}>
+        {/* Header do Calendário */}
+        <View style={styles.calendarHeader}>
+          <TouchableOpacity onPress={() => navigateMonth('prev')} style={styles.calendarNavButton}>
+            <Feather name="chevron-left" size={24} color="#004A61" />
+          </TouchableOpacity>
+          <Text style={styles.calendarMonthText}>
+            {monthNames[currentMonth]} {currentYear}
+          </Text>
+          <TouchableOpacity onPress={() => navigateMonth('next')} style={styles.calendarNavButton}>
+            <Feather name="chevron-right" size={24} color="#004A61" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Dias da semana */}
+        <View style={styles.weekDaysContainer}>
+          {weekDays.map((day, index) => (
+            <View key={index} style={styles.weekDay}>
+              <Text style={styles.weekDayText}>{day}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Dias do mês */}
+        <View style={styles.daysContainer}>
+          {days.map((day, index) => {
+            if (day === null) {
+              return <View key={index} style={styles.dayCell} />;
+            }
+            const isTodayDate = isToday(day, currentMonth, currentYear);
+            const isSelectedDate = isSelected(day, currentMonth, currentYear);
+            
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.dayCell,
+                  isTodayDate && styles.todayCell,
+                  isSelectedDate && styles.selectedDayCell
+                ]}
+                onPress={() => handleDayPress(day)}
+              >
+                <Text style={[
+                  styles.dayText,
+                  isTodayDate && styles.todayText,
+                  isSelectedDate && styles.selectedDayText
+                ]}>
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
   };
 
   const formatDateTime = (isoString: string): string => {
@@ -247,8 +554,8 @@ export default function SintomaScreen() {
   const handleSaveSintoma = async () => {
     // Validar todos os campos
     const newErrors: {[key: string]: string} = {};
-    Object.keys(newSintoma).forEach(field => {
-      const error = validateField(field, newSintoma[field as keyof Sintoma]);
+    Object.keys(sintoma).forEach(field => {
+      const error = validateField(field, sintoma[field as keyof Sintoma]);
       if (error) {
         newErrors[field] = error;
       }
@@ -281,14 +588,55 @@ export default function SintomaScreen() {
       }
 
       const perfilIdParsed = parseInt(profileId);
-      const sintomaData = {
-        descricao_sintoma: newSintoma.descricao_sintoma.trim(),
-        intensidade: newSintoma.intensidade,
-        data_hora_inicio: newSintoma.data_hora_inicio,
+
+      // Primeiro, criar a doença
+      const doencaPayload: any = {
+        nome_doenca: sintoma.nome_doenca.trim(),
+        tipo_doenca: sintoma.tipo_doenca.trim(),
         perfil_id: perfilIdParsed
       };
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms`, {
+      // Adicionar campos opcionais se preenchidos
+      if (dataDiagnosticoISO) {
+        doencaPayload.data_diagnostico = dataDiagnosticoISO;
+      }
+      if (dataInicioSintomasISO) {
+        doencaPayload.data_inicio_sintomas = dataInicioSintomasISO;
+      }
+      if (dataCuraISO) {
+        doencaPayload.data_cura = dataCuraISO;
+      }
+      if (sintoma.observacoes && sintoma.observacoes.trim()) {
+        doencaPayload.observacoes = sintoma.observacoes.trim();
+      }
+
+      const doencaResponse = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.DOENCA_RECORDS}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(doencaPayload)
+      });
+
+      const doencaResult = await doencaResponse.json();
+
+      if (!doencaResponse.ok) {
+        throw new Error(doencaResult.message || `Erro ao criar doença. Status: ${doencaResponse.status}`);
+      }
+
+      // Obter o ID da doença criada
+      const doencaId = doencaResult.data.id;
+
+      // Agora, criar o sintoma associado à doença
+      const sintomaData = {
+        descricao_sintoma: sintoma.descricao_sintoma.trim(),
+        intensidade: sintoma.intensidade,
+        data_hora_inicio: sintoma.data_hora_inicio,
+        perfil_id: perfilIdParsed
+      };
+
+      const sintomaResponse = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.DOENCA_RECORDS}/${doencaId}/symptoms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -297,38 +645,14 @@ export default function SintomaScreen() {
         body: JSON.stringify(sintomaData)
       });
 
-      const result = await response.json();
+      const sintomaResult = await sintomaResponse.json();
 
-      if (!response.ok) {
-        throw new Error(result.message || `Erro ao salvar sintoma. Status: ${response.status}`);
-      }
-
-      const novoSintoma = {
-        id: result.data.id,
-        doenca_id: newSintoma.doenca_id,
-        ...sintomaData
-      };
-
-      setSintomas(prev => [novoSintoma, ...prev]);
-      
-      // Se não estiver em modo rápido, fechar modal e resetar
-      if (!fastMode) {
-        setShowAddModal(false);
-        resetForm();
-      } else {
-        // Modo rápido: manter modal aberto e resetar apenas alguns campos
-        setNewSintoma(prev => ({
-          ...prev,
-          descricao_sintoma: '',
-          intensidade: 'Leve',
-          data_hora_inicio: '',
-        }));
-        setSelectedDateTime(new Date());
-        setErrors({});
-        setTouched({});
+      if (!sintomaResponse.ok) {
+        throw new Error(sintomaResult.message || `Erro ao salvar sintoma. Status: ${sintomaResponse.status}`);
       }
 
       Alert.alert('Sucesso!', 'Sintoma registrado com sucesso!');
+      router.back();
     } catch (error: any) {
       console.error('Erro ao salvar sintoma:', error);
       Alert.alert('Erro', error.message || 'Não foi possível salvar o sintoma.');
@@ -337,277 +661,72 @@ export default function SintomaScreen() {
     }
   };
 
-  const resetForm = () => {
-    setNewSintoma({
-      doenca_id: 0,
-      descricao_sintoma: '',
-      intensidade: 'Leve',
-      data_hora_inicio: '',
-    });
-    setSelectedDateTime(new Date());
-    setErrors({});
-    setTouched({});
-    setFastMode(false);
-  };
-
-  const handleDeleteSintoma = async (id: number) => {
-    Alert.alert(
-      'Confirmar Exclusão',
-      'Tem certeza que deseja excluir este sintoma?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await AsyncStorage.getItem('healthcare_auth_token');
-              if (!token) {
-                Alert.alert('Erro de Autenticação', 'Você não está logado.');
-                return;
-              }
-
-              const profileId = await AsyncStorage.getItem('active_profile_id');
-              if (!profileId) {
-                Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
-                return;
-              }
-
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}?perfil_id=${profileId}`, {
-                method: 'DELETE',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`,
-                },
-              });
-
-              if (response.ok) {
-                setSintomas(prev => prev.filter(s => s.id !== id));
-                Alert.alert('Sucesso!', 'Sintoma excluído com sucesso!');
-              } else {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Erro ao excluir sintoma');
-              }
-            } catch (error: any) {
-              console.error('Erro ao excluir sintoma:', error);
-              Alert.alert('Erro', error.message || 'Não foi possível excluir o sintoma');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const getIntensidadeColor = (intensidade: string) => {
-    const option = intensidadeOptions.find(opt => opt.value === intensidade);
-    return option?.color || '#666';
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return dateString;
-      }
-      return date.toLocaleDateString('pt-BR');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const openAddModal = () => {
-    resetForm();
-    setShowAddModal(true);
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={24} color="#16425B" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Sintomas</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={openAddModal}
-        >
-          <Feather name="plus" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {sintomas.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconContainer}>
-              <Feather name="activity" size={64} color="#81C4D7" />
-            </View>
-            <Text style={styles.emptyTitle}>Nenhum sintoma registrado</Text>
-            <Text style={styles.emptySubtitle}>
-              Toque no botão + para registrar um novo sintoma
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.sintomasList}>
-            {sintomas.map((sintoma) => {
-              const doenca = doencas.find(d => d.id === sintoma.doenca_id);
-              return (
-                <View key={sintoma.id} style={styles.sintomaCard}>
-                  <View style={styles.sintomaHeader}>
-                    <View style={styles.sintomaInfo}>
-                      <Text style={styles.sintomaDoenca}>
-                        {doenca?.nome_doenca || 'Doença não encontrada'}
-                      </Text>
-                      <Text style={styles.sintomaDescricao}>
-                        {sintoma.descricao_sintoma}
-                      </Text>
-                      <View style={styles.sintomaMeta}>
-                        <Feather name="calendar" size={14} color="#707070" />
-                        <Text style={styles.sintomaData}>
-                          {formatDate(sintoma.data_hora_inicio)}
-                        </Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteSintoma(sintoma.id!)}
-                    >
-                      <Feather name="trash-2" size={20} color="#EB9481" />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.sintomaFooter}>
-                    <View style={[
-                      styles.intensidadeBadge,
-                      { backgroundColor: getIntensidadeColor(sintoma.intensidade) + '20' }
-                    ]}>
-                      <View style={[
-                        styles.intensidadeDot,
-                        { backgroundColor: getIntensidadeColor(sintoma.intensidade) }
-                      ]} />
-                      <Text style={[
-                        styles.intensidadeText,
-                        { color: getIntensidadeColor(sintoma.intensidade) }
-                      ]}>
-                        {sintoma.intensidade}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Modal para adicionar sintoma */}
-      <Modal
-        visible={showAddModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => {
-                setShowAddModal(false);
-                resetForm();
-              }}
-            >
-              <Feather name="x" size={24} color="#16425B" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Novo Sintoma</Text>
-            <TouchableOpacity
-              style={styles.fastModeButton}
-              onPress={() => setFastMode(!fastMode)}
-            >
-              <Feather 
-                name={fastMode ? "zap" : "zap-off"} 
-                size={20} 
-                color={fastMode ? "#FF9800" : "#707070"} 
-              />
-            </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color="#004A61" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Sintoma</Text>
+            <Text style={styles.headerSubtitle}>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
           </View>
-
-          {fastMode && (
-            <View style={styles.fastModeBanner}>
-              <Feather name="zap" size={16} color="#FF9800" />
-              <Text style={styles.fastModeText}>Modo Rápido Ativado</Text>
-            </View>
-          )}
-
-          <ScrollView 
-            style={styles.modalContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Seleção de Doença */}
+          <View style={{ width: 24 }} />
+        </View>
+        {/* Formulário */}
+        <View style={styles.form}>
+          {/* Campo de Doença */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>
                 Doença <Text style={styles.required}>*</Text>
               </Text>
-              {loadingDoencas ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#3B7CA6" />
-                  <Text style={styles.loadingText}>Carregando doenças...</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.inputText,
+                  errors.nome_doenca && touched.nome_doenca && styles.inputError
+                ]}
+                value={sintoma.nome_doenca}
+                onChangeText={(text) => handleFieldChange('nome_doenca', text)}
+                onBlur={() => setTouched(prev => ({ ...prev, nome_doenca: true }))}
+                placeholder="Digite o nome da doença"
+                placeholderTextColor="#999"
+              />
                 </View>
-              ) : doencas.length === 0 ? (
-                <View style={styles.emptyDoencasContainer}>
-                  <Feather name="alert-circle" size={24} color="#EB9481" />
-                  <Text style={styles.emptyDoencasText}>
-                    Nenhuma doença cadastrada. Cadastre uma doença primeiro.
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.createDoencaButton}
-                    onPress={() => router.push('/monitor/nova-doenca-sintoma')}
-                  >
-                    <Feather name="plus" size={18} color="#FFFFFF" />
-                    <Text style={styles.createDoencaButtonText}>
-                      Cadastrar Doença e Sintoma
-                    </Text>
-                  </TouchableOpacity>
+            {errors.nome_doenca && touched.nome_doenca && (
+              <Text style={styles.errorText}>{errors.nome_doenca}</Text>
+            )}
                 </View>
-              ) : (
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.diseaseScrollContainer}
-                >
-                  <View style={styles.diseaseCardContainer}>
-                    {doencas.map((doenca) => (
-                      <TouchableOpacity
-                        key={doenca.id}
+
+          {/* Campo de Tipo da Doença */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              Tipo da Doença <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={styles.inputContainer}>
+              <TextInput
                         style={[
-                          styles.diseaseCard,
-                          newSintoma.doenca_id === doenca.id && styles.diseaseCardSelected
-                        ]}
-                        onPress={() => handleFieldChange('doenca_id', doenca.id)}
-                      >
-                        <View style={[
-                          styles.diseaseCardIcon,
-                          newSintoma.doenca_id === doenca.id && styles.diseaseCardIconSelected
-                        ]}>
-                          <Feather 
-                            name={newSintoma.doenca_id === doenca.id ? "check" : "circle"} 
-                            size={20} 
-                            color={newSintoma.doenca_id === doenca.id ? "#FFFFFF" : "#81C4D7"} 
+                  styles.input,
+                  styles.inputText,
+                  errors.tipo_doenca && touched.tipo_doenca && styles.inputError
+                ]}
+                value={sintoma.tipo_doenca}
+                onChangeText={(text) => handleFieldChange('tipo_doenca', text)}
+                onBlur={() => setTouched(prev => ({ ...prev, tipo_doenca: true }))}
+                placeholder="Digite o tipo da doença (ex: Viral, Bacteriana, Crônica...)"
+                placeholderTextColor="#999"
                           />
                         </View>
-                        <Text style={[
-                          styles.diseaseCardText,
-                          newSintoma.doenca_id === doenca.id && styles.diseaseCardTextSelected
-                        ]}>
-                          {doenca.nome_doenca}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              )}
-              {errors.doenca_id && touched.doenca_id && (
-                <Text style={styles.errorText}>{errors.doenca_id}</Text>
+            {errors.tipo_doenca && touched.tipo_doenca && (
+              <Text style={styles.errorText}>{errors.tipo_doenca}</Text>
               )}
             </View>
 
@@ -622,7 +741,7 @@ export default function SintomaScreen() {
                     styles.input,
                     errors.descricao_sintoma && touched.descricao_sintoma && styles.inputError
                   ]}
-                  value={newSintoma.descricao_sintoma}
+                value={sintoma.descricao_sintoma}
                   onChangeText={(text) => handleFieldChange('descricao_sintoma', text)}
                   onBlur={() => setTouched(prev => ({ ...prev, descricao_sintoma: true }))}
                   placeholder="Ex: Dor de cabeça, febre, náusea..."
@@ -644,7 +763,7 @@ export default function SintomaScreen() {
               </Text>
               <View style={styles.intensidadeContainer}>
                 {intensidadeOptions.map((option) => {
-                  const isSelected = newSintoma.intensidade === option.value;
+                const isSelected = sintoma.intensidade === option.value;
                   const isIntensa = option.value === 'Intensa';
                   
                   return (
@@ -691,7 +810,7 @@ export default function SintomaScreen() {
                   );
                 })}
               </View>
-              {newSintoma.intensidade === 'Intensa' && (
+            {sintoma.intensidade === 'Intensa' && (
                 <View style={styles.intenseAlert}>
                   <Feather name="alert-triangle" size={16} color="#F44336" />
                   <Text style={styles.intenseAlertText}>
@@ -714,16 +833,16 @@ export default function SintomaScreen() {
                   styles.dateTimeInput,
                   errors.data_hora_inicio && touched.data_hora_inicio && styles.inputError
                 ]}
-                onPress={() => setShowDateTimePicker(true)}
+              onPress={showDataHoraInicioPicker}
               >
                 <View style={styles.dateTimeInputContent}>
                   <Feather name="calendar" size={20} color="#3B7CA6" />
                   <Text style={[
                     styles.dateTimeInputText,
-                    !newSintoma.data_hora_inicio && styles.dateTimeInputTextPlaceholder
+                  !sintoma.data_hora_inicio && styles.dateTimeInputTextPlaceholder
                   ]}>
-                    {newSintoma.data_hora_inicio 
-                      ? formatDateTime(newSintoma.data_hora_inicio)
+                  {sintoma.data_hora_inicio 
+                    ? formatDateTime(sintoma.data_hora_inicio)
                       : 'Selecione data e hora'}
                   </Text>
                 </View>
@@ -732,64 +851,345 @@ export default function SintomaScreen() {
               {errors.data_hora_inicio && touched.data_hora_inicio && (
                 <Text style={styles.errorText}>{errors.data_hora_inicio}</Text>
               )}
-              
-              {Platform.OS === 'ios' && showDateTimePicker && (
-                <View style={styles.dateTimePickerContainer}>
-                  <View style={styles.dateTimePickerHeader}>
-                    <TouchableOpacity onPress={() => setShowDateTimePicker(false)}>
-                      <Text style={styles.dateTimePickerCancel}>Cancelar</Text>
+            </View>
+
+            {/* Data de Diagnóstico */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Data de Diagnóstico
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.dateInputButton,
+                  !dataDiagnosticoBR && styles.dateInputButtonPlaceholder,
+                  errors.data_diagnostico && touched.data_diagnostico && styles.inputError
+                ]}
+                onPress={showDataDiagnosticoPicker}
+              >
+                <Text style={[
+                  styles.dateInputButtonText,
+                  !dataDiagnosticoBR && styles.dateInputButtonTextPlaceholder
+                ]}>
+                  {dataDiagnosticoBR || 'Selecione a data de diagnóstico'}
+                </Text>
+                <Feather name="chevron-down" size={20} color={dataDiagnosticoBR ? "#004A61" : "#999"} />
                     </TouchableOpacity>
-                    <Text style={styles.dateTimePickerTitle}>Data e Hora</Text>
-                    <TouchableOpacity onPress={() => {
-                      setShowDateTimePicker(false);
-                      handleDateTimeChange({ type: 'set' }, selectedDateTime);
-                    }}>
-                      <Text style={styles.dateTimePickerConfirm}>Confirmar</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <DateTimePicker
-                    value={selectedDateTime}
-                    mode="datetime"
-                    display="spinner"
-                    onChange={handleDateTimeChange}
-                    maximumDate={new Date()}
-                  />
-                </View>
-              )}
-              
-              {Platform.OS === 'android' && showDateTimePicker && (
-                <DateTimePicker
-                  value={selectedDateTime}
-                  mode="datetime"
-                  display="default"
-                  onChange={handleDateTimeChange}
-                  maximumDate={new Date()}
-                />
+              {errors.data_diagnostico && touched.data_diagnostico && (
+                <Text style={styles.errorText}>{errors.data_diagnostico}</Text>
               )}
             </View>
-          </ScrollView>
 
-          {/* Botão Salvar */}
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                !isFormValid && styles.saveButtonDisabled
-              ]}
-              onPress={handleSaveSintoma}
-              disabled={!isFormValid || loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Feather name="check" size={20} color="#FFFFFF" />
-                  <Text style={styles.saveButtonText}>Salvar</Text>
-                </>
+            {/* Data de Início dos Sintomas */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Data de Início dos Sintomas
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.dateInputButton,
+                  !dataInicioSintomasBR && styles.dateInputButtonPlaceholder,
+                  errors.data_inicio_sintomas && touched.data_inicio_sintomas && styles.inputError
+                ]}
+                onPress={showDataInicioSintomasPicker}
+              >
+                <Text style={[
+                  styles.dateInputButtonText,
+                  !dataInicioSintomasBR && styles.dateInputButtonTextPlaceholder
+                ]}>
+                  {dataInicioSintomasBR || 'Selecione a data de início dos sintomas'}
+                </Text>
+                <Feather name="chevron-down" size={20} color={dataInicioSintomasBR ? "#004A61" : "#999"} />
+                    </TouchableOpacity>
+              {errors.data_inicio_sintomas && touched.data_inicio_sintomas && (
+                <Text style={styles.errorText}>{errors.data_inicio_sintomas}</Text>
               )}
+                  </View>
+
+            {/* Data de Cura */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Data de Cura
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.dateInputButton,
+                  !dataCuraBR && styles.dateInputButtonPlaceholder,
+                  errors.data_cura && touched.data_cura && styles.inputError
+                ]}
+                onPress={showDataCuraPicker}
+              >
+                <Text style={[
+                  styles.dateInputButtonText,
+                  !dataCuraBR && styles.dateInputButtonTextPlaceholder
+                ]}>
+                  {dataCuraBR || 'Selecione a data de cura'}
+                </Text>
+                <Feather name="chevron-down" size={20} color={dataCuraBR ? "#004A61" : "#999"} />
+              </TouchableOpacity>
+              {errors.data_cura && touched.data_cura && (
+                <Text style={styles.errorText}>{errors.data_cura}</Text>
+              )}
+            </View>
+
+            {/* Observações */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Observações
+              </Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    errors.observacoes && touched.observacoes && styles.inputError
+                  ]}
+                  value={sintoma.observacoes}
+                  onChangeText={(text) => handleFieldChange('observacoes', text)}
+                  onBlur={() => setTouched(prev => ({ ...prev, observacoes: true }))}
+                  placeholder="Informações adicionais sobre a doença..."
+                  placeholderTextColor="#A4A4A4"
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+              {errors.observacoes && touched.observacoes && (
+                <Text style={styles.errorText}>{errors.observacoes}</Text>
+              )}
+            </View>
+            </View>
+
+        {/* Botão Salvar */}
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            !isFormValid && styles.saveButtonDisabled
+          ]}
+          onPress={handleSaveSintoma}
+          disabled={!isFormValid || loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>Salvar</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Modal de Seleção de Data e Hora de Início - Calendário Customizado (funciona na WEB) */}
+      <Modal
+        visible={showDataHoraInicioModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDataHoraInicioModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione a Data e Hora de Início</Text>
+              <TouchableOpacity
+                onPress={() => setShowDataHoraInicioModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color="#666" />
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+
+            <ScrollView style={styles.calendarModalContent} showsVerticalScrollIndicator={false}>
+              {/* Calendário */}
+              {renderCalendar()}
+              
+              {/* Seletor de Hora */}
+              <View style={styles.timePickerContainer}>
+                <Text style={styles.timePickerLabel}>Selecione a hora:</Text>
+                <View style={styles.timePickerWrapper}>
+                  <DateTimePicker
+                    value={selectedDataHoraInicio}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, date) => {
+                      if (event.type === 'set' && date) {
+                        setSelectedDataHoraInicio(date);
+                        // Atualizar também a data do calendário com a hora selecionada
+                        const newDate = new Date(selectedCalendarDate);
+                        newDate.setHours(date.getHours());
+                        newDate.setMinutes(date.getMinutes());
+                        setSelectedCalendarDate(newDate);
+                      }
+                    }}
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowDataHoraInicioModal(false);
+                  setActiveCalendarField(null);
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={confirmDateTimeSelection}
+              >
+                <Text style={styles.modalConfirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Seleção de Data de Diagnóstico */}
+      <Modal
+        visible={showDataDiagnosticoModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowDataDiagnosticoModal(false);
+          setActiveCalendarField(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione a Data de Diagnóstico</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDataDiagnosticoModal(false);
+                  setActiveCalendarField(null);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.calendarModalContent}>
+              {renderCalendar()}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowDataDiagnosticoModal(false);
+                  setActiveCalendarField(null);
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={confirmDateTimeSelection}
+              >
+                <Text style={styles.modalConfirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Seleção de Data de Início dos Sintomas */}
+      <Modal
+        visible={showDataInicioSintomasModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowDataInicioSintomasModal(false);
+          setActiveCalendarField(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione a Data de Início dos Sintomas</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDataInicioSintomasModal(false);
+                  setActiveCalendarField(null);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.calendarModalContent}>
+              {renderCalendar()}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowDataInicioSintomasModal(false);
+                  setActiveCalendarField(null);
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={confirmDateTimeSelection}
+              >
+                <Text style={styles.modalConfirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Seleção de Data de Cura */}
+      <Modal
+        visible={showDataCuraModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowDataCuraModal(false);
+          setActiveCalendarField(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecione a Data de Cura</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDataCuraModal(false);
+                  setActiveCalendarField(null);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.calendarModalContent}>
+              {renderCalendar()}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowDataCuraModal(false);
+                  setActiveCalendarField(null);
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={confirmDateTimeSelection}
+              >
+                <Text style={styles.modalConfirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -798,303 +1198,73 @@ export default function SintomaScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: '#F0F4F8',
+  },
+  scrollContainer: {
+    padding: 20,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    marginBottom: 30,
+    paddingHorizontal: 5,
   },
-  backButton: {
-    padding: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#16425B',
-  },
-  addButton: {
-    backgroundColor: '#3B7CA6',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  backButton: {},
+  headerTitleContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
-  content: {
-    flex: 1,
-    padding: 20,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
   },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#E8F4F8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#16425B',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    color: '#707070',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  sintomasList: {
-    gap: 16,
-  },
-  sintomaCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#81C4D7',
-  },
-  sintomaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  sintomaInfo: {
-    flex: 1,
-  },
-  sintomaDoenca: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#3B7CA6',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-  },
-  sintomaDescricao: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#16425B',
-    marginBottom: 8,
-    lineHeight: 22,
-  },
-  sintomaMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sintomaData: {
+  headerSubtitle: {
     fontSize: 14,
-    color: '#707070',
+    color: 'gray',
   },
-  deleteButton: {
-    padding: 8,
-  },
-  sintomaFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  intensidadeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  intensidadeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  intensidadeText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#F7F7F7',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  modalCloseButton: {
-    padding: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#16425B',
-  },
-  fastModeButton: {
-    padding: 8,
-  },
-  fastModeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF3E0',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  fastModeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FF9800',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
+  form: {
+    marginBottom: 20,
   },
   formGroup: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#16425B',
-    marginBottom: 12,
+    color: '#004A61',
+    marginBottom: 8,
   },
   required: {
-    color: '#F44336',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#707070',
-  },
-  emptyDoencasContainer: {
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFEBEE',
-    borderRadius: 12,
-    gap: 12,
-  },
-  emptyDoencasText: {
-    fontSize: 14,
-    color: '#F44336',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  createDoencaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3B7CA6',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    gap: 8,
-    marginTop: 8,
-  },
-  createDoencaButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  diseaseScrollContainer: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-  },
-  diseaseCardContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  diseaseCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    gap: 10,
-    minWidth: 140,
-  },
-  diseaseCardSelected: {
-    borderColor: '#3B7CA6',
-    backgroundColor: '#E8F4F8',
-  },
-  diseaseCardIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#F7F7F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  diseaseCardIconSelected: {
-    backgroundColor: '#3B7CA6',
-  },
-  diseaseCardText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#707070',
-  },
-  diseaseCardTextSelected: {
-    color: '#16425B',
-    fontWeight: '600',
+    color: '#FF4444',
+    fontWeight: 'bold',
   },
   inputContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     overflow: 'hidden',
   },
   input: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     fontSize: 16,
-    color: '#16425B',
-    minHeight: 100,
+    color: '#333',
+  },
+  inputText: {
+    minHeight: 50,
   },
   inputError: {
-    borderColor: '#F44336',
+    borderColor: '#FF4444',
+    backgroundColor: '#FFF5F5',
   },
   errorText: {
-    color: '#F44336',
-    fontSize: 13,
-    marginTop: 6,
-    marginLeft: 4,
+    color: '#FF4444',
+    fontSize: 14,
+    marginTop: 4,
+    fontWeight: '500',
   },
   intensidadeContainer: {
     flexDirection: 'row',
@@ -1159,11 +1329,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+    fontSize: 16,
   },
   dateTimeInputContent: {
     flexDirection: 'row',
@@ -1173,69 +1344,208 @@ const styles = StyleSheet.create({
   },
   dateTimeInputText: {
     fontSize: 16,
-    color: '#16425B',
+    color: '#333',
     fontWeight: '500',
   },
   dateTimeInputTextPlaceholder: {
-    color: '#A4A4A4',
+    color: '#999',
     fontWeight: '400',
   },
-  dateTimePickerContainer: {
+  // Estilos para campos de data (sem hora)
+  dateInputButton: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginTop: 12,
-    overflow: 'hidden',
-  },
-  dateTimePickerHeader: {
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  dateInputButtonPlaceholder: {
+    borderColor: '#E0E0E0',
+  },
+  dateInputButtonText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
+  },
+  dateInputButtonTextPlaceholder: {
+    color: '#999',
+    fontWeight: '400',
+  },
+  // Estilos do Modal e Calendário Customizado (padrão Medicamentos)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  calendarModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    width: '90%',
+    maxWidth: 400,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  calendarModalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-  dateTimePickerCancel: {
-    fontSize: 16,
-    color: '#707070',
-    fontWeight: '500',
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#004A61',
   },
-  dateTimePickerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#16425B',
+  modalCloseButton: {
+    padding: 5,
   },
-  dateTimePickerConfirm: {
-    fontSize: 16,
-    color: '#3B7CA6',
-    fontWeight: '600',
-  },
-  modalFooter: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
+  modalButtons: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
   },
-  saveButton: {
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    backgroundColor: '#004A61',
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginLeft: 10,
+    alignItems: 'center',
+  },
+  modalConfirmButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  calendarContainer: {
+    width: '100%',
+  },
+  calendarHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  calendarNavButton: {
+    padding: 8,
+  },
+  calendarMonthText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#004A61',
+  },
+  weekDaysContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  weekDay: {
+    width: 40,
+    alignItems: 'center',
+  },
+  weekDayText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  dayCell: {
+    width: '14.28%',
+    aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3B7CA6',
-    borderRadius: 12,
-    paddingVertical: 16,
-    gap: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: 8,
+  },
+  dayText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  todayCell: {
+    backgroundColor: '#E8F4F8',
+    borderRadius: 20,
+  },
+  todayText: {
+    color: '#004A61',
+    fontWeight: 'bold',
+  },
+  selectedDayCell: {
+    backgroundColor: '#004A61',
+    borderRadius: 20,
+  },
+  selectedDayText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  timePickerContainer: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  timePickerLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#004A61',
+    marginBottom: 12,
+  },
+  timePickerWrapper: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  saveButton: {
+    backgroundColor: '#004A61',
+    borderRadius: 15,
+    alignItems: 'center',
+    paddingVertical: 15,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    elevation: 3,
   },
   saveButtonDisabled: {
     backgroundColor: '#A4A4A4',
     opacity: 0.6,
   },
   saveButtonText: {
+    fontSize: 18,
     color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
 });
+
+
+
