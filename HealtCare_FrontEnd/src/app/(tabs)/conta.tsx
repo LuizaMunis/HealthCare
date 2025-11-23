@@ -2,12 +2,14 @@
 
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 //import {useUserData} from '@/hooks/useUserData';
 import { useAccount } from '@/hooks/useAccount';
+
+const EllipseImage = require('../../assets/images/Ellipse 44.png');
 
 // Importação de todos os modais
 import PerfilModal from '@/components/Account/PerfilModal';
@@ -37,8 +39,8 @@ export default function AccountScreen() {
     handleAddProfile,    
   } = useAccount();
 
-  const colorScheme = useColorScheme() ?? 'light';
-  const themeColors = Colors[colorScheme];
+  // Modo escuro removido - sempre usar modo claro
+  const themeColors = Colors['light'];
 
   const menuItems = [
     { key: 'personalInfo', icon: 'user', label: 'Dados da Conta' },
@@ -48,8 +50,12 @@ export default function AccountScreen() {
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <ScrollView>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]} edges={['top', 'bottom']}>
+      {/* Bolas azuis de fundo */}
+      <Image source={EllipseImage} style={styles.ellipseTopLeft} resizeMode="contain" pointerEvents="none" />
+      <Image source={EllipseImage} style={styles.ellipseBottomRight} resizeMode="contain" pointerEvents="none" />
+      
+      <ScrollView style={{ zIndex: 1 }}>
         <View style={styles.header}>
             <Text style={[styles.headerTitle, { color: themeColors.primary }]}>Seu Conta</Text>
         </View>
@@ -115,6 +121,24 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { justifyContent: 'center', alignItems: 'center' },
+    ellipseTopLeft: {
+        position: 'absolute',
+        top: -80,
+        left: -80,
+        width: 300,
+        height: 300,
+        opacity: 0.4,
+        zIndex: 0,
+    },
+    ellipseBottomRight: {
+        position: 'absolute',
+        bottom: 50,
+        right: -60,
+        width: 280,
+        height: 280,
+        opacity: 0.4,
+        zIndex: 0,
+    },
     header: { padding: 20, alignItems: 'center' },
     headerTitle: { fontSize: 24, fontWeight: 'bold' },
     profileCard: { marginHorizontal: 20, borderRadius: 15, padding: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
