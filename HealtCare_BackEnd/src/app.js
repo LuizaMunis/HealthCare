@@ -56,6 +56,42 @@ app.use('/api/medicamentos', medicamentoRoutes);
 app.use('/api/doencas', doencaRoutes);
 app.use('/api/sintomas', sintomaRoutes);
 app.use('/api/vacinas', vacinaRoutes);
+
+// Endpoint temporário para inserir dados de exemplo
+app.post('/api/insert-sample-data', async (req, res) => {
+  try {
+    const { pool } = require('./config/database');
+    
+    // Buscar o primeiro perfil disponível
+    const [profiles] = await pool.execute('SELECT id FROM perfil LIMIT 1');
+    
+    if (profiles.length === 0) {
+      return res.status(400).json({ success: false, message: 'Nenhum perfil encontrado' });
+    }
+
+    const profileId = profiles[0].id;
+    
+    // Inserir doenças de exemplo
+    const doencas = [
+      { nome_doenca: 'Gripe', tipo_doenca: 'Viral', data_diagnostico: '2024-01-15', observacoes: 'Doença viral comum' },
+      { nome_doenca: 'Hipertensão', tipo_doenca: 'Crônica', data_diagnostico: '2024-02-01', observacoes: 'Pressão arterial elevada' },
+      { nome_doenca: 'Diabetes Tipo 2', tipo_doenca: 'Crônica', data_diagnostico: '2024-03-10', observacoes: 'Diabetes mellitus tipo 2' },
+      { nome_doenca: 'Resfriado', tipo_doenca: 'Viral', data_diagnostico: '2024-04-05', observacoes: 'Resfriado comum' },
+      { nome_doenca: 'Dor de Cabeça', tipo_doenca: 'Sintomática', data_diagnostico: '2024-05-01', observacoes: 'Cefaleia tensional' }
+    ];
+
+    for (const doenca of doencas) {
+      const query = `INSERT INTO doenca (perfil_id, nome_doenca, tipo_doenca, data_diagnostico, observacoes) VALUES (?, ?, ?, ?, ?)`;
+      const values = [profileId, doenca.nome_doenca, doenca.tipo_doenca, doenca.data_diagnostico, doenca.observacoes];
+      await pool.execute(query, values);
+    }
+
+    res.json({ success: true, message: 'Dados de exemplo inseridos com sucesso', profileId });
+  } catch (error) {
+    console.error('Erro ao inserir dados de exemplo:', error);
+    res.status(500).json({ success: false, message: 'Erro ao inserir dados de exemplo' });
+  }
+});
 app.use('/api/temperatura', temperaturaRoutes);
 app.use('/api/frequencia-cardiaca', frequenciaCardiacaRoutes);
 app.use('/api/glicemia', glicemiaRoutes);

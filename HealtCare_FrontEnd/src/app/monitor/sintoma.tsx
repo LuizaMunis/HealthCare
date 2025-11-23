@@ -37,6 +37,8 @@ export default function SintomaScreen() {
   });
   const [doencas, setDoencas] = useState<{id: number, nome_doenca: string}[]>([]);
   const [loadingDoencas, setLoadingDoencas] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [touched, setTouched] = useState<{[key: string]: boolean}>({});
 
   const loadDoencas = async () => {
     setLoadingDoencas(true);
@@ -44,10 +46,10 @@ export default function SintomaScreen() {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) return;
 
-      const profileId = await AsyncStorage.getItem('active_profile_id');
+      const profileId = await AsyncStorage.getItem('healthcare_active_profile_id');
       if (!profileId) return;
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/doencas`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/doencas/${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -73,10 +75,10 @@ export default function SintomaScreen() {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) return;
 
-      const profileId = await AsyncStorage.getItem('active_profile_id');
+      const profileId = await AsyncStorage.getItem('healthcare_active_profile_id');
       if (!profileId) return;
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +182,7 @@ export default function SintomaScreen() {
         return;
       }
 
-      const profileId = await AsyncStorage.getItem('active_profile_id');
+      const profileId = await AsyncStorage.getItem('healthcare_active_profile_id');
       if (!profileId) {
         Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
         return;
@@ -194,7 +196,7 @@ export default function SintomaScreen() {
       };
 
       // Usar a rota de sintomas
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${profileId}/${newSintoma.doenca_id}/symptoms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -251,13 +253,13 @@ export default function SintomaScreen() {
                 return;
               }
 
-              const profileId = await AsyncStorage.getItem('active_profile_id');
+              const profileId = await AsyncStorage.getItem('healthcare_active_profile_id');
               if (!profileId) {
                 Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
                 return;
               }
 
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}`, {
+              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${profileId}/${id}`, {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',
