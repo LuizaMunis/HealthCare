@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput, ScrollView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
-// Defina a interface para o item de histórico
+// Interface dos registros
 interface PressureHistoryItem {
   id: number;
   data_hora_medicao: string;
@@ -13,26 +13,127 @@ interface PressureHistoryItem {
   diastolica_mmhg: number;
 }
 
-// Componente para renderizar cada item da lista
-const HistoryItem: React.FC<{
-  item: PressureHistoryItem;
-  onEdit: (item: PressureHistoryItem) => void;
-  onDelete: (id: number) => void;
-}> = ({ item, onEdit, onDelete }) => {
-  // Formata a data para um formato mais legível
-  const formattedDate = new Date(item.data_hora_medicao).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+// Utilitário para formatar data/hora
+const formatDateTime = (value: string): string => {
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return 'Data inválida';
+  const day = `${d.getDate()}`.padStart(2, '0');
+  const month = `${d.getMonth() + 1}`.padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = `${d.getHours()}`.padStart(2, '0');
+  const minutes = `${d.getMinutes()}`.padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+};
+
+// Gráfico simples com import dinâmico
+const PressureChart: React.FC<{ data: PressureHistoryItem[] }> = ({ data }) => {
+  const [svgLib, setSvgLib] = React.useState<any>(null);
+  const [selectedPoint, setSelectedPoint] = React.useState<{
+    x: number; y: number; item: PressureHistoryItem; tipo: 'sistolica' | 'diastolica';
+  } | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    import('react-native-svg')
+      .then(mod => { if (mounted) setSvgLib(mod); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  if (!data || data.length === 0) return <Text style={styles.chartEmpty}>Sem dados para o gráfico.</Text>;
+  if (!svgLib) return (
+    <View style={styles.chartFallback}>
+      <Text style={styles.chartEmpty}>Carregando módulo de gráfico...</Text>
+      <Text style={styles.chartHint}>Instalar: expo install react-native-svg</Text>
+    </View>
+  );
+  const { default: Svg, Polyline, Circle } = svgLib;
+  const sorted = [...data].sort((a,b)=> new Date(a.data_hora_medicao).getTime() - new Date(b.data_hora_medicao).getTime());
+  const systolicValues = sorted.map(r => r.sistolica_mmhg);
+  const diastolicValues = sorted.map(r => r.diastolica_mmhg);
+  const allValues = [...systolicValues, ...diastolicValues];
+  const min = Math.min(...allValues) - 5;
+  const max = Math.max(...allValues) + 5;
+  const chartHeight = 180;
+  const chartWidth = Math.max(360, sorted.length * 80);
+  const valueToY = (v:number) => {
+    const range = max - min || 1;
+    return chartHeight - ((v - min) / range) * (chartHeight - 20) - 10;
+  };
+  const xForIndex = (i:number) => (i/(sorted.length-1||1))* (chartWidth-40) + 20;
+  const points = (arr:number[]) => arr.map((v,i)=> `${xForIndex(i)},${valueToY(v)}`).join(' ');
+
+  const renderTooltip = () => {
+    if (!selectedPoint) return null;
+    const { x, y, item, tipo } = selectedPoint;
+    const date = formatDateTime(item.data_hora_medicao);
+    const systolica = item.sistolica_mmhg;
+    const diastolica = item.diastolica_mmhg;
+    const adjustedX = Math.min(Math.max(x - 60, 4), chartWidth - 140);
+    const adjustedY = y < 70 ? y + 20 : y - 60;
+    return (
+      <View style={[styles.tooltipContainer,{ left: adjustedX, top: adjustedY }]}> 
+        <Text style={styles.tooltipTitle}>{date}</Text>
+        <Text style={styles.tooltipValue}>Sistólica: {systolica} mmHg</Text>
+        <Text style={styles.tooltipValue}>Diastólica: {diastolica} mmHg</Text>
+        <Text style={styles.tooltipInfo}>Ponto: {tipo === 'sistolica' ? 'Sistólica' : 'Diastólica'}</Text>
+      </View>
+    );
+  };
 
   return (
-  <View style={styles.itemContainer}>
-    <View style={styles.itemDetails}><Text style={styles.itemDate}>{formattedDate}</Text><Text style={styles.itemValues}>Sistólica: <Text style={styles.boldText}>{item.sistolica_mmhg}</Text> mmHg</Text><Text style={styles.itemValues}>Diastólica: <Text style={styles.boldText}>{item.diastolica_mmhg}</Text> mmHg</Text></View>
-    <View style={styles.itemActions}><TouchableOpacity onPress={() => onEdit(item)} style={styles.actionButton}><Feather name="edit" size={22} color="#004A61" /></TouchableOpacity><TouchableOpacity onPress={() => onDelete(item.id)} style={styles.actionButton}><Feather name="trash-2" size={22} color="#D9534F" /></TouchableOpacity></View>
-  </View>
+    <View style={styles.chartCard}>
+      <Text style={styles.sectionTitle}>Gráfico de Pressão Arterial</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.chartInnerWrapper}>
+          <Svg width={chartWidth} height={chartHeight}>
+            <Polyline points={`20,10 20,${chartHeight-10}`} stroke="#ccc" strokeWidth={1} />
+            <Polyline points={`20,${chartHeight-10} ${chartWidth-20},${chartHeight-10}`} stroke="#ccc" strokeWidth={1} />
+            <Polyline points={points(systolicValues)} fill="none" stroke="#E53935" strokeWidth={3} />
+            {systolicValues.map((v,i)=>{
+              const x = xForIndex(i);
+              return (
+                <Circle
+                  key={`s-${i}`}
+                  cx={x}
+                  cy={valueToY(v)}
+                  r={5}
+                  fill="#E53935"
+                  onPress={()=> setSelectedPoint({ x, y: valueToY(v), item: sorted[i], tipo:'sistolica' })}
+                />
+              );
+            })}
+            <Polyline points={points(diastolicValues)} fill="none" stroke="#1E88E5" strokeWidth={3} />
+            {diastolicValues.map((v,i)=>{
+              const x = xForIndex(i);
+              return (
+                <Circle
+                  key={`d-${i}`}
+                  cx={x}
+                  cy={valueToY(v)}
+                  r={5}
+                  fill="#1E88E5"
+                  onPress={()=> setSelectedPoint({ x, y: valueToY(v), item: sorted[i], tipo:'diastolica' })}
+                />
+              );
+            })}
+          </Svg>
+          <View style={styles.chartLabelsRow}>
+            {sorted.map((r,i)=>{
+              const d = new Date(r.data_hora_medicao);
+              const label = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}`;
+              return <Text key={r.id} style={[styles.chartLabel,{left:xForIndex(i) - 10, position:'absolute'}]}>{label}</Text>;
+            })}
+          </View>
+          {renderTooltip()}
+        </View>
+      </ScrollView>
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}><View style={[styles.legendDot,{backgroundColor:'#E53935'}]} /><Text style={styles.legendLabel}>Sistólica</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendDot,{backgroundColor:'#1E88E5'}]} /><Text style={styles.legendLabel}>Diastólica</Text></View>
+        <View style={styles.legendRangeBadge}><Text style={styles.legendRangeText}>{min + 5} - {max - 5} mmHg</Text></View>
+      </View>
+    </View>
   );
 };
 
@@ -42,294 +143,332 @@ export default function PressureHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Filtro período
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [filteredRecords, setFilteredRecords] = useState<PressureHistoryItem[] | null>(null);
+
+  // Modal edição
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PressureHistoryItem | null>(null);
-
   const [systolic, setSystolic] = useState(0);
   const [diastolic, setDiastolic] = useState(0);
-  const [date, setDate] = useState('');  
+  const [date, setDate] = useState('');
 
   const fetchHistory = async () => {
-      setLoading(true);
-      setError(null); 
-      
-      try {
-        const token = await AsyncStorage.getItem('healthcare_auth_token');
-        if (!token) {
-          throw new Error('Token de autenticação não encontrado.');
-        }
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
+      if (!token) throw new Error('Token de autenticação não encontrado.');
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) throw new Error('Nenhum perfil ativo encontrado.');
 
-        const profileId = await AsyncStorage.getItem('active_profile_id');
-        if (!profileId) {
-          throw new Error('Nenhum perfil ativo encontrado.');
-        }
-
-        const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}?perfil_id=${profileId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        const result = await response.json();
-        
-        // Depuração para ver o que a API está retornando
-        console.log("Resposta da API recebida:", JSON.stringify(result, null, 2));
-        
-        // Se a resposta da API não for 'ok' (ex: erro 400, 500), joga um erro
-        if (!response.ok) {
-          // Usa a mensagem de erro do backend, se houver, ou uma padrão
-          throw new Error(result.message || 'Falha ao buscar o histórico.');
-        }
-        
-        const recordsArray = result.data; 
-        if (Array.isArray(recordsArray)) {
-          // Se for um Array, ordena e atualiza o estado
-          recordsArray.sort((a, b) => new Date(b.data_hora_medicao).getTime() - new Date(a.data_hora_medicao).getTime());
-          setRecords(recordsArray);
-        } else {
-          // Se NÃO for um Array, define o estado como um array vazio
-          console.warn("A API não retornou um array de registros. Definindo como vazio.");
-          setRecords([]);
-        }
-
-      } catch (err: any) {
-        // O 'catch' captura QUALQUER erro que acontecer dentro do 'try'
-        console.error("Erro em fetchHistory:", err);
-        setError(err.message);
-        // O Alert pode ser opcional se você já mostra o erro na tela
-        // Alert.alert('Erro ao Carregar', err.message);
-      } finally {
-        // O 'finally' sempre executa, independentemente de sucesso ou erro
-        setLoading(false);
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}?perfil_id=${profileId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const result = await response.json();
+      console.log('Resposta da API pressão:', JSON.stringify(result, null, 2));
+      if (!response.ok) throw new Error(result.message || 'Falha ao buscar o histórico.');
+      const data = result.data;
+      if (Array.isArray(data)) {
+        data.sort((a,b)=> new Date(b.data_hora_medicao).getTime() - new Date(a.data_hora_medicao).getTime());
+        setRecords(data);
+      } else {
+        setRecords([]);
       }
+    } catch (err:any) {
+      console.error('Erro fetchHistory pressão:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // useFocusEffect garante que os dados sejam recarregados sempre que a tela entra em foco
-  useFocusEffect(
-    useCallback(() => {
-      fetchHistory();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => { fetchHistory(); }, []));
 
-  // Função para lidar com a exclusão de um registro
   const handleDelete = async (id: number) => {
-    Alert.alert(
-      'Confirmar Exclusão',
-      'Você tem certeza que deseja excluir este registro?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await AsyncStorage.getItem('healthcare_auth_token');
-
-              const profileId = await AsyncStorage.getItem('active_profile_id');
-              if (!profileId) {
-                Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
-                return;
-              }
-
-              const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${id}?perfil_id=${profileId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json' 
-                },
-              });
-
-              if (!response.ok) {
-                const result = await response.json();
-                let errorMessage = 'Falha ao excluir o registro.';
-                try {
-                  const errorResult = await response.json();
-                  errorMessage = errorResult.message || errorMessage;
-                } catch (e) {
-                  errorMessage = `Erro do servidor: ${response.status} ${response.statusText}`;
-                }
-                throw new Error(result.message || 'Falha ao excluir o registro.');
-              }
-
-              // Remove o item da lista localmente para atualizar a UI instantaneamente
-              setRecords(prevRecords => prevRecords.filter(record => record.id !== id));
-              Alert.alert('Sucesso', 'Registro excluído com sucesso.');
-            } catch (err: any) {
-              Alert.alert('Erro ao Excluir', err.message);
-            }
-          },
-        },
-      ]
-    );
+    Alert.alert('Confirmar Exclusão','Você tem certeza que deseja excluir este registro?',[
+      { text:'Cancelar', style:'cancel' },
+      { text:'Excluir', style:'destructive', onPress: async () => {
+        try {
+          const token = await AsyncStorage.getItem('healthcare_auth_token');
+          const profileId = await AsyncStorage.getItem('active_profile_id');
+          if (!profileId) { Alert.alert('Erro','Nenhum perfil ativo encontrado.'); return; }
+          const resp = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${id}?perfil_id=${profileId}`, {
+            method:'DELETE',
+            headers:{ 'Authorization':`Bearer ${token}`, 'Content-Type':'application/json' }
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(()=>({}));
+            throw new Error(errData.message || `Falha ao excluir (HTTP ${resp.status}).`);
+          }
+          setRecords(prev => prev.filter(r => r.id !== id));
+          Alert.alert('Sucesso','Registro excluído com sucesso.');
+        } catch(e:any) { Alert.alert('Erro ao Excluir', e.message); }
+      }}
+    ]);
   };
 
-  // Função para navegar para a tela de edição, passando os dados do item
   const handleEdit = (item: PressureHistoryItem) => {
-    setEditingRecord(item); // Guarda o item inteiro que estamos editando
-    // Preenche os estados do formulário com os dados do item clicado
+    setEditingRecord(item);
     setSystolic(item.sistolica_mmhg);
     setDiastolic(item.diastolica_mmhg);
     setDate(new Date(item.data_hora_medicao).toISOString().split('T')[0]);
-    setIsModalVisible(true); // Abre o modal
+    setIsModalVisible(true);
   };
 
   const handleUpdate = async () => {
-    if (!editingRecord) return; // Segurança: só continua se houver um registro em edição
-
-    // Validação dos dados
-    if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
-      Alert.alert('Atenção', 'Por favor, insira valores de pressão válidos.');
+    if (!editingRecord) return;
+    if (!systolic || !diastolic || systolic <=0 || diastolic <=0) {
+      Alert.alert('Atenção','Valores inválidos.');
       return;
     }
-
     try {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
       const profileId = await AsyncStorage.getItem('active_profile_id');
-      if (!profileId) {
-        Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
-        return;
-      }
+      if (!profileId) { Alert.alert('Erro','Nenhum perfil ativo encontrado.'); return; }
       const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${editingRecord.id}?perfil_id=${profileId}`;
-      const method = 'PUT';
-
-      const time = new Date(editingRecord.data_hora_medicao).toTimeString().slice(0, 8);
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      const time = new Date(editingRecord.data_hora_medicao).toTimeString().slice(0,8);
+      const resp = await fetch(url, {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
         body: JSON.stringify({
           sistolica_mmhg: systolic,
-          diastolica_mmhg: diastolic,
-          data_hora_medicao: `${date}T${time}`,
-          perfil_id: parseInt(profileId)
-        }),
+            diastolica_mmhg: diastolic,
+            data_hora_medicao: `${date}T${time}`,
+            perfil_id: parseInt(profileId)
+        })
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao atualizar o registro.');
+      if (!resp.ok) {
+        const errData = await resp.json().catch(()=>({}));
+        throw new Error(errData.message || 'Falha ao atualizar o registro.');
       }
-
-      Alert.alert('Sucesso!', 'Registro atualizado com sucesso.');
-      setIsModalVisible(false); // Fecha o modal
-      setEditingRecord(null); // Limpa o registro em edição
-      fetchHistory(); // Atualiza a lista para mostrar os novos dados
-
-    } catch (err: any) {
-      Alert.alert('Erro ao Atualizar', err.message);
-    }
+      Alert.alert('Sucesso!','Registro atualizado.');
+      setIsModalVisible(false);
+      setEditingRecord(null);
+      fetchHistory();
+    } catch(e:any) { Alert.alert('Erro ao Atualizar', e.message); }
   };
 
-  if (loading) {
-    return <ActivityIndicator size="large" color="#004A61" style={styles.centered} />;
-  }
+  // Filtro período
+  const formatDateMask = (value: string): string => {
+    const digits = value.replace(/\D/g,'').slice(0,8);
+    let r='';
+    for (let i=0;i<digits.length;i++) { r += digits[i]; if (i===1 || i===3) r+='/'; }
+    return r;
+  };
 
-  if (error && records.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Erro ao carregar dados: {error}</Text>
-        <TouchableOpacity onPress={fetchHistory} style={styles.retryButton}>
-            <Text style={styles.saveButtonText}>Tentar Novamente</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const applyFilter = () => {
+    if (!startDate && !endDate) { setFilteredRecords(null); return; }
+    const parseDate = (val:string, end:boolean=false): number => {
+      const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(val.trim());
+      if (!m) return NaN; const [,dd,mm,yyyy] = m; const day = +dd; const month = +mm -1; const year = +yyyy;
+      const h = end?23:0, mi=end?59:0, s=end?59:0;
+      return new Date(year,month,day,h,mi,s).getTime();
+    };
+    const start = startDate? parseDate(startDate,false) : -Infinity;
+    const end = endDate? parseDate(endDate,true) : Infinity;
+    if (isNaN(start) || isNaN(end)) { Alert.alert('Filtro inválido','Formato DD/MM/AAAA.'); return; }
+    if (start > end) { Alert.alert('Intervalo inválido','Início maior que fim.'); return; }
+    const subset = records.filter(r => {
+      const t = new Date(r.data_hora_medicao).getTime();
+      return t >= start && t <= end;
+    });
+    setFilteredRecords(subset);
+  };
+
+  const clearFilter = () => {
+    setStartDate(''); setEndDate(''); setFilteredRecords(null);
+  };
+
+  if (loading) return <ActivityIndicator size="large" color="#004A61" style={styles.centered} />;
+  if (error && records.length === 0) return (
+    <View style={styles.centered}>
+      <Text style={styles.errorText}>Erro ao carregar dados: {error}</Text>
+      <TouchableOpacity onPress={fetchHistory} style={styles.retryButton}><Text style={styles.saveButtonText}>Tentar Novamente</Text></TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color="#004A61" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Histórico de Pressão</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      
-      {records.length === 0 ? (
-        <View style={styles.centered}>
-          <Text style={styles.emptyText}>Nenhum registro encontrado.</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} nestedScrollEnabled>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}><Feather name="arrow-left" size={24} color="#004A61" /></TouchableOpacity>
+          <Text style={styles.headerTitle}>Histórico de Pressão</Text>
+          <View style={{ width:24 }} />
         </View>
-      ) : (
-        <FlatList
-          data={records}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <HistoryItem item={item} onEdit={handleEdit} onDelete={handleDelete} />
-          )}
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
-    <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Editar Registro</Text>
-            
-            {/* Formulário de Edição (reaproveitando a lógica e estilo) */}
-            <View style={styles.formContainer}>
-              {/* Card Sistólica */}
-              <View style={styles.pressureCard}><View style={styles.pressureBody}><TouchableOpacity style={styles.controlButton} onPress={() => setSystolic(prev => prev - 1)}><Feather name="minus-circle" size={32} color="#6c757d" /></TouchableOpacity><View style={styles.pressureValueContainer}><Text style={styles.pressureValueMain}>{systolic}</Text><Text style={styles.pressureUnit}>mmHg</Text></View><TouchableOpacity style={styles.controlButton} onPress={() => setSystolic(prev => prev + 1)}><Feather name="plus-circle" size={32} color="#6c757d" /></TouchableOpacity></View></View>
-              {/* Card Diastólica */}
-              <View style={styles.pressureCard}><View style={styles.pressureBody}><TouchableOpacity style={styles.controlButton} onPress={() => setDiastolic(prev => prev - 1)}><Feather name="minus-circle" size={32} color="#6c757d" /></TouchableOpacity><View style={styles.pressureValueContainer}><Text style={styles.pressureValueMain}>{diastolic}</Text><Text style={styles.pressureUnit}>mmHg</Text></View><TouchableOpacity style={styles.controlButton} onPress={() => setDiastolic(prev => prev + 1)}><Feather name="plus-circle" size={32} color="#6c757d" /></TouchableOpacity></View></View>
-              {/* Data */}
-              <Text style={styles.dateLabel}>Data do registro</Text>
-              <TextInput style={styles.dateInput} value={date} onChangeText={setDate} placeholder="AAAA-MM-DD" />
-            </View>
 
-            {/* Botões do Modal */}
+        {/* Filtro */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Filtrar por Período</Text>
+            <View style={styles.filterRow}>
+              <View style={styles.filterField}>
+                <Text style={styles.filterLabel}>Início</Text>
+                <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={startDate} keyboardType="number-pad" onChangeText={t=> setStartDate(formatDateMask(t))} />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={styles.filterLabel}>Fim</Text>
+                <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={endDate} keyboardType="number-pad" onChangeText={t=> setEndDate(formatDateMask(t))} />
+              </View>
+            </View>
+            <View style={styles.filterActions}>
+              <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={applyFilter}><Text style={styles.buttonPrimaryText}>Aplicar</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonOutline]} onPress={clearFilter}><Text style={styles.buttonOutlineText}>Limpar</Text></TouchableOpacity>
+            </View>
+            {filteredRecords && <View style={styles.badgeInfo}><Text style={styles.badgeInfoText}>Mostrando {filteredRecords.length} / {records.length}</Text></View>}
+        </View>
+
+        {/* Gráfico */}
+        <PressureChart data={filteredRecords || records} />
+
+        {/* Tabela */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Registros de Pressão</Text>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderCell,{flex:2}]}>Data</Text>
+            <Text style={styles.tableHeaderCell}>Sistólica</Text>
+            <Text style={styles.tableHeaderCell}>Diastólica</Text>
+            <Text style={styles.tableHeaderCell}>Ações</Text>
+          </View>
+          {(filteredRecords ? filteredRecords.length===0 : records.length===0) ? (
+            <View style={styles.emptyWrapper}><Text style={styles.emptyText}>Nenhum registro encontrado.</Text></View>
+          ) : (
+            <FlatList
+              data={filteredRecords || records}
+              keyExtractor={item => item.id.toString()}
+              renderItem={({ item }) => {
+                const dt = formatDateTime(item.data_hora_medicao);
+                return (
+                  <View style={[styles.tableRow, item.id % 2 === 0 && styles.tableRowAlt]}>
+                    <Text style={[styles.tableCell,{flex:2}]}>{dt}</Text>
+                    <Text style={styles.tableCell}>{item.sistolica_mmhg}</Text>
+                    <Text style={styles.tableCell}>{item.diastolica_mmhg}</Text>
+                    <View style={[styles.tableCell, styles.rowActions]}>
+                      <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconButton} hitSlop={{top:8,bottom:8,left:8,right:8}}><Feather name="edit" size={18} color="#007094" /></TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.iconButton} hitSlop={{top:8,bottom:8,left:8,right:8}}><Feather name="trash-2" size={18} color="#D9534F" /></TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }}
+              contentContainerStyle={styles.tableListContent}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Modal de edição */}
+      <Modal animationType="slide" transparent visible={isModalVisible} onRequestClose={()=> setIsModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Editar Registro</Text>
+            <View style={styles.formContainer}>
+              <View style={styles.dualPressureRow}>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>Sistólica</Text>
+                  <View style={styles.metricBody}>
+                    <TouchableOpacity style={styles.metricControl} onPress={()=> setSystolic(p=> p-1)}><Feather name="minus" size={22} color="#555" /></TouchableOpacity>
+                    <View style={styles.metricValueWrap}><Text style={styles.metricValue}>{systolic}</Text><Text style={styles.metricUnit}>mmHg</Text></View>
+                    <TouchableOpacity style={styles.metricControl} onPress={()=> setSystolic(p=> p+1)}><Feather name="plus" size={22} color="#555" /></TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>Diastólica</Text>
+                  <View style={styles.metricBody}>
+                    <TouchableOpacity style={styles.metricControl} onPress={()=> setDiastolic(p=> p-1)}><Feather name="minus" size={22} color="#555" /></TouchableOpacity>
+                    <View style={styles.metricValueWrap}><Text style={styles.metricValue}>{diastolic}</Text><Text style={styles.metricUnit}>mmHg</Text></View>
+                    <TouchableOpacity style={styles.metricControl} onPress={()=> setDiastolic(p=> p+1)}><Feather name="plus" size={22} color="#555" /></TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              <Text style={styles.inputLabel}>Data do registro</Text>
+              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder="AAAA-MM-DD" />
+            </View>
             <View style={styles.modalActions}>
-              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setIsModalVisible(false)}>
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handleUpdate}>
-                <Text style={styles.saveButtonText}>Salvar Alterações</Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonNeutral]} onPress={()=> setIsModalVisible(false)}><Text style={styles.buttonNeutralText}>Cancelar</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleUpdate}><Text style={styles.buttonPrimaryText}>Salvar</Text></TouchableOpacity>
             </View>
           </View>
         </View>
-    </Modal>
-    </SafeAreaView>  
-    );
+      </Modal>
+    </SafeAreaView>
+  );
 }
 
+// Estilos
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F4F8' },
-  // ... (estilos existentes)
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: '#E0E0E0' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  backButton: {},
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  listContainer: { padding: 20 },
-  itemContainer: { backgroundColor: '#FFFFFF', borderRadius: 10, padding: 15, marginBottom: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, },
-  itemDetails: { flex: 1 },
-  itemDate: { fontSize: 12, color: 'gray', marginBottom: 8 },
-  itemValues: { fontSize: 16, color: '#333' },
-  boldText: { fontWeight: 'bold' },
-  itemActions: { flexDirection: 'row' },
-  actionButton: { padding: 8, marginLeft: 8 },
-  emptyText: { fontSize: 16, color: 'gray' },
-  errorText: { fontSize: 16, color: 'red', textAlign: 'center', marginBottom: 20 },
-  retryButton: { backgroundColor: '#004A61', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
-  saveButtonText: { fontSize: 16, color: '#FFFFFF', fontWeight: 'bold' },
-  // Modal Styles
-  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-  modalContent: { width: '90%', backgroundColor: '#F0F4F8', borderRadius: 20, padding: 20, alignItems: 'center' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
-  formContainer: { width: '100%' },
-  modalActions: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 },
-  modalButton: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  cancelButton: { backgroundColor: '#f0f0f0', marginRight: 10 },
-  cancelButtonText: { color: '#333', fontWeight: 'bold' },
-  saveButton: { backgroundColor: '#004A61' },
-  // Estilos do formulário (reaproveitados de pressure.tsx)
-  pressureCard: { backgroundColor: '#FFFFFF', borderRadius: 15, marginBottom: 15, elevation: 1 },
-  pressureBody: { paddingVertical: 10, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  controlButton: { padding: 10 },
-  pressureValueContainer: { flexDirection: 'row', alignItems: 'baseline' },
-  pressureValueMain: { fontSize: 50, fontWeight: 'bold', color: '#333', textAlign: 'center', minWidth: 80 },
-  pressureUnit: { fontSize: 18, color: '#333', marginLeft: 8 },
-  dateLabel: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 10, marginTop: 10 },
-  dateInput: { backgroundColor: '#FFFFFF', borderRadius: 10, padding: 15, fontSize: 16, color: '#333', elevation: 1 },
+  container: { flex:1, backgroundColor:'#F5F7FA' },
+  scrollContent: { paddingBottom:48 },
+  centered: { flex:1, justifyContent:'center', alignItems:'center', padding:24 },
+  header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingVertical:18, paddingHorizontal:20, backgroundColor:'#FFFFFF', borderBottomWidth:1, borderBottomColor:'#E2E8F0' },
+  headerTitle: { fontSize:20, fontWeight:'700', color:'#1F2D3D' },
+  backButton: { padding:4 },
+
+  card: { backgroundColor:'#FFFFFF', marginHorizontal:16, marginTop:14, borderRadius:14, padding:14, ...Platform.select({ web:{ boxShadow:'0 4px 12px rgba(0,0,0,0.06)' }, default:{ elevation:3, shadowColor:'#000', shadowOpacity:0.08, shadowRadius:6 } }) },
+  sectionTitle: { fontSize:16, fontWeight:'700', color:'#004A61', marginBottom:10 },
+  inputLabel: { fontSize:13, fontWeight:'600', color:'#334155', marginBottom:6, marginTop:4 },
+  input: { backgroundColor:'#F9FAFB', borderWidth:1, borderColor:'#D0D7DE', borderRadius:10, paddingHorizontal:12, paddingVertical:10, fontSize:14, color:'#1F2D3D' },
+  button: { flex:1, paddingVertical:12, borderRadius:10, alignItems:'center', justifyContent:'center', marginRight:10 },
+  buttonPrimary: { backgroundColor:'#007094' },
+  buttonPrimaryText: { color:'#FFFFFF', fontSize:14, fontWeight:'700' },
+  buttonOutline: { backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#CBD5E1' },
+  buttonOutlineText: { color:'#334155', fontSize:14, fontWeight:'600' },
+  buttonNeutral: { backgroundColor:'#EEF2F6' },
+  buttonNeutralText: { color:'#334155', fontSize:14, fontWeight:'600' },
+  badgeInfo: { alignSelf:'flex-start', marginTop:10, backgroundColor:'#E0F2FE', paddingHorizontal:10, paddingVertical:4, borderRadius:8 },
+  badgeInfoText: { fontSize:12, fontWeight:'600', color:'#0369A1' },
+  emptyWrapper: { paddingVertical:16 },
+  emptyText: { fontSize:14, color:'#64748B', textAlign:'center' },
+  errorText: { fontSize:16, color:'#DC2626', textAlign:'center', marginBottom:20 },
+  retryButton: { backgroundColor:'#004A61', paddingVertical:12, paddingHorizontal:24, borderRadius:12 },
+  saveButtonText: { fontSize:16, color:'#FFFFFF', fontWeight:'700' },
+
+  filterRow: { flexDirection:'row', justifyContent:'space-between' },
+  filterField: { flex:1, marginRight:10 },
+  filterLabel: { fontSize:12, fontWeight:'600', color:'#475569', marginBottom:4 },
+  filterActions: { flexDirection:'row', marginTop:14 },
+
+  chartCard: { backgroundColor:'#FFFFFF', marginHorizontal:16, marginTop:14, borderRadius:14, paddingVertical:12, paddingHorizontal:16, ...Platform.select({ web:{ boxShadow:'0 4px 12px rgba(0,0,0,0.06)' }, default:{ elevation:3, shadowColor:'#000', shadowOpacity:0.08, shadowRadius:6 } }) },
+  chartInnerWrapper: { position:'relative', paddingBottom:6 },
+  chartEmpty: { textAlign:'center', color:'#64748B', marginVertical:12 },
+  chartLabelsRow: { height:26, marginTop:6, position:'relative' },
+  chartLabel: { fontSize:10, color:'#334155' },
+  legendRow: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginTop:10 },
+  legendItem: { flexDirection:'row', alignItems:'center', marginRight:14 },
+  legendDot: { width:12, height:12, borderRadius:6, marginRight:6 },
+  legendLabel: { fontSize:12, fontWeight:'600', color:'#334155' },
+  legendRangeBadge: { backgroundColor:'#F1F5F9', paddingHorizontal:10, paddingVertical:4, borderRadius:8 },
+  legendRangeText: { fontSize:11, fontWeight:'600', color:'#475569' },
+  chartFallback: { padding:12, borderRadius:10, backgroundColor:'#FFF', marginHorizontal:16, marginTop:8 },
+  chartHint: { fontSize:12, color:'#475569', marginTop:4, textAlign:'center' },
+
+  tooltipContainer: { position:'absolute', padding:8, backgroundColor:'#004A61', borderRadius:8, minWidth:130 },
+  tooltipTitle: { color:'#fff', fontSize:11, fontWeight:'700' },
+  tooltipValue: { color:'#fff', fontSize:11, marginTop:2 },
+  tooltipInfo: { color:'#fff', fontSize:10, marginTop:4, opacity:0.85 },
+
+  tableHeader: { flexDirection:'row', backgroundColor:'#004A61', paddingVertical:8, paddingHorizontal:12, borderRadius:10, marginTop:4 },
+  tableHeaderCell: { flex:1, color:'#FFFFFF', fontSize:12, fontWeight:'700' },
+  tableRow: { flexDirection:'row', paddingVertical:10, paddingHorizontal:12, borderBottomWidth:1, borderBottomColor:'#E2E8F0' },
+  tableRowAlt: { backgroundColor:'#F8FAFC' },
+  tableCell: { flex:1, fontSize:12, color:'#334155' },
+  rowActions: { flexDirection:'row', justifyContent:'flex-start' },
+  iconButton: { padding:4, marginRight:6, borderRadius:8, backgroundColor:'#F1F5F9' },
+  tableListContent: {},
+
+  modalContainer: { flex:1, justifyContent:'center', alignItems:'center', backgroundColor:'rgba(15,23,42,0.45)' },
+  modalCard: { width:'90%', backgroundColor:'#FFFFFF', borderRadius:20, padding:20, ...Platform.select({ web:{ boxShadow:'0 8px 24px rgba(0,0,0,0.12)' }, default:{ elevation:6, shadowColor:'#000', shadowOpacity:0.18, shadowRadius:12 } }) },
+  modalTitle: { fontSize:18, fontWeight:'700', color:'#004A61', marginBottom:16 },
+  formContainer: { width:'100%' },
+  modalActions: { flexDirection:'row', justifyContent:'space-between', width:'100%', marginTop:24 },
+
+  dualPressureRow: { flexDirection:'row', justifyContent:'space-between', marginBottom:12 },
+  metricCard: { flex:1, backgroundColor:'#F8FAFC', borderRadius:16, paddingVertical:12, paddingHorizontal:14, marginRight:10 },
+  metricLabel: { fontSize:13, fontWeight:'600', color:'#475569', marginBottom:8 },
+  metricBody: { flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
+  metricControl: { width:42, height:42, borderRadius:10, backgroundColor:'#E2E8F0', alignItems:'center', justifyContent:'center' },
+  metricValueWrap: { flexDirection:'row', alignItems:'baseline' },
+  metricValue: { fontSize:42, fontWeight:'700', color:'#1F2D3D', minWidth:70, textAlign:'center' },
+  metricUnit: { fontSize:14, color:'#475569', marginLeft:6, fontWeight:'600' }
 });
