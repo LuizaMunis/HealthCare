@@ -142,7 +142,9 @@ export default function SintomasHistoryScreen() {
     }
   }, []);
 
-  useFocusEffect(fetchHistory);
+  useFocusEffect(useCallback(() => {
+    fetchHistory();
+  }, [fetchHistory]));
 
   const handleEdit = (item: SintomaItem) => {
     setEditingSintoma(item);

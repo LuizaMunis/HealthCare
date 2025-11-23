@@ -196,7 +196,7 @@ export default function EditarMedicamentoScreen() {
           <View style={styles.medicamentosList}>
             {medicamentos.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Feather name="pill" size={48} color="#CCC" />
+                <Feather name="package" size={48} color="#CCC" />
                 <Text style={styles.emptyText}>Nenhum medicamento registrado</Text>
                 <Text style={styles.emptySubtext}>Toque no + para adicionar seu primeiro medicamento</Text>
               </View>

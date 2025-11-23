@@ -63,11 +63,11 @@ class DoencaService {
 
   // --- Métodos Privados de Verificação ---
   static async _verifyProfileOwnership(usuarioId, profileId) {
-    const perfil = await PerfilModel.findById(profileId);
+    const perfil = await ProfileModel.findById(profileId);
     if (!perfil) {
       throw new Error('Perfil não encontrado.');
     }
-    if (perfil.usuario_id !== usuarioId) {
+    if (perfil.usuario_id !== Number(usuarioId)) {
       throw new Error('Acesso não autorizado a este perfil.');
     }
     return perfil;

@@ -55,7 +55,12 @@ export default function TemperatureHistoryScreen() {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) throw new Error('Token de autenticação não encontrado.');
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.TEMPERATURE_RECORDS}`, {
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        throw new Error('Nenhum perfil ativo encontrado.');
+      }
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.TEMPERATURE_RECORDS}?perfil_id=${profileId}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const result = await response.json();
@@ -79,7 +84,18 @@ export default function TemperatureHistoryScreen() {
       { text: 'Excluir', style: 'destructive', onPress: async () => {
           try {
             const token = await AsyncStorage.getItem('healthcare_auth_token');
-            const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.TEMPERATURE_RECORDS}/${id}` , {
+            if (!token) {
+              Alert.alert('Erro', 'Token de autenticação não encontrado.');
+              return;
+            }
+
+            const profileId = await AsyncStorage.getItem('active_profile_id');
+            if (!profileId) {
+              Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+              return;
+            }
+
+            const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.TEMPERATURE_RECORDS}/${id}?perfil_id=${profileId}` , {
               method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
@@ -111,12 +127,27 @@ export default function TemperatureHistoryScreen() {
     }
     try {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
+      if (!token) {
+        Alert.alert('Erro', 'Token de autenticação não encontrado.');
+        return;
+      }
+
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) {
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+        return;
+      }
+
       const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.TEMPERATURE_RECORDS}/${editingRecord.id}`;
       const time = new Date(editingRecord.data_hora_medicao).toTimeString().slice(0,8);
       const response = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ graus_celsius: tempNum, data_hora_medicao: `${date}T${time}` })
+        body: JSON.stringify({ 
+          graus_celsius: tempNum, 
+          data_hora_medicao: `${date}T${time}`,
+          perfil_id: parseInt(profileId)
+        })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Falha ao atualizar o registro.');

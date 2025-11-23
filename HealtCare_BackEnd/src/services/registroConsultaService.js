@@ -131,7 +131,7 @@ class ConsultaService {
   }
 
   static async _verifyProfileOwnership(usuarioId, profileId) {
-    const perfil = await PerfilModel.findById(profileId);
+    const perfil = await ProfileModel.findById(profileId);
     if (!perfil) {
       throw new Error('Perfil não encontrado.');
     }

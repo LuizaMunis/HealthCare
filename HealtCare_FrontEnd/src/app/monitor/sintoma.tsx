@@ -29,6 +29,7 @@ export default function SintomaScreen() {
   const [sintomas, setSintomas] = useState<Sintoma[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [newSintoma, setNewSintoma] = useState<Sintoma>({
     doenca_id: 0,
     descricao_sintoma: '',
@@ -53,7 +54,7 @@ export default function SintomaScreen() {
       const profileId = await AsyncStorage.getItem('active_profile_id');
       if (!profileId) return;
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/doencas`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/doencas?perfil_id=${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -172,39 +173,63 @@ export default function SintomaScreen() {
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
-  const handleSaveSintoma = async () => {
+  const handleSaveSintoma = () => {
+    // Validações básicas
     if (!validateAllFields()) {
       Alert.alert('Campos obrigatórios', 'Por favor, corrija os erros nos campos destacados em vermelho.');
       return;
     }
 
+    // Validar se doenca_id é válido antes de mostrar o modal
+    if (!newSintoma.doenca_id || newSintoma.doenca_id === 0) {
+      Alert.alert('Erro', 'Por favor, selecione uma doença antes de salvar o sintoma.');
+      return;
+    }
+
+    // Mostrar modal de confirmação
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmSave = async () => {
+    setShowConfirmationModal(false);
     setLoading(true);
+
     try {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
       if (!token) {
         Alert.alert('Erro de Autenticação', 'Você não está logado.');
+        setLoading(false);
         return;
       }
 
       const profileId = await AsyncStorage.getItem('active_profile_id');
+      console.log('🔍 [DEBUG] ProfileId do AsyncStorage:', profileId, 'Tipo:', typeof profileId);
       if (!profileId) {
-        Alert.alert('Erro', 'Nenhum perfil ativo encontrado.');
+        console.error('❌ [DEBUG] ProfileId não encontrado no AsyncStorage');
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
+        setLoading(false);
         return;
       }
 
+      // Preparar dados para envio
+      const perfilIdParsed = parseInt(profileId);
+      console.log('🔍 [DEBUG] ProfileId parseado:', perfilIdParsed, 'É NaN?', isNaN(perfilIdParsed));
+
       const sintomaData = {
-        doenca_id: newSintoma.doenca_id,
         descricao_sintoma: newSintoma.descricao_sintoma.trim(),
         intensidade: newSintoma.intensidade,
         data_hora_inicio: `${newSintoma.data_hora_inicio}T00:00:00`,
-        perfil_id: parseInt(profileId)
+        perfil_id: perfilIdParsed
       };
 
       console.log('📤 [DEBUG] Enviando dados do sintoma:', JSON.stringify(sintomaData, null, 2));
-      console.log('📤 [DEBUG] URL:', `${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms?perfil_id=${profileId}`);
+      console.log('📤 [DEBUG] doenca_id (URL):', newSintoma.doenca_id);
+      console.log('🔍 [DEBUG] URL da requisição:', `${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms`);
+      console.log('🔍 [DEBUG] Token presente?', token ? 'Sim' : 'Não');
 
-      // Usar a rota de sintomas
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms?perfil_id=${profileId}`, {
+      console.log('📡 [DEBUG] Iniciando requisição POST...');
+      // Usar a rota de sintomas - doenca_id vem como parâmetro da URL, perfil_id apenas no body
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${newSintoma.doenca_id}/symptoms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -213,34 +238,53 @@ export default function SintomaScreen() {
         body: JSON.stringify(sintomaData)
       });
 
-      console.log('📥 [DEBUG] Status da resposta:', response.status);
+      console.log('📥 [DEBUG] Resposta recebida:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       const result = await response.json();
-      console.log('📥 [DEBUG] Resposta do servidor:', JSON.stringify(result, null, 2));
+      console.log('📥 [DEBUG] Corpo da resposta:', JSON.stringify(result, null, 2));
 
-      if (response.ok) {
-        const novoSintoma = {
-          id: result.data.id,
-          ...sintomaData
-        };
-
-        setSintomas(prev => [novoSintoma, ...prev]);
-        setShowAddModal(false);
-        setNewSintoma({
-          doenca_id: 0,
-          descricao_sintoma: '',
-          intensidade: 'Leve',
-          data_hora_inicio: new Date().toISOString().split('T')[0],
+      if (!response.ok) {
+        console.error('❌ [DEBUG] Erro na resposta do servidor:', {
+          status: response.status,
+          statusText: response.statusText,
+          result: JSON.stringify(result, null, 2)
         });
-        setErrors({});
-        setTouched({});
-
-        Alert.alert('Sucesso!', 'Sintoma registrado com sucesso!');
-      } else {
-        throw new Error(result.message || 'Erro ao registrar sintoma');
+        throw new Error(result.message || `Erro ao salvar sintoma. Status: ${response.status}`);
       }
+
+      console.log('✅ [DEBUG] Sintoma salvo com sucesso:', JSON.stringify(result, null, 2));
+
+      const novoSintoma = {
+        id: result.data.id,
+        doenca_id: newSintoma.doenca_id,
+        ...sintomaData
+      };
+
+      setSintomas(prev => [novoSintoma, ...prev]);
+      setShowAddModal(false);
+      setNewSintoma({
+        doenca_id: 0,
+        descricao_sintoma: '',
+        intensidade: 'Leve',
+        data_hora_inicio: new Date().toISOString().split('T')[0],
+      });
+      setErrors({});
+      setTouched({});
+
+      Alert.alert('Sucesso!', 'Sintoma registrado com sucesso!');
     } catch (error: any) {
-      console.error('Erro ao salvar sintoma:', error);
-      Alert.alert('Erro', error.message || 'Não foi possível salvar o sintoma. Tente novamente.');
+      console.error('❌ [DEBUG] Erro completo ao salvar sintoma:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        error: error
+      });
+      Alert.alert('Erro', error.message || 'Não foi possível salvar o sintoma.');
     } finally {
       setLoading(false);
     }
@@ -304,8 +348,15 @@ export default function SintomaScreen() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return dateString; // Retorna a string original se a data for inválida
+      }
+      return date.toLocaleDateString('pt-BR');
+    } catch {
+      return dateString; // Retorna a string original em caso de erro
+    }
   };
 
   // Funções do calendário
@@ -386,7 +437,7 @@ export default function SintomaScreen() {
             <Feather name="chevron-left" size={24} color="#004A61" />
           </TouchableOpacity>
           <Text style={styles.calendarMonthText}>
-            {monthNames[currentMonth]} {currentYear}
+            {`${monthNames[currentMonth]} ${String(currentYear)}`}
           </Text>
           <TouchableOpacity onPress={() => navigateMonth('next')} style={styles.calendarNavButton}>
             <Feather name="chevron-right" size={24} color="#004A61" />
@@ -526,6 +577,8 @@ export default function SintomaScreen() {
         visible={showAddModal}
         animationType="slide"
         presentationStyle="pageSheet"
+        accessibilityViewIsModal={true}
+        accessibilityLabel="Modal para adicionar novo sintoma"
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
@@ -660,7 +713,14 @@ export default function SintomaScreen() {
                   !newSintoma.data_hora_inicio && styles.dateInputTextPlaceholder
                 ]}>
                   {newSintoma.data_hora_inicio 
-                    ? new Date(newSintoma.data_hora_inicio).toLocaleDateString('pt-BR')
+                    ? (() => {
+                        try {
+                          const date = new Date(newSintoma.data_hora_inicio);
+                          return isNaN(date.getTime()) ? newSintoma.data_hora_inicio : date.toLocaleDateString('pt-BR');
+                        } catch {
+                          return newSintoma.data_hora_inicio;
+                        }
+                      })()
                     : 'Selecione a data de início'}
                 </Text>
                 <Feather name="calendar" size={20} color="#666" />
@@ -673,12 +733,96 @@ export default function SintomaScreen() {
         </SafeAreaView>
       </Modal>
 
+      {/* Modal de Confirmação */}
+      <Modal
+        visible={showConfirmationModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowConfirmationModal(false)}
+        accessibilityViewIsModal={true}
+        accessibilityLabel="Modal de confirmação de sintoma"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmationModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Confirmar Sintoma</Text>
+              <TouchableOpacity
+                onPress={() => setShowConfirmationModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <Text style={styles.modalSubtitle}>Confirme os dados do sintoma:</Text>
+              
+              <View style={styles.confirmationItem}>
+                <Text style={styles.confirmationLabel}>Doença:</Text>
+                <Text style={styles.confirmationValue}>
+                  {doencas.find(d => d.id === newSintoma.doenca_id)?.nome_doenca || 'Não selecionada'}
+                </Text>
+              </View>
+
+              <View style={styles.confirmationItem}>
+                <Text style={styles.confirmationLabel}>Descrição:</Text>
+                <Text style={styles.confirmationValue}>{newSintoma.descricao_sintoma || '-'}</Text>
+              </View>
+
+              <View style={styles.confirmationItem}>
+                <Text style={styles.confirmationLabel}>Intensidade:</Text>
+                <Text style={styles.confirmationValue}>{newSintoma.intensidade}</Text>
+              </View>
+
+              <View style={styles.confirmationItem}>
+                <Text style={styles.confirmationLabel}>Data de início:</Text>
+                <Text style={styles.confirmationValue}>
+                  {newSintoma.data_hora_inicio 
+                    ? (() => {
+                        try {
+                          const date = new Date(newSintoma.data_hora_inicio);
+                          return isNaN(date.getTime()) ? newSintoma.data_hora_inicio : date.toLocaleDateString('pt-BR');
+                        } catch {
+                          return newSintoma.data_hora_inicio;
+                        }
+                      })()
+                    : 'Não selecionada'}
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowConfirmationModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={handleConfirmSave}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalConfirmButtonText}>Confirmar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal de Seleção de Data de Início - Calendário */}
       <Modal
         visible={showDataInicioModal}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setShowDataInicioModal(false)}
+        accessibilityViewIsModal={true}
+        accessibilityLabel="Modal de seleção de data de início"
       >
         <View style={styles.modalOverlay}>
           <View style={styles.calendarModalContainer}>
@@ -859,6 +1003,7 @@ const styles = StyleSheet.create({
   modalContent: {
     flex: 1,
     padding: 20,
+    maxHeight: 300,
   },
   formGroup: {
     marginBottom: 24,
@@ -976,6 +1121,44 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
+  },
+  // Estilos do Modal de Confirmação
+  confirmationModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    width: '100%',
+    maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  confirmationItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  confirmationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#004A61',
+    flex: 1,
+  },
+  confirmationValue: {
+    fontSize: 14,
+    color: '#333',
+    flex: 2,
+    textAlign: 'right',
   },
   calendarModalContainer: {
     backgroundColor: '#FFFFFF',

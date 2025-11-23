@@ -98,7 +98,7 @@ export default function HomeScreen() {
               style={styles.quickAccessCard} 
               onPress={() => router.push('/history/medication')}
             >
-              <Feather name="pill" size={32} color="#004A61" />
+              <Feather name="package" size={32} color="#004A61" />
               <Text style={styles.quickAccessTitle}>Medicamento</Text>
           </TouchableOpacity>
         </View>

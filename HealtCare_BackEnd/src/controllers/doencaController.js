@@ -5,10 +5,17 @@ class DoencaController {
   static async createDoenca(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId } = req.params;
+      const perfilId = req.body.perfil_id || req.query.perfil_id;
       const doencaData = req.body;
 
-      const newDoenca = await DoencaService.createDoenca(usuarioId, profileId, doencaData);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const newDoenca = await DoencaService.createDoenca(usuarioId, perfilId, doencaData);
 
       res.status(201).json({
         success: true,
@@ -16,49 +23,72 @@ class DoencaController {
         data: newDoenca
       });
     } catch (error) {
-      this.handleError(res, error);
+      DoencaController.handleError(res, error);
     }
   }
 
   static async getAllDoencasByProfile(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      const doencas = await DoencaService.getAllDoencasByProfile(usuarioId, profileId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const doencas = await DoencaService.getAllDoencasByProfile(usuarioId, perfilId);
 
       res.json({
         success: true,
         data: doencas
       });
     } catch (error) {
-      this.handleError(res, error);
+      DoencaController.handleError(res, error);
     }
   }
 
   static async getDoencaById(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, doencaId } = req.params;
+      const { doencaId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      const doenca = await DoencaService.getDoencaById(usuarioId, profileId, doencaId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const doenca = await DoencaService.getDoencaById(usuarioId, perfilId, doencaId);
 
       res.json({
         success: true,
         data: doenca
       });
     } catch (error) {
-      this.handleError(res, error);
+      DoencaController.handleError(res, error);
     }
   }
 
   static async updateDoenca(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, doencaId } = req.params;
+      const { doencaId } = req.params;
+      const perfilId = req.body.perfil_id || req.query.perfil_id;
       const updateData = req.body;
 
-      const updatedDoenca = await DoencaService.updateDoenca(usuarioId, profileId, doencaId, updateData);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      const updatedDoenca = await DoencaService.updateDoenca(usuarioId, perfilId, doencaId, updateData);
 
       res.json({
         success: true,
@@ -66,23 +96,31 @@ class DoencaController {
         data: updatedDoenca
       });
     } catch (error) {
-      this.handleError(res, error);
+      DoencaController.handleError(res, error);
     }
   }
 
   static async deleteDoenca(req, res) {
     try {
       const usuarioId = req.user.id;
-      const { profileId, doencaId } = req.params;
+      const { doencaId } = req.params;
+      const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-      await DoencaService.deleteDoenca(usuarioId, profileId, doencaId);
+      if (!perfilId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'perfil_id é obrigatório (query string ou body).' 
+        });
+      }
+
+      await DoencaService.deleteDoenca(usuarioId, perfilId, doencaId);
 
       res.json({
         success: true,
         message: 'Doença deletada com sucesso!'
       });
     } catch (error) {
-      this.handleError(res, error);
+      DoencaController.handleError(res, error);
     }
   }
 
@@ -93,25 +131,41 @@ class DoencaController {
   static async addSintomaToDoenca(req, res) {
     try {
         const usuarioId = req.user.id;
-        const { profileId, doencaId } = req.params;
+        const { doencaId } = req.params;
+        const perfilId = req.body.perfil_id || req.query.perfil_id;
         const sintomaData = req.body;
 
-        const novoSintoma = await DoencaService.addSintoma(usuarioId, profileId, doencaId, sintomaData);
+        if (!perfilId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'perfil_id é obrigatório (query string ou body).' 
+          });
+        }
+
+        const novoSintoma = await DoencaService.addSintoma(usuarioId, perfilId, doencaId, sintomaData);
         res.status(201).json({ success: true, message: 'Sintoma adicionado com sucesso!', data: novoSintoma });
     } catch (error) {
-        this.handleError(res, error);
+        DoencaController.handleError(res, error);
     }
   }
 
   static async getSintomasByDoenca(req, res) {
     try {
         const usuarioId = req.user.id;
-        const { profileId, doencaId } = req.params;
+        const { doencaId } = req.params;
+        const perfilId = req.query.perfil_id || req.body.perfil_id;
 
-        const sintomas = await DoencaService.getSintomasByDoenca(usuarioId, profileId, doencaId);
+        if (!perfilId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'perfil_id é obrigatório (query string ou body).' 
+          });
+        }
+
+        const sintomas = await DoencaService.getSintomasByDoenca(usuarioId, perfilId, doencaId);
         res.json({ success: true, data: sintomas });
     } catch (error) {
-        this.handleError(res, error);
+        DoencaController.handleError(res, error);
     }
   }
 
