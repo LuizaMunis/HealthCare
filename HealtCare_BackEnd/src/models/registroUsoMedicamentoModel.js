@@ -34,6 +34,24 @@ class RegistroUsoMedicamentoModel {
       throw error;
     }
   }
+
+  static async findByMedicamentoIdAndDate(medicamentoId, date) {
+    const query = `
+      SELECT id, medicamento_id, data_hora_registro, status_uso
+      FROM registroUsoMedicamento
+      WHERE medicamento_id = ? 
+        AND DATE(data_hora_registro) = DATE(?)
+      ORDER BY data_hora_registro DESC
+      LIMIT 1
+    `;
+    try {
+      const [rows] = await pool.execute(query, [medicamentoId, date]);
+      return rows[0] || null;
+    } catch (error) {
+      console.error('Erro ao buscar registro de uso por ID de medicamento e data:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = RegistroUsoMedicamentoModel;

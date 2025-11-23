@@ -89,15 +89,44 @@ class MedicamentoModel {
   }
 
   static async update(medicamentoId, updateData) {
-    const fields = Object.keys(updateData).map(key => `${key} = ?`).join(', ');
-    const values = [...Object.values(updateData), medicamentoId];
+    // Lista de campos válidos da tabela medicamento
+    const camposValidos = [
+      'nome_medicamento',
+      'dosagem',
+      'frequencia_horas',
+      'duracao_dias_tratamento',
+      'data_inicio_tratamento',
+      'lembretes_ativos',
+      'uso_continuo'
+    ];
+
+    // Filtrar apenas campos válidos
+    const dadosFiltrados = {};
+    for (const campo of camposValidos) {
+      if (campo in updateData) {
+        dadosFiltrados[campo] = updateData[campo];
+      }
+    }
+
+    // Se não houver campos válidos para atualizar, retornar false
+    if (Object.keys(dadosFiltrados).length === 0) {
+      console.warn('⚠️ [DEBUG Model] Nenhum campo válido para atualizar');
+      return false;
+    }
+
+    const fields = Object.keys(dadosFiltrados).map(key => `${key} = ?`).join(', ');
+    const values = [...Object.values(dadosFiltrados), medicamentoId];
     const query = `UPDATE medicamento SET ${fields} WHERE id = ?`;
+
+    console.log('🔍 [DEBUG Model] Query de update:', query);
+    console.log('🔍 [DEBUG Model] Valores:', values);
+    console.log('🔍 [DEBUG Model] Dados filtrados:', JSON.stringify(dadosFiltrados, null, 2));
 
     try {
       const [result] = await pool.execute(query, values);
       return result.affectedRows > 0;
     } catch (error) {
-      console.error('Erro ao atualizar medicamento:', error);
+      console.error('❌ [DEBUG Model] Erro ao atualizar medicamento:', error);
       throw error;
     }
   }

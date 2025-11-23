@@ -15,6 +15,7 @@ interface MedicationItem {
   data_inicio_tratamento: string;
   lembretes_ativos: boolean;
   uso_continuo: boolean;
+  statusHoje?: 'Tomado' | 'Pulado' | 'Adiado' | null;
 }
 
 const HistoryItem: React.FC<{ 
@@ -42,6 +43,32 @@ const HistoryItem: React.FC<{
     }
   };
 
+  const getStatusColor = (status?: string | null) => {
+    switch (status) {
+      case 'Tomado':
+        return '#28A745';
+      case 'Pulado':
+        return '#FFC107';
+      case 'Adiado':
+        return '#17A2B8';
+      default:
+        return '#6C757D';
+    }
+  };
+
+  const getStatusText = (status?: string | null) => {
+    switch (status) {
+      case 'Tomado':
+        return 'Tomado hoje';
+      case 'Pulado':
+        return 'Pulado hoje';
+      case 'Adiado':
+        return 'Adiado hoje';
+      default:
+        return 'Não tomado hoje';
+    }
+  };
+
   return (
     <View style={styles.itemContainer}>
       <View style={styles.itemHeader}>
@@ -55,6 +82,11 @@ const HistoryItem: React.FC<{
           <Text style={styles.itemSubtitle}>
             {item.uso_continuo ? 'Uso contínuo' : `Duração: ${formatDuration(item.duracao_dias_tratamento)}`}
           </Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.statusHoje) + '20', borderColor: getStatusColor(item.statusHoje) }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.statusHoje) }]}>
+              {getStatusText(item.statusHoje)}
+            </Text>
+          </View>
         </View>
       </View>
       <View style={styles.itemActions}>
@@ -76,6 +108,33 @@ export default function MedicationHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchStatusHoje = async (medicamentoId: number, token: string, profileId: string): Promise<'Tomado' | 'Pulado' | 'Adiado' | null> => {
+    try {
+      const hoje = new Date().toISOString().split('T')[0];
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_USAGE_RECORDS}/${medicamentoId}/usage-logs?perfil_id=${profileId}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      if (response.ok) {
+        const result = await response.json();
+        const registros = Array.isArray(result.data) ? result.data : [];
+        
+        // Buscar registro do dia atual
+        const registroHoje = registros.find((r: any) => {
+          const dataRegistro = new Date(r.data_hora_registro).toISOString().split('T')[0];
+          return dataRegistro === hoje;
+        });
+        
+        return registroHoje ? registroHoje.status_uso : null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao buscar status de uso:', error);
+      return null;
+    }
+  };
+
   const fetchHistory = async () => {
     setLoading(true);
     setError(null);
@@ -94,14 +153,22 @@ export default function MedicationHistoryScreen() {
 
       const rows = Array.isArray(result.data) ? result.data : [];
       
+      // Buscar status de uso do dia para cada medicamento
+      const rowsComStatus = await Promise.all(
+        rows.map(async (item: MedicationItem) => {
+          const statusHoje = await fetchStatusHoje(item.id, token, profileId);
+          return { ...item, statusHoje };
+        })
+      );
+      
       // Ordenação decrescente por data (mais recente primeiro)
-      rows.sort((a: MedicationItem, b: MedicationItem) => {
+      rowsComStatus.sort((a: MedicationItem, b: MedicationItem) => {
         const dateA = new Date(a.data_inicio_tratamento).getTime();
         const dateB = new Date(b.data_inicio_tratamento).getTime();
         return dateB - dateA; // Decrescente (mais recente primeiro)
       });
       
-      setRecords(rows);
+      setRecords(rowsComStatus);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -137,10 +204,13 @@ export default function MedicationHistoryScreen() {
   };
 
   const handleEdit = (item: MedicationItem) => {
-    // Navegar para a tela de edição com os dados do medicamento
+    // Navegar para a tela de novo medicamento com os dados para edição
     router.push({
-      pathname: '/monitor/editar-medicamento',
-      params: { medicamento: JSON.stringify(item) }
+      pathname: '/monitor/novo-medicamento',
+      params: { 
+        medicamento: JSON.stringify(item),
+        editMode: 'true'
+      }
     });
   };
 
@@ -366,5 +436,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  statusBadge: {
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

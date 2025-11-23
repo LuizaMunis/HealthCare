@@ -2,6 +2,7 @@
 
 const MedicamentoModel = require('../models/medicamentoModel');
 const RegistroUsoMedicamentoModel = require('../models/registroUsoMedicamentoModel');
+const FormatoMedicamentoModel = require('../models/formatoMedicamentoModel');
 const ProfileModel = require('../models/profileModel');
 
 // Verificar se ProfileModel foi importado corretamente
@@ -42,6 +43,23 @@ class MedicamentoService {
     const resultado = await MedicamentoModel.create(dadosParaCriar);
     
     console.log('✅ [DEBUG Service] Medicamento criado com sucesso:', JSON.stringify(resultado, null, 2));
+    
+    // Criar formato do medicamento se fornecido
+    if (dadosMedicamento.nome_formato && dadosMedicamento.unidade_padrao_dosagem) {
+      try {
+        const formatoData = {
+          medicamento_id: resultado.id,
+          nome_formato: dadosMedicamento.nome_formato,
+          unidade_padrao_dosagem: dadosMedicamento.unidade_padrao_dosagem
+        };
+        await FormatoMedicamentoModel.create(formatoData);
+        console.log('✅ [DEBUG Service] Formato do medicamento criado com sucesso');
+      } catch (error) {
+        console.error('❌ [DEBUG Service] Erro ao criar formato do medicamento:', error);
+        // Não falhar a criação do medicamento se o formato falhar
+      }
+    }
+    
     return resultado;
   }
 
@@ -52,14 +70,90 @@ class MedicamentoService {
 
   static async getMedicamentoById(usuarioId, perfilId, medicamentoId) {
     await this._verifyProfileOwnership(usuarioId, perfilId);
-    return await this._verifyMedicamentoOwnership(perfilId, medicamentoId);
+    const medicamento = await this._verifyMedicamentoOwnership(perfilId, medicamentoId);
+    
+    // Buscar formato do medicamento se existir
+    try {
+      const formato = await FormatoMedicamentoModel.findByMedicamentoId(medicamentoId);
+      if (formato) {
+        medicamento.formato = formato;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar formato do medicamento:', error);
+      // Não falhar se não encontrar formato
+    }
+    
+    return medicamento;
   }
   
   static async updateMedicamento(usuarioId, perfilId, medicamentoId, updateData) {
     await this._verifyProfileOwnership(usuarioId, perfilId);
     await this._verifyMedicamentoOwnership(perfilId, medicamentoId);
 
-    await MedicamentoModel.update(medicamentoId, updateData);
+    console.log('🔍 [DEBUG Service] updateMedicamento - updateData recebido:', JSON.stringify(updateData, null, 2));
+
+    // Extrair dados do formato separadamente ANTES de filtrar
+    const nome_formato = updateData.nome_formato;
+    const unidade_padrao_dosagem = updateData.unidade_padrao_dosagem;
+
+    // Separar dados do medicamento dos dados do formato e perfil_id
+    // Campos que pertencem à tabela medicamento
+    const camposMedicamento = [
+      'nome_medicamento',
+      'dosagem',
+      'frequencia_horas',
+      'duracao_dias_tratamento',
+      'data_inicio_tratamento',
+      'lembretes_ativos',
+      'uso_continuo'
+    ];
+
+    // Filtrar apenas os campos válidos da tabela medicamento
+    // Criar um novo objeto apenas com os campos permitidos
+    const dadosMedicamento = {};
+    for (const campo of camposMedicamento) {
+      if (campo in updateData && updateData[campo] !== undefined && updateData[campo] !== null) {
+        dadosMedicamento[campo] = updateData[campo];
+      }
+    }
+
+    // Garantir que perfil_id, nome_formato e unidade_padrao_dosagem NÃO estejam em dadosMedicamento
+    // (mesmo que não devessem estar, garantimos a remoção)
+    if ('perfil_id' in dadosMedicamento) delete dadosMedicamento.perfil_id;
+    if ('nome_formato' in dadosMedicamento) delete dadosMedicamento.nome_formato;
+    if ('unidade_padrao_dosagem' in dadosMedicamento) delete dadosMedicamento.unidade_padrao_dosagem;
+
+    console.log('🔍 [DEBUG Service] updateMedicamento - dadosMedicamento filtrado:', JSON.stringify(dadosMedicamento, null, 2));
+    console.log('🔍 [DEBUG Service] updateMedicamento - formato:', { nome_formato, unidade_padrao_dosagem });
+
+    // Atualizar medicamento apenas com campos válidos
+    await MedicamentoModel.update(medicamentoId, dadosMedicamento);
+
+    // Atualizar ou criar formato se fornecido
+    if (nome_formato && unidade_padrao_dosagem) {
+      try {
+        const formatoExistente = await FormatoMedicamentoModel.findByMedicamentoId(medicamentoId);
+        
+        if (formatoExistente) {
+          // Atualizar formato existente
+          await FormatoMedicamentoModel.update(medicamentoId, {
+            nome_formato,
+            unidade_padrao_dosagem
+          });
+        } else {
+          // Criar novo formato
+          await FormatoMedicamentoModel.create({
+            medicamento_id: medicamentoId,
+            nome_formato,
+            unidade_padrao_dosagem
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar formato do medicamento:', error);
+        // Não falhar a atualização do medicamento se o formato falhar
+      }
+    }
+
     return await MedicamentoModel.findById(medicamentoId);
   }
 
@@ -86,9 +180,23 @@ class MedicamentoService {
       throw new Error(`Status de uso inválido. Use um dos seguintes: ${validStatus.join(', ')}`);
     }
 
+    // Normalizar data_hora_registro para formato DATETIME do MySQL (YYYY-MM-DD HH:mm:ss)
+    let normalizedDateTime = String(data_hora_registro);
+    // Se estiver em formato ISO (YYYY-MM-DDTHH:mm:ss.sssZ), converter para MySQL
+    if (normalizedDateTime.includes('T')) {
+      normalizedDateTime = normalizedDateTime.replace('T', ' ').replace('Z', '').split('.')[0];
+    }
+    // Garantir que não tenha timezone offset
+    if (normalizedDateTime.includes('+') || normalizedDateTime.match(/-/g)?.length > 2) {
+      const parts = normalizedDateTime.split(' ');
+      if (parts.length === 2) {
+        normalizedDateTime = parts[0] + ' ' + parts[1].split('+')[0].split('-')[0];
+      }
+    }
+
     const dadosParaCriar = {
       medicamento_id: medicamentoId,
-      data_hora_registro,
+      data_hora_registro: normalizedDateTime,
       status_uso: status_uso.charAt(0).toUpperCase() + status_uso.slice(1).toLowerCase() // Capitaliza (Ex: Tomado)
     };
     return await RegistroUsoMedicamentoModel.create(dadosParaCriar);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,26 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
+interface MedicamentoData {
+  id?: number;
+  nome_medicamento: string;
+  dosagem: string;
+  frequencia_horas: number;
+  duracao_dias_tratamento: number;
+  data_inicio_tratamento: string;
+  lembretes_ativos: boolean;
+  uso_continuo: boolean;
+}
+
 export default function NovoMedicamentoScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const isEditMode = params.editMode === 'true' && params.medicamento;
+  const [medicamentoId, setMedicamentoId] = useState<number | null>(null);
   const [nome, setNome] = useState('');
   const [dosagem, setDosagem] = useState('');
   const [frequenciaHoras, setFrequenciaHoras] = useState('8');
@@ -26,6 +40,8 @@ export default function NovoMedicamentoScreen() {
   const [dataInicialISO, setDataInicialISO] = useState('');
   const [usoContinuo, setUsoContinuo] = useState(false);
   const [lembretesAtivos, setLembretesAtivos] = useState(true);
+  const [formato, setFormato] = useState<'Comprimido' | 'Líquido' | null>(null);
+  const [unidadeDosagem, setUnidadeDosagem] = useState('');
   const [loading, setLoading] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [showDosagemModal, setShowDosagemModal] = useState(false);
@@ -34,10 +50,81 @@ export default function NovoMedicamentoScreen() {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
+  // Carregar dados do medicamento se estiver em modo de edição
+  useEffect(() => {
+    if (isEditMode && params.medicamento) {
+      try {
+        const medicamentoData: MedicamentoData = JSON.parse(params.medicamento as string);
+        
+        if (medicamentoData.id) {
+          setMedicamentoId(medicamentoData.id);
+        }
+        setNome(medicamentoData.nome_medicamento || '');
+        setDosagem(medicamentoData.dosagem || '');
+        setFrequenciaHoras(String(medicamentoData.frequencia_horas || '8'));
+        setDuracaoDias(medicamentoData.duracao_dias_tratamento ? String(medicamentoData.duracao_dias_tratamento) : '');
+        setUsoContinuo(medicamentoData.uso_continuo || false);
+        setLembretesAtivos(medicamentoData.lembretes_ativos !== undefined ? medicamentoData.lembretes_ativos : true);
+        
+        // Formatar data
+        if (medicamentoData.data_inicio_tratamento) {
+          const data = new Date(medicamentoData.data_inicio_tratamento);
+          const dataFormatada = data.toLocaleDateString('pt-BR');
+          const dataISO = data.toISOString().split('T')[0];
+          setDataInicial(dataFormatada);
+          setDataInicialISO(dataISO);
+          setSelectedCalendarDate(data);
+          setCurrentMonth(data.getMonth());
+          setCurrentYear(data.getFullYear());
+        }
+
+        // Buscar formato do medicamento
+        if (medicamentoData.id) {
+          loadFormatoMedicamento(medicamentoData.id);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados do medicamento:', error);
+        Alert.alert('Erro', 'Não foi possível carregar os dados do medicamento para edição.');
+      }
+    }
+  }, [isEditMode, params.medicamento]);
+
+  const loadFormatoMedicamento = async (id: number) => {
+    try {
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      
+      if (!token || !profileId) return;
+
+      // Buscar medicamento completo com formato
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}/${id}?perfil_id=${profileId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const medicamento = result.data;
+        
+        // Se houver formato, preencher
+        if (medicamento.formato) {
+          setFormato(medicamento.formato.nome_formato as 'Comprimido' | 'Líquido' | null);
+          setUnidadeDosagem(medicamento.formato.unidade_padrao_dosagem || '');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar formato do medicamento:', error);
+    }
+  };
+
   const handleSave = () => {
     // Validações básicas
     if (!nome.trim()) {
       Alert.alert('Erro', 'Por favor, insira o nome do medicamento');
+      return;
+    }
+
+    if (!formato) {
+      Alert.alert('Erro', 'Por favor, selecione o formato do medicamento (Comprimido ou Líquido)');
       return;
     }
 
@@ -48,6 +135,11 @@ export default function NovoMedicamentoScreen() {
 
     if (!dosagem.trim()) {
       Alert.alert('Erro', 'Por favor, insira a dosagem do medicamento');
+      return;
+    }
+
+    if (!unidadeDosagem.trim()) {
+      Alert.alert('Erro', 'Por favor, insira a unidade de dosagem');
       return;
     }
 
@@ -115,16 +207,24 @@ export default function NovoMedicamentoScreen() {
         data_inicio_tratamento: dataInicioISO,
         uso_continuo: usoContinuo ? 1 : 0, // Converter para número (1 ou 0)
         lembretes_ativos: lembretesAtivos ? 1 : 0, // Converter para número (1 ou 0)
-        perfil_id: perfilIdParsed
+        perfil_id: perfilIdParsed,
+        nome_formato: formato || null,
+        unidade_padrao_dosagem: unidadeDosagem.trim() || null
       };
 
       console.log('📤 [DEBUG] Enviando dados do medicamento:', JSON.stringify(medicamentoData, null, 2));
       console.log('🔍 [DEBUG] URL da requisição:', `${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}`);
       console.log('🔍 [DEBUG] Token presente?', token ? 'Sim' : 'Não');
 
-      console.log('📡 [DEBUG] Iniciando requisição POST...');
-      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}`, {
-        method: 'POST',
+      console.log('📡 [DEBUG] Iniciando requisição...');
+      const url = isEditMode && medicamentoId 
+        ? `${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}/${medicamentoId}?perfil_id=${perfilIdParsed}`
+        : `${API_CONFIG.BASE_URL}${ENDPOINTS.MEDICATION_RECORDS}`;
+      
+      const method = isEditMode && medicamentoId ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -152,7 +252,7 @@ export default function NovoMedicamentoScreen() {
       }
 
       console.log('✅ [DEBUG] Medicamento salvo com sucesso:', JSON.stringify(result, null, 2));
-      Alert.alert('Sucesso!', 'Medicamento registrado com sucesso!');
+      Alert.alert('Sucesso!', isEditMode ? 'Medicamento atualizado com sucesso!' : 'Medicamento registrado com sucesso!');
       router.back();
     } catch (error: any) {
       console.error('❌ [DEBUG] Erro completo ao salvar medicamento:', {
@@ -336,7 +436,7 @@ export default function NovoMedicamentoScreen() {
             <Feather name="arrow-left" size={24} color="#004A61" />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Medicamento</Text>
+            <Text style={styles.headerTitle}>{isEditMode ? 'Editar Medicamento' : 'Medicamento'}</Text>
             <Text style={styles.headerSubtitle}>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
           </View>
           <View style={{ width: 24 }} />
@@ -355,6 +455,37 @@ export default function NovoMedicamentoScreen() {
             />
           </View>
 
+          {/* Formato do medicamento */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Formato do medicamento *</Text>
+            <View style={styles.formatoContainer}>
+              <TouchableOpacity
+                style={[styles.formatoOption, formato === 'Comprimido' && styles.formatoOptionSelected]}
+                onPress={() => {
+                  setFormato('Comprimido');
+                  setUnidadeDosagem('mg');
+                }}
+              >
+                <Text style={[styles.formatoOptionText, formato === 'Comprimido' && styles.formatoOptionTextSelected]}>
+                  Comprimido
+                </Text>
+                {formato === 'Comprimido' && <Feather name="check" size={20} color="#004A61" />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.formatoOption, formato === 'Líquido' && styles.formatoOptionSelected]}
+                onPress={() => {
+                  setFormato('Líquido');
+                  setUnidadeDosagem('ml');
+                }}
+              >
+                <Text style={[styles.formatoOptionText, formato === 'Líquido' && styles.formatoOptionTextSelected]}>
+                  Líquido
+                </Text>
+                {formato === 'Líquido' && <Feather name="check" size={20} color="#004A61" />}
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Frequência em horas */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Frequência (horas)</Text>
@@ -371,13 +502,34 @@ export default function NovoMedicamentoScreen() {
           {/* Dosagem */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Dosagem</Text>
-            <TouchableOpacity style={styles.input} onPress={showDosagemPicker}>
-              <Text style={[styles.inputText, !dosagem && styles.inputTextPlaceholder]}>
-                {dosagem || 'Selecione a dosagem'}
-              </Text>
-              <Feather name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
+            <View style={styles.dosagemContainer}>
+              <TextInput
+                style={[styles.textInput, styles.dosagemInput]}
+                value={dosagem}
+                onChangeText={setDosagem}
+                placeholder="Ex: 50"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+              />
+              <View style={styles.unidadeContainer}>
+                <Text style={styles.unidadeText}>{unidadeDosagem || (formato === 'Comprimido' ? 'mg' : formato === 'Líquido' ? 'ml' : '')}</Text>
+              </View>
+            </View>
           </View>
+
+          {/* Unidade padrão de dosagem */}
+          {formato && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Unidade padrão de dosagem</Text>
+              <TextInput
+                style={styles.textInput}
+                value={unidadeDosagem}
+                onChangeText={setUnidadeDosagem}
+                placeholder={formato === 'Comprimido' ? 'Ex: mg, g' : 'Ex: ml, L'}
+                placeholderTextColor="#999"
+              />
+            </View>
+          )}
 
           {/* Data inicial */}
           <View style={styles.inputGroup}>
@@ -470,8 +622,13 @@ export default function NovoMedicamentoScreen() {
               </View>
 
               <View style={styles.confirmationItem}>
+                <Text style={styles.confirmationLabel}>Formato:</Text>
+                <Text style={styles.confirmationValue}>{formato || 'Não selecionado'}</Text>
+              </View>
+
+              <View style={styles.confirmationItem}>
                 <Text style={styles.confirmationLabel}>Dosagem:</Text>
-                <Text style={styles.confirmationValue}>{dosagem}</Text>
+                <Text style={styles.confirmationValue}>{dosagem} {unidadeDosagem}</Text>
               </View>
 
               <View style={styles.confirmationItem}>
@@ -958,5 +1115,56 @@ const styles = StyleSheet.create({
   selectedDayText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  formatoContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  formatoOption: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  formatoOptionSelected: {
+    backgroundColor: '#E8F4F8',
+    borderColor: '#004A61',
+  },
+  formatoOptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  formatoOptionTextSelected: {
+    color: '#004A61',
+    fontWeight: 'bold',
+  },
+  dosagemContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dosagemInput: {
+    flex: 1,
+  },
+  unidadeContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    justifyContent: 'center',
+    minWidth: 60,
+  },
+  unidadeText: {
+    fontSize: 16,
+    color: '#004A61',
+    fontWeight: '600',
   },
 });
