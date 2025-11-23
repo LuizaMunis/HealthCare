@@ -40,7 +40,7 @@ export default function HomeScreen() {
           <View style={styles.welcomeStripe} />
           <View>
             <Text style={styles.welcomeTitle}>Olá, {userName || 'Usuário'}!</Text>
-            <Text style={styles.welcomeSubtitle}>Bem-vindo ao HealthCare.</Text>
+            <Text style={styles.welcomeSubtitle}>Seus relatórios de saúde.</Text>
           </View>
         </View>
 

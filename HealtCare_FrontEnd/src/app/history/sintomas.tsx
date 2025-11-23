@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -70,7 +71,11 @@ const HistoryItem: React.FC<{
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
-            onPress={() => onDelete(item.id)}
+            onPress={() => {
+              console.log('Botão de excluir pressionado para sintoma ID:', item.id);
+              onDelete(item.id);
+            }}
+            activeOpacity={0.7}
           >
             <Feather name="trash-2" size={18} color="#F44336" />
           </TouchableOpacity>
@@ -82,6 +87,7 @@ const HistoryItem: React.FC<{
 
 export default function SintomasHistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [sintomas, setSintomas] = useState<SintomaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -240,20 +246,30 @@ export default function SintomasHistoryScreen() {
                 return;
               }
 
-              const response = await fetch(
-                `${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}?perfil_id=${profileId}`,
-                {
-                  method: 'DELETE',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                  },
-                }
-              );
+              const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.SYMPTOMS_RECORDS}/${id}?perfil_id=${profileId}`;
+              console.log('Deletando sintoma:', url);
+
+              const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+              });
+
+              console.log('Resposta do servidor:', response.status, response.statusText);
+
+              const responseData = await response.json().catch(() => null);
+              console.log('Dados da resposta:', responseData);
 
               if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Erro ao excluir sintoma. Status: ${response.status}`);
+                const errorMessage = responseData?.message || `Erro ao excluir sintoma. Status: ${response.status}`;
+                throw new Error(errorMessage);
+              }
+
+              // Verificar se a resposta indica sucesso
+              if (responseData && responseData.success === false) {
+                throw new Error(responseData.message || 'Erro ao excluir sintoma');
               }
 
               // Atualizar a lista local
@@ -310,16 +326,16 @@ export default function SintomasHistoryScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={[]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
             <Feather name="arrow-left" size={24} color="#004A61" />
           </TouchableOpacity>
-          <Text style={styles.title}>Histórico de Sintomas</Text>
-          <View style={styles.placeholder} />
+          <Text style={styles.headerTitle}>Histórico de Sintomas</Text>
+          <View style={{ width: 24 }} />
         </View>
         {renderLoadingState()}
       </SafeAreaView>
@@ -328,16 +344,16 @@ export default function SintomasHistoryScreen() {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={[]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
             <Feather name="arrow-left" size={24} color="#004A61" />
           </TouchableOpacity>
-          <Text style={styles.title}>Histórico de Sintomas</Text>
-          <View style={styles.placeholder} />
+          <Text style={styles.headerTitle}>Histórico de Sintomas</Text>
+          <View style={{ width: 24 }} />
         </View>
         {renderErrorState()}
       </SafeAreaView>
@@ -345,21 +361,16 @@ export default function SintomasHistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
           <Feather name="arrow-left" size={24} color="#004A61" />
         </TouchableOpacity>
-        <Text style={styles.title}>Histórico de Sintomas</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/monitor/sintoma')}
-        >
-          <Feather name="plus" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Histórico de Sintomas</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       {sintomas.length === 0 ? (
@@ -467,35 +478,21 @@ export default function SintomasHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F4F8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-  backButton: {
-    padding: 8,
-  },
-  title: {
-    fontSize: 20,
+  backButton: {},
+  headerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#004A61',
-  },
-  addButton: {
-    backgroundColor: '#004A61',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  placeholder: {
-    width: 40,
+    color: '#333',
   },
   listContainer: {
     padding: 20,
@@ -561,6 +558,10 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
+    minWidth: 40,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,

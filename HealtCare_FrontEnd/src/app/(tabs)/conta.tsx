@@ -62,13 +62,18 @@ export default function AccountScreen() {
         </View>
 
         <View style={[styles.profileCard, { backgroundColor: themeColors.card }]}>
-            {/* Exibe o nome do perfil ativo */}
-            <Text style={[styles.profileName, { color: themeColors.text }]}>Olá, {activeProfile?.name || 'Usuário'}!</Text>
-            <Text style={[styles.profileSub, { color: themeColors.textSecondary }]}>Seja bem-vindo ao HealthCare.</Text>
-            <TouchableOpacity style={styles.profileAction} onPress={() => openModal('changeProfile')}>
-                <Feather name="users" size={16} color={themeColors.primary}/>
-                <Text style={[styles.profileActionText, { color: themeColors.primary }]}>Mudar perfil</Text>
-            </TouchableOpacity>
+            <View style={styles.profileStripe} />
+            <View style={styles.profileContent}>
+                <View style={styles.profileTextContainer}>
+                    {/* Exibe o nome do perfil ativo */}
+                    <Text style={styles.profileName}>Olá, {activeProfile?.name || 'Usuário'}!</Text>
+                    <Text style={styles.profileSub}>Seus dados Pessoais.</Text>
+                </View>
+                <TouchableOpacity style={styles.profileAction} onPress={() => openModal('changeProfile')}>
+                    <Feather name="users" size={16} color={themeColors.primary}/>
+                    <Text style={[styles.profileActionText, { color: themeColors.primary }]}>Mudar perfil</Text>
+                </TouchableOpacity>
+            </View>
         </View>
         
         <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Configurações de conta</Text>
@@ -144,9 +149,12 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 24, fontWeight: 'bold' },
     logoText: { fontSize: 24, fontWeight: 'bold', color: '#004A61' },
     logoIcon: { color: '#00B8D4' },
-    profileCard: { marginHorizontal: 20, borderRadius: 15, padding: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
-    profileName: { fontSize: 22, fontWeight: 'bold' },
-    profileSub: { marginBottom: 15 },
+    profileCard: { marginHorizontal: 20, borderRadius: 15, padding: 20, flexDirection: 'row', alignItems: 'flex-start', elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
+    profileStripe: { width: 5, height: 40, backgroundColor: '#00B8D4', borderRadius: 3, marginRight: 15 },
+    profileContent: { flex: 1 },
+    profileTextContainer: { justifyContent: 'center', minHeight: 40, marginBottom: 15 },
+    profileName: { fontSize: 22, fontWeight: 'bold', color: '#333' },
+    profileSub: { fontSize: 14, color: 'gray' },
     profileAction: { flexDirection: 'row', alignItems: 'center' },
     profileActionText: { marginLeft: 8, fontWeight: 'bold' },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', margin: 20 },

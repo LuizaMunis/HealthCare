@@ -1,6 +1,7 @@
 // backend/src/services/sintomaService.js
 const SintomaModel = require('../models/sintomaModel');
 const DoencaModel = require('../models/doencaModel');
+const DoencaService = require('./doencaService');
 const ProfileModel = require('../models/profileModel');
 
 class SintomaService {
@@ -195,7 +196,29 @@ class SintomaService {
         return false;
       }
 
+      // Obter o doenca_id antes de excluir o sintoma
+      const doencaId = sintomaExistente.doenca_id;
+
+      // Excluir o sintoma
       const deletado = await SintomaModel.delete(sintomaId);
+      if (!deletado) {
+        return false;
+      }
+
+      // Verificar se ainda existem outros sintomas associados à doença
+      const sintomasRestantes = await SintomaModel.findByDoencaId(doencaId);
+      
+      // Se não houver mais sintomas, excluir a doença também
+      if (sintomasRestantes.length === 0) {
+        try {
+          await DoencaService.deleteDoenca(usuarioId, profileId, doencaId);
+          console.log(`Doença ${doencaId} excluída automaticamente após exclusão do último sintoma`);
+        } catch (error) {
+          console.error('Erro ao excluir doença após exclusão do sintoma:', error);
+          // Não lançar erro aqui, pois o sintoma já foi excluído com sucesso
+        }
+      }
+
       return deletado;
     } catch (error) {
       console.error('Erro no SintomaService.deleteSintoma:', error);
