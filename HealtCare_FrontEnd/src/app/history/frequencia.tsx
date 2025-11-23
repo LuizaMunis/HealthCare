@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,6 +34,7 @@ const HistoryItem: React.FC<{
 
 export default function HeartRateHistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [records, setRecords] = useState<HeartRateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,8 +146,8 @@ export default function HeartRateHistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color="#004A61" />
         </TouchableOpacity>
@@ -154,7 +156,18 @@ export default function HeartRateHistoryScreen() {
       </View>
 
       {records.length === 0 ? (
-        <View style={styles.centered}><Text style={styles.emptyText}>Nenhum registro encontrado.</Text></View>
+        <View style={styles.emptyContainer}>
+          <Feather name="heart" size={64} color="#CCCCCC" />
+          <Text style={styles.emptyText}>Nenhum registro de frequência cardíaca</Text>
+          <Text style={styles.emptySubtext}>Adicione sua primeira medição para começar o histórico</Text>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => router.push('/monitor/frequencia')}
+          >
+            <Feather name="plus" size={20} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>Adicionar Frequência Cardíaca</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={records}
@@ -210,7 +223,41 @@ const styles = StyleSheet.create({
   boldText: { fontWeight: 'bold' },
   itemActions: { flexDirection: 'row' },
   actionButton: { padding: 8, marginLeft: 8 },
-  emptyText: { fontSize: 16, color: 'gray' },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: { 
+    fontSize: 18, 
+    color: '#666', 
+    marginTop: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  addButton: {
+    backgroundColor: '#004A61',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
   errorText: { fontSize: 16, color: 'red', textAlign: 'center', marginBottom: 20 },
   retryButton: { backgroundColor: '#004A61', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   saveButtonText: { fontSize: 16, color: '#FFFFFF', fontWeight: 'bold' },

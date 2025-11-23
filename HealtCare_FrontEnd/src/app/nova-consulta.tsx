@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Modal,
   FlatList,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -29,6 +30,25 @@ export default function NovaConsultaScreen() {
   const [showEspecialidadeModal, setShowEspecialidadeModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dataTexto, setDataTexto] = useState('');
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedHour, setSelectedHour] = useState(8);
+  const [selectedMinute, setSelectedMinute] = useState(0);
+
+  // Configurações dos seletores de hora
+  const ITEM_HEIGHT = 44;
+  const VISIBLE_ITEMS = 3;
+  const HOUR_MIN = 0;
+  const HOUR_MAX = 23;
+  const MINUTE_MIN = 0;
+  const MINUTE_MAX = 55;
+
+  const hourValues = useMemo(() => Array.from({ length: HOUR_MAX - HOUR_MIN + 1 }, (_, i) => HOUR_MIN + i), []);
+  const minuteValues = useMemo(() => Array.from({ length: (MINUTE_MAX - MINUTE_MIN) / 5 + 1 }, (_, i) => MINUTE_MIN + i * 5), []);
+
+  const hourScrollRef = useRef<ScrollView | null>(null);
+  const minuteScrollRef = useRef<ScrollView | null>(null);
+  const hourScrollY = useRef(new Animated.Value(0)).current;
+  const minuteScrollY = useRef(new Animated.Value(0)).current;
 
   const especialidades = [
     'Cardiologista',
@@ -87,6 +107,25 @@ export default function NovaConsultaScreen() {
     setDataTexto(formatDate(data));
   }, []);
 
+  // Centraliza valores iniciais ao abrir o modal de hora
+  useEffect(() => {
+    if (showTimePicker) {
+      const initialHourIndex = Math.min(Math.max(selectedHour - HOUR_MIN, 0), hourValues.length - 1);
+      const initialMinuteIndex = Math.min(Math.max(selectedMinute / 5, 0), minuteValues.length - 1);
+      const t = setTimeout(() => {
+        hourScrollRef.current?.scrollTo({ 
+          y: initialHourIndex * ITEM_HEIGHT, 
+          animated: false 
+        });
+        minuteScrollRef.current?.scrollTo({ 
+          y: initialMinuteIndex * ITEM_HEIGHT, 
+          animated: false 
+        });
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [showTimePicker, selectedHour, selectedMinute]);
+
   const handleDataTextoChange = (text: string) => {
     const formatted = formatDataTexto(text);
     setDataTexto(formatted);
@@ -102,10 +141,25 @@ export default function NovaConsultaScreen() {
 
   // Validar e formatar hora (HH:mm)
   const formatHora = (text: string) => {
-    // Remove tudo que não é número
-    const numbers = text.replace(/\D/g, '');
+    // Normalizar separadores: substituir qualquer separador (:, ;, ., etc) por :
+    let normalized = text.replace(/[;.,]/g, ':');
     
-    // Limita a 4 dígitos
+    // Remove tudo que não é número ou dois pontos
+    const cleaned = normalized.replace(/[^0-9:]/g, '');
+    
+    // Se já tem dois pontos, manter apenas o primeiro e remover números extras
+    if (cleaned.includes(':')) {
+      const parts = cleaned.split(':');
+      const hours = parts[0].slice(0, 2);
+      const minutes = parts[1] ? parts[1].slice(0, 2) : '';
+      if (minutes) {
+        return `${hours}:${minutes}`;
+      }
+      return hours.length === 2 ? `${hours}:` : hours;
+    }
+    
+    // Se não tem separador, formatar como números
+    const numbers = cleaned.replace(/\D/g, '');
     const limited = numbers.slice(0, 4);
     
     // Formata como HH:mm
@@ -117,6 +171,30 @@ export default function NovaConsultaScreen() {
   const handleHoraChange = (text: string) => {
     const formatted = formatHora(text);
     setHora(formatted);
+  };
+
+  const openTimePicker = () => {
+    // Inicializar com o horário atual se existir
+    if (hora && hora.includes(':')) {
+      const [h, m] = hora.split(':').map(Number);
+      if (!isNaN(h) && !isNaN(m)) {
+        setSelectedHour(h);
+        const minuteRounded = Math.round(m / 5) * 5;
+        setSelectedMinute(Math.min(55, Math.max(0, minuteRounded)));
+      }
+    }
+    setShowTimePicker(true);
+  };
+
+  const confirmTimeSelection = () => {
+    const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`;
+    const horaNormalizada = timeString.replace(/[h;.,]/g, ':');
+    setHora(horaNormalizada);
+    setShowTimePicker(false);
+  };
+
+  const cancelTimeSelection = () => {
+    setShowTimePicker(false);
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -131,7 +209,7 @@ export default function NovaConsultaScreen() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!especialidade.trim()) {
       Alert.alert('Erro', 'Por favor, selecione uma especialidade');
       return;
@@ -165,9 +243,88 @@ export default function NovaConsultaScreen() {
       return;
     }
 
-    // Aqui você implementaria a lógica para salvar no backend
-    Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
-    router.back();
+    setSaving(true);
+
+    try {
+      // Obter token e perfil_id
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+
+      if (!token) {
+        setSaving(false);
+        Alert.alert('Erro', 'Você precisa estar logado para criar uma consulta');
+        return;
+      }
+
+      if (!profileId) {
+        setSaving(false);
+        Alert.alert('Erro', 'Nenhum perfil ativo encontrado. Por favor, selecione um perfil.');
+        return;
+      }
+
+      // Normalizar o horário antes de processar (garantir que usa ":")
+      const horaNormalizada = hora.replace(/[h;.,]/g, ':');
+      // Combinar data e hora
+      const [horas, minutos] = horaNormalizada.split(':').map(Number);
+      const [day, month, year] = dataTexto.split('/').map(Number);
+      
+      // Criar data no timezone local sem conversão para UTC
+      // Usar formato que preserve o horário local: YYYY-MM-DD HH:mm:ss
+      const dataHoraFormatada = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00`;
+      
+      console.log('🕐 [DEBUG Nova Consulta] Horário selecionado:', horaNormalizada);
+      console.log('📅 [DEBUG Nova Consulta] Data selecionada:', dataTexto);
+      console.log('🔧 [DEBUG Nova Consulta] Data/Hora formatada:', dataHoraFormatada);
+
+      // Preparar dados para enviar ao backend
+      const dadosConsulta = {
+        perfil_id: parseInt(profileId),
+        especialidade: especialidade.trim(),
+        data_hora_consulta: dataHoraFormatada, // Formato local sem timezone
+        nome_medico: nomeMedico.trim(),
+        local: endereco.trim(),
+        observacoes: descricao.trim() || null,
+      };
+
+      console.log('📤 [DEBUG Nova Consulta] Dados enviados:', dadosConsulta);
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.CONSULTAS}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dadosConsulta),
+      });
+
+      const result = await response.json();
+      console.log('📥 [DEBUG Nova Consulta] Resposta do servidor:', result);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setSaving(false);
+          Alert.alert('Erro', 'Sessão expirada. Por favor, faça login novamente');
+          return;
+        }
+        
+        const errorMessage = result.message || 'Erro ao criar consulta. Tente novamente.';
+        setSaving(false);
+        Alert.alert('Erro', errorMessage);
+        return;
+      }
+
+      if (result.success) {
+        Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
+        router.back();
+      } else {
+        setSaving(false);
+        Alert.alert('Erro', result.message || 'Erro ao criar consulta. Tente novamente.');
+      }
+    } catch (error: any) {
+      console.error('Erro ao criar consulta:', error);
+      setSaving(false);
+      Alert.alert('Erro', 'Não foi possível criar a consulta. Verifique sua conexão e tente novamente.');
+    }
   };
 
   const handleAttachFiles = async () => {
@@ -242,15 +399,12 @@ export default function NovaConsultaScreen() {
           {/* Hora */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Hora</Text>
-            <TextInput
-              style={styles.textInput}
-              value={hora}
-              onChangeText={handleHoraChange}
-              placeholder="HH:mm (ex: 14:30)"
-              placeholderTextColor="#999"
-              keyboardType="numeric"
-              maxLength={5}
-            />
+            <TouchableOpacity style={styles.input} onPress={openTimePicker}>
+              <Text style={[styles.inputText, !hora && styles.placeholder]}>
+                {hora || 'HH:mm'}
+              </Text>
+              <Feather name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
           {/* Data */}
@@ -353,6 +507,195 @@ export default function NovaConsultaScreen() {
           <Text style={styles.saveButtonText}>Salvar</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal do Seletor de Hora */}
+      <Modal
+        visible={showTimePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={cancelTimeSelection}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.timePickerModal}>
+            <View style={styles.timePickerHeader}>
+              <TouchableOpacity onPress={cancelTimeSelection}>
+                <Text style={styles.cancelButton}>Cancelar</Text>
+              </TouchableOpacity>
+              <Text style={styles.timePickerTitle}>Hora da consulta</Text>
+              <TouchableOpacity onPress={confirmTimeSelection}>
+                <Text style={styles.confirmButton}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.timePickerContainer}>
+              {/* Seletor de Hora */}
+              <View style={styles.timeCard}>
+                <View style={styles.timeCardHeader}>
+                  <Text style={styles.timeCardHeaderText}>Hora</Text>
+                  <Text style={styles.timeCardHeaderValue}>{selectedHour.toString().padStart(2, '0')}</Text>
+                </View>
+                <View style={styles.timeCardBody}>
+                  <View style={styles.pickerRow}>
+                    <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
+                      <Animated.ScrollView
+                        ref={hourScrollRef}
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
+                        alwaysBounceVertical={false}
+                        overScrollMode="never"
+                        decelerationRate="fast"
+                        snapToInterval={ITEM_HEIGHT}
+                        disableIntervalMomentum
+                        snapToAlignment="start"
+                        scrollEventThrottle={16}
+                        onScroll={Animated.event(
+                          [{ nativeEvent: { contentOffset: { y: hourScrollY } } }],
+                          { 
+                            useNativeDriver: true,
+                            listener: (ev: any) => {
+                              const offsetY = ev.nativeEvent.contentOffset.y;
+                              const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                              const clampedIndex = Math.min(Math.max(rawIndex, 0), hourValues.length - 1);
+                              const newHour = HOUR_MIN + clampedIndex;
+                              if (newHour !== selectedHour) {
+                                setSelectedHour(newHour);
+                              }
+                            }
+                          }
+                        )}
+                        onMomentumScrollEnd={(ev) => {
+                          const offsetY = ev.nativeEvent.contentOffset.y;
+                          const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                          const clampedIndex = Math.min(Math.max(rawIndex, 0), hourValues.length - 1);
+                          const newHour = HOUR_MIN + clampedIndex;
+                          setSelectedHour(newHour);
+                          const targetY = clampedIndex * ITEM_HEIGHT;
+                          if (Math.abs(offsetY - targetY) > 1) {
+                            hourScrollRef.current?.scrollTo({
+                              y: targetY,
+                              animated: false,
+                            });
+                          }
+                        }}
+                        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
+                      >
+                        {hourValues.map((item, index) => {
+                          const inputRange = [
+                            (index - 1) * ITEM_HEIGHT,
+                            index * ITEM_HEIGHT,
+                            (index + 1) * ITEM_HEIGHT,
+                          ];
+                          const opacity = hourScrollY.interpolate({
+                            inputRange,
+                            outputRange: [0.25, 1, 0.25],
+                            extrapolate: 'clamp',
+                          });
+                          const scale = hourScrollY.interpolate({
+                            inputRange,
+                            outputRange: [0.9, 1.6, 0.9],
+                            extrapolate: 'clamp',
+                          });
+                          return (
+                            <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                              <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
+                                {item.toString().padStart(2, '0')}
+                              </Animated.Text>
+                            </View>
+                          );
+                        })}
+                      </Animated.ScrollView>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Separador */}
+              <Text style={styles.timeSeparator}>:</Text>
+
+              {/* Seletor de Minuto */}
+              <View style={styles.timeCard}>
+                <View style={styles.timeCardHeader}>
+                  <Text style={styles.timeCardHeaderText}>Minuto</Text>
+                  <Text style={styles.timeCardHeaderValue}>{selectedMinute.toString().padStart(2, '0')}</Text>
+                </View>
+                <View style={styles.timeCardBody}>
+                  <View style={styles.pickerRow}>
+                    <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
+                      <Animated.ScrollView
+                        ref={minuteScrollRef}
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
+                        alwaysBounceVertical={false}
+                        overScrollMode="never"
+                        decelerationRate="fast"
+                        snapToInterval={ITEM_HEIGHT}
+                        disableIntervalMomentum
+                        snapToAlignment="start"
+                        scrollEventThrottle={16}
+                        onScroll={Animated.event(
+                          [{ nativeEvent: { contentOffset: { y: minuteScrollY } } }],
+                          { 
+                            useNativeDriver: true,
+                            listener: (ev: any) => {
+                              const offsetY = ev.nativeEvent.contentOffset.y;
+                              const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                              const clampedIndex = Math.min(Math.max(rawIndex, 0), minuteValues.length - 1);
+                              const newMinute = MINUTE_MIN + clampedIndex * 5;
+                              if (newMinute !== selectedMinute) {
+                                setSelectedMinute(newMinute);
+                              }
+                            }
+                          }
+                        )}
+                        onMomentumScrollEnd={(ev) => {
+                          const offsetY = ev.nativeEvent.contentOffset.y;
+                          const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                          const clampedIndex = Math.min(Math.max(rawIndex, 0), minuteValues.length - 1);
+                          const newMinute = MINUTE_MIN + clampedIndex * 5;
+                          setSelectedMinute(newMinute);
+                          const targetY = clampedIndex * ITEM_HEIGHT;
+                          if (Math.abs(offsetY - targetY) > 1) {
+                            minuteScrollRef.current?.scrollTo({
+                              y: targetY,
+                              animated: false,
+                            });
+                          }
+                        }}
+                        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
+                      >
+                        {minuteValues.map((item, index) => {
+                          const inputRange = [
+                            (index - 1) * ITEM_HEIGHT,
+                            index * ITEM_HEIGHT,
+                            (index + 1) * ITEM_HEIGHT,
+                          ];
+                          const opacity = minuteScrollY.interpolate({
+                            inputRange,
+                            outputRange: [0.25, 1, 0.25],
+                            extrapolate: 'clamp',
+                          });
+                          const scale = minuteScrollY.interpolate({
+                            inputRange,
+                            outputRange: [0.9, 1.6, 0.9],
+                            extrapolate: 'clamp',
+                          });
+                          return (
+                            <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                              <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
+                                {item.toString().padStart(2, '0')}
+                              </Animated.Text>
+                            </View>
+                          );
+                        })}
+                      </Animated.ScrollView>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal de Especialidade */}
       <Modal
@@ -605,5 +948,100 @@ const styles = StyleSheet.create({
   modalItemTextSelected: {
     color: '#004A61',
     fontWeight: '600',
+  },
+  // Estilos do Seletor de Hora
+  timePickerModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
+  },
+  timePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  cancelButton: {
+    fontSize: 16,
+    color: '#666',
+  },
+  timePickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  confirmButton: {
+    fontSize: 16,
+    color: '#004A61',
+    fontWeight: '600',
+  },
+  timePickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  timeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    flex: 1,
+  },
+  timeCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#B2EBF2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+  },
+  timeCardHeaderText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#004A61',
+  },
+  timeCardHeaderValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#004A61',
+  },
+  timeCardBody: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wheelContainer: {
+    width: 80,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  wheelItemText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#004A61',
+  },
+  timeSeparator: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#004A61',
+    marginHorizontal: 10,
   },
 });

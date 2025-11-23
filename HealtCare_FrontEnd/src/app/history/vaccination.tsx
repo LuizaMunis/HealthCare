@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -48,6 +49,7 @@ const HistoryItem: React.FC<{ item: VaccineItem; onEdit: (item: VaccineItem) => 
 
 export default function VaccinationHistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [records, setRecords] = useState<VaccineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,8 +123,8 @@ export default function VaccinationHistoryScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={[]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#004A61" />
           </TouchableOpacity>
@@ -139,8 +141,8 @@ export default function VaccinationHistoryScreen() {
 
   if (error && records.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={[]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#004A61" />
           </TouchableOpacity>
@@ -161,8 +163,8 @@ export default function VaccinationHistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color="#004A61" />
         </TouchableOpacity>

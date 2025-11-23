@@ -4,8 +4,9 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -25,7 +26,53 @@ export default function ChangePasswordModal({ visible, onClose, onSave }) {
   const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
+  // Limpar campos quando o modal fechar
+  useEffect(() => {
+    if (!visible) {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsCurrentPasswordVisible(false);
+      setIsNewPasswordVisible(false);
+      setIsConfirmPasswordVisible(false);
+    }
+  }, [visible]);
+
   const handleSave = () => {
+    // Validações
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Atenção', 'A nova senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Atenção', 'As novas senhas não coincidem.');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      Alert.alert('Atenção', 'A nova senha deve ser diferente da senha atual.');
+      return;
+    }
+
+    // Verificar se a nova senha tem pelo menos uma letra maiúscula, uma minúscula e um número
+    const hasUpperCase = /[A-Z]/.test(newPassword);
+    const hasLowerCase = /[a-z]/.test(newPassword);
+    const hasNumbers = /\d/.test(newPassword);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+      Alert.alert(
+        'Atenção',
+        'A nova senha deve conter pelo menos:\n- Uma letra maiúscula\n- Uma letra minúscula\n- Um número'
+      );
+      return;
+    }
+
     onSave({ current: currentPassword, new: newPassword, confirm: confirmPassword });
   };
 

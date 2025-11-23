@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   TextInput,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +18,7 @@ import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 export default function NovoMedicamentoScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [nome, setNome] = useState('');
   const [dosagem, setDosagem] = useState('');
   const [frequenciaHoras, setFrequenciaHoras] = useState('8');
@@ -328,16 +329,14 @@ export default function NovoMedicamentoScreen() {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={[]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color="#004A61" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <View style={styles.titleButton}>
-            <Text style={styles.title}>Novo medicamento</Text>
-          </View>
+          <Text style={styles.title}>Novo medicamento</Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -652,18 +651,10 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 24,
   },
-  titleButton: {
-    backgroundColor: '#004A61',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#81C5D8',
-  },
   title: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#333',
   },
   content: {
     flex: 1,
