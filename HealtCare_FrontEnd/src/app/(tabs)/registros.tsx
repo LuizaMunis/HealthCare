@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useUserData } from '@/hooks/useUserData';
@@ -11,6 +11,7 @@ const EllipseImage = require('../../assets/images/Ellipse 44.png');
 export default function RegistrosScreen() {
   const { userName, loading } = useUserData();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return (
@@ -21,12 +22,12 @@ export default function RegistrosScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       {/* Bolas azuis de fundo */}
       <Image source={EllipseImage} style={styles.ellipseTopLeft} resizeMode="contain" pointerEvents="none" />
       <Image source={EllipseImage} style={styles.ellipseBottomRight} resizeMode="contain" pointerEvents="none" />
       
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top, paddingBottom: insets.bottom + 100 }]}>
         <View style={styles.header}>
           <Text style={styles.logoText}>Seus registros <Text style={styles.logoIcon}>+</Text></Text>
         </View>
@@ -116,8 +117,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF' 
   },
   scrollContainer: { 
-    padding: 20,
+    paddingHorizontal: 20,
     zIndex: 1
+  },
+  header: { 
+    alignItems: 'center', 
+    marginBottom: 20 
+  },
+  logoText: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    color: '#004A61' 
+  },
+  logoIcon: { 
+    color: '#00B8D4' 
   },
   ellipseTopLeft: {
     position: 'absolute',

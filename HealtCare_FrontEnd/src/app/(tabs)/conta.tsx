@@ -3,7 +3,7 @@
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 //import {useUserData} from '@/hooks/useUserData';
@@ -21,6 +21,7 @@ import ChangeProfileModal from '@/components/Account/changeProfileModal';
 export default function AccountScreen() {
   const params = useLocalSearchParams();
   console.log(params); // ou use params.id, params.nome, etc.
+  const insets = useSafeAreaInsets();
   
   //const { userName } = useUserData();
   const {
@@ -50,14 +51,14 @@ export default function AccountScreen() {
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]} edges={[]}>
       {/* Bolas azuis de fundo */}
       <Image source={EllipseImage} style={styles.ellipseTopLeft} resizeMode="contain" pointerEvents="none" />
       <Image source={EllipseImage} style={styles.ellipseBottomRight} resizeMode="contain" pointerEvents="none" />
       
-      <ScrollView style={{ zIndex: 1 }}>
+      <ScrollView style={{ zIndex: 1 }} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 100 }}>
         <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: themeColors.primary }]}>Seu Conta</Text>
+            <Text style={styles.logoText}>Sua Conta <Text style={styles.logoIcon}>+</Text></Text>
         </View>
 
         <View style={[styles.profileCard, { backgroundColor: themeColors.card }]}>
@@ -139,8 +140,10 @@ const styles = StyleSheet.create({
         opacity: 0.4,
         zIndex: 0,
     },
-    header: { padding: 20, alignItems: 'center' },
+    header: { padding: 20, alignItems: 'center', marginBottom: 20 },
     headerTitle: { fontSize: 24, fontWeight: 'bold' },
+    logoText: { fontSize: 24, fontWeight: 'bold', color: '#004A61' },
+    logoIcon: { color: '#00B8D4' },
     profileCard: { marginHorizontal: 20, borderRadius: 15, padding: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
     profileName: { fontSize: 22, fontWeight: 'bold' },
     profileSub: { marginBottom: 15 },

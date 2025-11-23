@@ -43,9 +43,6 @@ export default function EditarConsultaScreen() {
   const [selectedMinute, setSelectedMinute] = useState(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(3);
-  const [selectedMonth, setSelectedMonth] = useState(10); // 0-indexed (novembro = 10)
-  const [selectedYear, setSelectedYear] = useState(2024);
 
   // Configurações dos seletores (baseado na tela de pressão arterial)
   const ITEM_HEIGHT = 44;
@@ -54,29 +51,13 @@ export default function EditarConsultaScreen() {
   const HOUR_MAX = 23;
   const MINUTE_MIN = 0;
   const MINUTE_MAX = 55;
-  const DAY_MIN = 1;
-  const DAY_MAX = 31;
-  const MONTH_MIN = 0;
-  const MONTH_MAX = 11;
-  const YEAR_MIN = 2024;
-  const YEAR_MAX = 2030; // Intervalos de 5 minutos
 
   const hourValues = useMemo(() => Array.from({ length: HOUR_MAX - HOUR_MIN + 1 }, (_, i) => HOUR_MIN + i), []);
   const minuteValues = useMemo(() => Array.from({ length: (MINUTE_MAX - MINUTE_MIN) / 5 + 1 }, (_, i) => MINUTE_MIN + i * 5), []);
-  const dayValues = useMemo(() => Array.from({ length: DAY_MAX - DAY_MIN + 1 }, (_, i) => DAY_MIN + i), []);
-  const monthValues = useMemo(() => Array.from({ length: MONTH_MAX - MONTH_MIN + 1 }, (_, i) => MONTH_MIN + i), []);
-  const yearValues = useMemo(() => Array.from({ length: YEAR_MAX - YEAR_MIN + 1 }, (_, i) => YEAR_MIN + i), []);
-
   const hourScrollRef = useRef<ScrollView | null>(null);
   const minuteScrollRef = useRef<ScrollView | null>(null);
-  const dayScrollRef = useRef<ScrollView | null>(null);
-  const monthScrollRef = useRef<ScrollView | null>(null);
-  const yearScrollRef = useRef<ScrollView | null>(null);
   const hourScrollY = useRef(new Animated.Value(0)).current;
   const minuteScrollY = useRef(new Animated.Value(0)).current;
-  const dayScrollY = useRef(new Animated.Value(0)).current;
-  const monthScrollY = useRef(new Animated.Value(0)).current;
-  const yearScrollY = useRef(new Animated.Value(0)).current;
 
   const especialidades = [
     'Cardiologista',
@@ -99,15 +80,18 @@ export default function EditarConsultaScreen() {
         setConsultaData(parsedConsulta);
         setEspecialidade(parsedConsulta.especialidade || '');
         setEndereco(parsedConsulta.endereco || '');
-        setHora(parsedConsulta.horario || parsedConsulta.hora || '11:30');
+        // Normalizar o horário para sempre usar ":" como separador
+        const horaRaw = parsedConsulta.horario || parsedConsulta.hora || '11:30';
+        const horaNormalizada = horaRaw.replace(/[h;.,]/g, ':');
+        setHora(horaNormalizada);
         setData(parsedConsulta.data || '03/11/2024');
         setDescricao(parsedConsulta.descricao || '');
         setNomeMedico(parsedConsulta.nomeMedico || parsedConsulta.nome_medico || '');
         
         // Inicializar valores do seletor de hora
-        const horaAtual = parsedConsulta.horario || parsedConsulta.hora || '11:30';
-        // Converter "11h30" para "11:30" se necessário
-        const horaFormatada = horaAtual.replace('h', ':');
+        const horaAtual = horaNormalizada;
+        // Garantir que está no formato HH:mm (normalizar qualquer separador)
+        const horaFormatada = horaAtual.replace(/[h;.,]/g, ':');
         const [hour, minute] = horaFormatada.split(':').map(Number);
         
         if (!isNaN(hour) && !isNaN(minute)) {
@@ -127,24 +111,11 @@ export default function EditarConsultaScreen() {
           const [day, month, year] = dataAtual.split('/').map(Number);
           if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
             setSelectedDate(new Date(year, month - 1, day));
-            setSelectedDay(day);
-            setSelectedMonth(month - 1); // 0-indexed
-            setSelectedYear(year);
           } else {
-            // Se não conseguir fazer parse, usar data atual
-            const hoje = new Date();
-            setSelectedDate(hoje);
-            setSelectedDay(hoje.getDate());
-            setSelectedMonth(hoje.getMonth());
-            setSelectedYear(hoje.getFullYear());
+            setSelectedDate(new Date());
           }
         } else {
-          // Se a data não estiver no formato esperado, usar data atual
-          const hoje = new Date();
-          setSelectedDate(hoje);
-          setSelectedDay(hoje.getDate());
-          setSelectedMonth(hoje.getMonth());
-          setSelectedYear(hoje.getFullYear());
+          setSelectedDate(new Date());
         }
       } catch (error) {
         console.error('Erro ao parsear consulta:', error);
@@ -160,27 +131,19 @@ export default function EditarConsultaScreen() {
       const initialHourIndex = Math.min(Math.max(selectedHour - HOUR_MIN, 0), hourValues.length - 1);
       const initialMinuteIndex = Math.min(Math.max(selectedMinute / 5, 0), minuteValues.length - 1);
       const t = setTimeout(() => {
-        hourScrollRef.current?.scrollTo({ y: initialHourIndex * ITEM_HEIGHT, animated: false });
-        minuteScrollRef.current?.scrollTo({ y: initialMinuteIndex * ITEM_HEIGHT, animated: false });
+        hourScrollRef.current?.scrollTo({ 
+          y: initialHourIndex * ITEM_HEIGHT, 
+          animated: false 
+        });
+        minuteScrollRef.current?.scrollTo({ 
+          y: initialMinuteIndex * ITEM_HEIGHT, 
+          animated: false 
+        });
       }, 100);
       return () => clearTimeout(t);
     }
   }, [showTimePicker, selectedHour, selectedMinute]);
 
-  // Centraliza valores iniciais do seletor de data
-  useEffect(() => {
-    if (showDatePicker) {
-      const initialDayIndex = Math.min(Math.max(selectedDay - DAY_MIN, 0), dayValues.length - 1);
-      const initialMonthIndex = Math.min(Math.max(selectedMonth - MONTH_MIN, 0), monthValues.length - 1);
-      const initialYearIndex = Math.min(Math.max(selectedYear - YEAR_MIN, 0), yearValues.length - 1);
-      const t = setTimeout(() => {
-        dayScrollRef.current?.scrollTo({ y: initialDayIndex * ITEM_HEIGHT, animated: false });
-        monthScrollRef.current?.scrollTo({ y: initialMonthIndex * ITEM_HEIGHT, animated: false });
-        yearScrollRef.current?.scrollTo({ y: initialYearIndex * ITEM_HEIGHT, animated: false });
-      }, 100);
-      return () => clearTimeout(t);
-    }
-  }, [showDatePicker, selectedDay, selectedMonth, selectedYear]);
 
   const handleSave = async () => {
     console.log('handleSave chamado na edição');
@@ -230,9 +193,23 @@ export default function EditarConsultaScreen() {
     console.log('Iniciando atualização...');
 
     try {
+      // Normalizar o horário antes de processar (garantir que usa ":")
+      const horaNormalizada = hora.replace(/[h;.,]/g, ':');
       // Combinar data e hora em um objeto Date
-      const [horas, minutos] = hora.split(':').map(Number);
+      const [horas, minutos] = horaNormalizada.split(':').map(Number);
+      
+      // Criar data no timezone local sem conversão para UTC
+      // Usar formato que preserve o horário local: YYYY-MM-DD HH:mm:ss
+      const dataHoraLocal = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00`;
+      
+      // Para enviar ao backend, criar Date e converter para ISO, mas vamos usar o formato local
       const dataHoraConsulta = new Date(year, month - 1, day, horas, minutos, 0, 0);
+      
+      console.log('🕐 [DEBUG] Horário selecionado:', horaNormalizada);
+      console.log('📅 [DEBUG] Data selecionada:', `${day}/${month}/${year}`);
+      console.log('🔧 [DEBUG] Data/Hora Local (formato):', dataHoraLocal);
+      console.log('🔧 [DEBUG] Data/Hora Date object:', dataHoraConsulta);
+      console.log('🔧 [DEBUG] Data/Hora ISO:', dataHoraConsulta.toISOString());
 
       // Verificar se a data/hora não é no passado
       const agora = new Date();
@@ -251,13 +228,19 @@ export default function EditarConsultaScreen() {
       }
 
       // Preparar dados para enviar ao backend
+      // Usar formato local para evitar problemas de timezone
+      // Formato: YYYY-MM-DD HH:mm:ss (sem timezone, será tratado como local pelo backend)
+      const dataHoraFormatada = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00`;
+      
       const dadosUpdate = {
         especialidade: especialidade.trim(),
-        data_hora_consulta: dataHoraConsulta.toISOString(), // Formato ISO para o backend
+        data_hora_consulta: dataHoraFormatada, // Formato local sem timezone
         nome_medico: nomeMedico.trim(),
         local: endereco.trim(),
         observacoes: descricao.trim() || null,
       };
+      
+      console.log('📤 [DEBUG] Dados enviados ao backend:', dadosUpdate);
 
       console.log('Dados a serem enviados:', dadosUpdate);
       console.log('URL:', `${API_CONFIG.BASE_URL}${ENDPOINTS.CONSULTAS}/${consultaData.id}`);
@@ -323,8 +306,11 @@ export default function EditarConsultaScreen() {
   };
 
   const confirmTimeSelection = () => {
+    // Garantir que sempre use ":" como separador
     const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`;
-    setHora(timeString);
+    // Normalizar para garantir que não há outros separadores
+    const horaNormalizada = timeString.replace(/[h;.,]/g, ':');
+    setHora(horaNormalizada);
     setShowTimePicker(false);
   };
 
@@ -336,25 +322,25 @@ export default function EditarConsultaScreen() {
     setShowDatePicker(true);
   };
 
-  const confirmDateSelection = () => {
-    const newDate = new Date(selectedYear, selectedMonth, selectedDay);
-    setSelectedDate(newDate);
-    const formattedDate = newDate.toLocaleDateString('pt-BR');
-    setData(formattedDate);
-    setShowDatePicker(false);
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setSelectedDate(selectedDate);
+      const day = selectedDate.getDate();
+      const month = selectedDate.getMonth() + 1;
+      const year = selectedDate.getFullYear();
+      const formattedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+      setData(formattedDate);
+      if (Platform.OS === 'ios') {
+        setShowDatePicker(false);
+      }
+    } else if (event.type === 'dismissed') {
+      setShowDatePicker(false);
+    }
   };
 
-  const cancelDateSelection = () => {
-    setShowDatePicker(false);
-  };
-
-  const getMonthName = (monthIndex: number) => {
-    const months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-    ];
-    return months[monthIndex];
-  };
 
   if (!consultaData) {
     return (
@@ -415,10 +401,31 @@ export default function EditarConsultaScreen() {
           {/* Data */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Data</Text>
-            <TouchableOpacity style={styles.input} onPress={openDatePicker}>
-              <Text style={styles.inputText}>{data}</Text>
-              <Feather name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
+            <View style={styles.dataInputContainer}>
+              <TextInput
+                style={styles.dataInput}
+                value={data}
+                onChangeText={setData}
+                placeholder="DD/MM/AAAA"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+                maxLength={10}
+              />
+              <TouchableOpacity 
+                style={styles.calendarButton}
+                onPress={openDatePicker}
+              >
+                <Feather name="calendar" size={20} color="#004A61" />
+              </TouchableOpacity>
+            </View>
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+              />
+            )}
           </View>
 
           {/* Nome do médico */}
@@ -499,13 +506,33 @@ export default function EditarConsultaScreen() {
                         scrollEventThrottle={16}
                         onScroll={Animated.event(
                           [{ nativeEvent: { contentOffset: { y: hourScrollY } } }],
-                          { useNativeDriver: true }
+                          { 
+                            useNativeDriver: true,
+                            listener: (ev: any) => {
+                              const offsetY = ev.nativeEvent.contentOffset.y;
+                              const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                              const clampedIndex = Math.min(Math.max(rawIndex, 0), hourValues.length - 1);
+                              const newHour = HOUR_MIN + clampedIndex;
+                              if (newHour !== selectedHour) {
+                                setSelectedHour(newHour);
+                              }
+                            }
+                          }
                         )}
                         onMomentumScrollEnd={(ev) => {
                           const offsetY = ev.nativeEvent.contentOffset.y;
                           const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
                           const clampedIndex = Math.min(Math.max(rawIndex, 0), hourValues.length - 1);
-                          setSelectedHour(HOUR_MIN + clampedIndex);
+                          const newHour = HOUR_MIN + clampedIndex;
+                          setSelectedHour(newHour);
+                          // Garantir alinhamento preciso após o scroll parar
+                          const targetY = clampedIndex * ITEM_HEIGHT;
+                          if (Math.abs(offsetY - targetY) > 1) {
+                            hourScrollRef.current?.scrollTo({
+                              y: targetY,
+                              animated: false,
+                            });
+                          }
                         }}
                         contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
                       >
@@ -564,13 +591,33 @@ export default function EditarConsultaScreen() {
                         scrollEventThrottle={16}
                         onScroll={Animated.event(
                           [{ nativeEvent: { contentOffset: { y: minuteScrollY } } }],
-                          { useNativeDriver: true }
+                          { 
+                            useNativeDriver: true,
+                            listener: (ev: any) => {
+                              const offsetY = ev.nativeEvent.contentOffset.y;
+                              const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+                              const clampedIndex = Math.min(Math.max(rawIndex, 0), minuteValues.length - 1);
+                              const newMinute = MINUTE_MIN + clampedIndex * 5;
+                              if (newMinute !== selectedMinute) {
+                                setSelectedMinute(newMinute);
+                              }
+                            }
+                          }
                         )}
                         onMomentumScrollEnd={(ev) => {
                           const offsetY = ev.nativeEvent.contentOffset.y;
                           const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
                           const clampedIndex = Math.min(Math.max(rawIndex, 0), minuteValues.length - 1);
-                          setSelectedMinute(MINUTE_MIN + clampedIndex * 5);
+                          const newMinute = MINUTE_MIN + clampedIndex * 5;
+                          setSelectedMinute(newMinute);
+                          // Garantir alinhamento preciso após o scroll parar
+                          const targetY = clampedIndex * ITEM_HEIGHT;
+                          if (Math.abs(offsetY - targetY) > 1) {
+                            minuteScrollRef.current?.scrollTo({
+                              y: targetY,
+                              animated: false,
+                            });
+                          }
                         }}
                         contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
                       >
@@ -608,221 +655,6 @@ export default function EditarConsultaScreen() {
         </View>
       </Modal>
 
-      {/* Modal do Seletor de Data */}
-      <Modal
-        visible={showDatePicker}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={cancelDateSelection}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.timePickerModal}>
-            <View style={styles.timePickerHeader}>
-              <TouchableOpacity onPress={cancelDateSelection}>
-                <Text style={styles.cancelButton}>Cancelar</Text>
-              </TouchableOpacity>
-              <Text style={styles.timePickerTitle}>Data da consulta</Text>
-              <TouchableOpacity onPress={confirmDateSelection}>
-                <Text style={styles.confirmButton}>Confirmar</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.timePickerContainer}>
-              {/* Seletor de Dia */}
-              <View style={styles.timeCard}>
-                <View style={styles.timeCardHeader}>
-                  <Text style={styles.timeCardHeaderText}>Dia</Text>
-                  <Text style={styles.timeCardHeaderValue}>{selectedDay.toString().padStart(2, '0')}</Text>
-                </View>
-                <View style={styles.timeCardBody}>
-                  <View style={styles.pickerRow}>
-                    <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
-                      <Animated.ScrollView
-                        ref={dayScrollRef}
-                        showsVerticalScrollIndicator={false}
-                        bounces={false}
-                        alwaysBounceVertical={false}
-                        overScrollMode="never"
-                        decelerationRate="fast"
-                        snapToInterval={ITEM_HEIGHT}
-                        disableIntervalMomentum
-                        snapToAlignment="start"
-                        scrollEventThrottle={16}
-                        onScroll={Animated.event(
-                          [{ nativeEvent: { contentOffset: { y: dayScrollY } } }],
-                          { useNativeDriver: true }
-                        )}
-                        onMomentumScrollEnd={(ev) => {
-                          const offsetY = ev.nativeEvent.contentOffset.y;
-                          const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
-                          const clampedIndex = Math.min(Math.max(rawIndex, 0), dayValues.length - 1);
-                          setSelectedDay(DAY_MIN + clampedIndex);
-                        }}
-                        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
-                      >
-                        {dayValues.map((item, index) => {
-                          const inputRange = [
-                            (index - 1) * ITEM_HEIGHT,
-                            index * ITEM_HEIGHT,
-                            (index + 1) * ITEM_HEIGHT,
-                          ];
-                          const opacity = dayScrollY.interpolate({
-                            inputRange,
-                            outputRange: [0.25, 1, 0.25],
-                            extrapolate: 'clamp',
-                          });
-                          const scale = dayScrollY.interpolate({
-                            inputRange,
-                            outputRange: [0.9, 1.6, 0.9],
-                            extrapolate: 'clamp',
-                          });
-                          return (
-                            <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
-                              <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
-                                {item.toString().padStart(2, '0')}
-                              </Animated.Text>
-                            </View>
-                          );
-                        })}
-                      </Animated.ScrollView>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* Separador */}
-              <Text style={styles.timeSeparator}>/</Text>
-
-              {/* Seletor de Mês */}
-              <View style={styles.timeCard}>
-                <View style={styles.timeCardHeader}>
-                  <Text style={styles.timeCardHeaderText}>Mês</Text>
-                  <Text style={styles.timeCardHeaderValue}>{getMonthName(selectedMonth)}</Text>
-                </View>
-                <View style={styles.timeCardBody}>
-                  <View style={styles.pickerRow}>
-                    <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
-                      <Animated.ScrollView
-                        ref={monthScrollRef}
-                        showsVerticalScrollIndicator={false}
-                        bounces={false}
-                        alwaysBounceVertical={false}
-                        overScrollMode="never"
-                        decelerationRate="fast"
-                        snapToInterval={ITEM_HEIGHT}
-                        disableIntervalMomentum
-                        snapToAlignment="start"
-                        scrollEventThrottle={16}
-                        onScroll={Animated.event(
-                          [{ nativeEvent: { contentOffset: { y: monthScrollY } } }],
-                          { useNativeDriver: true }
-                        )}
-                        onMomentumScrollEnd={(ev) => {
-                          const offsetY = ev.nativeEvent.contentOffset.y;
-                          const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
-                          const clampedIndex = Math.min(Math.max(rawIndex, 0), monthValues.length - 1);
-                          setSelectedMonth(MONTH_MIN + clampedIndex);
-                        }}
-                        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
-                      >
-                        {monthValues.map((item, index) => {
-                          const inputRange = [
-                            (index - 1) * ITEM_HEIGHT,
-                            index * ITEM_HEIGHT,
-                            (index + 1) * ITEM_HEIGHT,
-                          ];
-                          const opacity = monthScrollY.interpolate({
-                            inputRange,
-                            outputRange: [0.25, 1, 0.25],
-                            extrapolate: 'clamp',
-                          });
-                          const scale = monthScrollY.interpolate({
-                            inputRange,
-                            outputRange: [0.9, 1.6, 0.9],
-                            extrapolate: 'clamp',
-                          });
-                          return (
-                            <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
-                              <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
-                                {getMonthName(item)}
-                              </Animated.Text>
-                            </View>
-                          );
-                        })}
-                      </Animated.ScrollView>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* Separador */}
-              <Text style={styles.timeSeparator}>/</Text>
-
-              {/* Seletor de Ano */}
-              <View style={styles.timeCard}>
-                <View style={styles.timeCardHeader}>
-                  <Text style={styles.timeCardHeaderText}>Ano</Text>
-                  <Text style={styles.timeCardHeaderValue}>{selectedYear}</Text>
-                </View>
-                <View style={styles.timeCardBody}>
-                  <View style={styles.pickerRow}>
-                    <View style={[styles.wheelContainer, { height: ITEM_HEIGHT * VISIBLE_ITEMS }]}>
-                      <Animated.ScrollView
-                        ref={yearScrollRef}
-                        showsVerticalScrollIndicator={false}
-                        bounces={false}
-                        alwaysBounceVertical={false}
-                        overScrollMode="never"
-                        decelerationRate="fast"
-                        snapToInterval={ITEM_HEIGHT}
-                        disableIntervalMomentum
-                        snapToAlignment="start"
-                        scrollEventThrottle={16}
-                        onScroll={Animated.event(
-                          [{ nativeEvent: { contentOffset: { y: yearScrollY } } }],
-                          { useNativeDriver: true }
-                        )}
-                        onMomentumScrollEnd={(ev) => {
-                          const offsetY = ev.nativeEvent.contentOffset.y;
-                          const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
-                          const clampedIndex = Math.min(Math.max(rawIndex, 0), yearValues.length - 1);
-                          setSelectedYear(YEAR_MIN + clampedIndex);
-                        }}
-                        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * ((VISIBLE_ITEMS - 1) / 2) }}
-                      >
-                        {yearValues.map((item, index) => {
-                          const inputRange = [
-                            (index - 1) * ITEM_HEIGHT,
-                            index * ITEM_HEIGHT,
-                            (index + 1) * ITEM_HEIGHT,
-                          ];
-                          const opacity = yearScrollY.interpolate({
-                            inputRange,
-                            outputRange: [0.25, 1, 0.25],
-                            extrapolate: 'clamp',
-                          });
-                          const scale = yearScrollY.interpolate({
-                            inputRange,
-                            outputRange: [0.9, 1.6, 0.9],
-                            extrapolate: 'clamp',
-                          });
-                          return (
-                            <View key={item} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
-                              <Animated.Text style={[styles.wheelItemText, { opacity, transform: [{ scale }] }]}>
-                                {item}
-                              </Animated.Text>
-                            </View>
-                          );
-                        })}
-                      </Animated.ScrollView>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -879,6 +711,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  dataInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingRight: 8,
+  },
+  dataInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  calendarButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   textArea: {
     minHeight: 100,
@@ -1014,6 +868,13 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
 });
+
+
+
+
+
+
+
 
 
 

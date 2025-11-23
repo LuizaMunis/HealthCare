@@ -38,7 +38,7 @@ router.post('/change-password',
   authMiddleware,
   ValidationMiddleware.sanitizeInput,
   ValidationMiddleware.validatePasswordChange(),
-  //UserController.changePassword
+  UserController.changePassword
 );
 
 //router.get('/all', authMiddleware, UserController.getAllUsers);

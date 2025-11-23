@@ -241,8 +241,23 @@ class ValidationMiddleware {
       body('nova_senha')
         .isLength({ min: 6 })
         .withMessage('Nova senha deve ter pelo menos 6 caracteres')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-        .withMessage('Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número'),
+        .custom((value) => {
+          // Validação mais flexível - apenas verificar se tem pelo menos 6 caracteres
+          if (value.length < 6) {
+            throw new Error('Nova senha deve ter pelo menos 6 caracteres');
+          }
+          
+          // Aviso opcional para senhas mais seguras
+          const hasUpperCase = /[A-Z]/.test(value);
+          const hasLowerCase = /[a-z]/.test(value);
+          const hasNumbers = /\d/.test(value);
+          
+          if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+            console.warn('Senha recomendada: use letras maiúsculas, minúsculas e números para maior segurança');
+          }
+          
+          return true;
+        }),
       
       ValidationMiddleware.handleValidationErrors
     ];

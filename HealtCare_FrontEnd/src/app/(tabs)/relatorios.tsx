@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
@@ -14,7 +14,8 @@ const EllipseImage = require('../../assets/images/Ellipse 44.png');
 export default function HomeScreen() {
   
   const { userName, loading } = useUserData();
-  const router = useRouter(); 
+  const router = useRouter();
+  const insets = useSafeAreaInsets(); 
 
   if (loading) {
     return (
@@ -25,13 +26,15 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       {/* Bolas azuis de fundo */}
       <Image source={EllipseImage} style={styles.ellipseTopLeft} resizeMode="contain" pointerEvents="none" />
       <Image source={EllipseImage} style={styles.ellipseBottomRight} resizeMode="contain" pointerEvents="none" />
       
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Cabeçalho removido conforme solicitação */}
+      <ScrollView contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top, paddingBottom: insets.bottom + 100 }]}>
+        <View style={styles.header}>
+          <Text style={styles.logoText}>Seus relatórios <Text style={styles.logoIcon}>+</Text></Text>
+        </View>
 
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeStripe} />
@@ -127,7 +130,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
-    scrollContainer: { padding: 20, zIndex: 1 },
+    scrollContainer: { paddingHorizontal: 20, zIndex: 1 },
     ellipseTopLeft: {
         position: 'absolute',
         top: -80,

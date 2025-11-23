@@ -121,7 +121,12 @@ export default function PressureScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#004A61" />
@@ -153,6 +158,7 @@ export default function PressureScreen() {
                   disableIntervalMomentum
                   snapToAlignment="start"
                   scrollEventThrottle={16}
+                  nestedScrollEnabled={true}
                   onScroll={Animated.event(
                     [{ nativeEvent: { contentOffset: { y: sysScrollY } } }],
                     { useNativeDriver: true }
@@ -216,6 +222,7 @@ export default function PressureScreen() {
                   disableIntervalMomentum
                   snapToAlignment="start"
                   scrollEventThrottle={16}
+                  nestedScrollEnabled={true}
                   onScroll={Animated.event(
                     [{ nativeEvent: { contentOffset: { y: diaScrollY } } }],
                     { useNativeDriver: true }

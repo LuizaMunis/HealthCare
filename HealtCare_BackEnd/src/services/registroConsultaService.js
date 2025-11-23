@@ -12,9 +12,25 @@ class ConsultaService {
       throw new Error('Os campos "especialidade" and "data e hora da consulta" são obrigatórios.');
     }
 
+    // Normalizar a data/hora: remover 'T' e substituir por espaço, remover 'Z' e milissegundos
+    // Isso garante que o formato seja compatível com DATETIME do MySQL
+    // Formato esperado: YYYY-MM-DD HH:mm:ss
+    let normalizedDateTime = String(data_hora_consulta).replace('T', ' ').replace('Z', '');
+    
+    // Remover milissegundos se existirem
+    if (normalizedDateTime.includes('.')) {
+      normalizedDateTime = normalizedDateTime.split('.')[0];
+    }
+    
+    // Remover timezone offset se existir (formato +HH:mm ou -HH:mm)
+    if (normalizedDateTime.includes('+') || (normalizedDateTime.match(/-/g) || []).length > 2) {
+      normalizedDateTime = normalizedDateTime.split('+')[0].split('-').slice(0, 3).join('-') + ' ' + normalizedDateTime.split(' ')[1]?.split('+')[0]?.split('-')[0] || '';
+    }
+
     const dadosParaCriar = {
       ...dadosConsulta,
       perfil_id: profileId,
+      data_hora_consulta: normalizedDateTime,
     };
 
     return await ConsultaModel.create(dadosParaCriar);
@@ -92,6 +108,24 @@ class ConsultaService {
 
     if (Object.keys(dadosUpdate).length === 0) {
       throw new Error("Nenhum dado fornecido para atualização.");
+    }
+    
+    // Normalizar data_hora_consulta se estiver presente
+    if (dadosUpdate.data_hora_consulta) {
+      // Normalizar a data/hora: remover 'T' e substituir por espaço, remover 'Z' e milissegundos
+      let normalizedDateTime = String(dadosUpdate.data_hora_consulta).replace('T', ' ').replace('Z', '');
+      
+      // Remover milissegundos se existirem
+      if (normalizedDateTime.includes('.')) {
+        normalizedDateTime = normalizedDateTime.split('.')[0];
+      }
+      
+      // Remover timezone offset se existir
+      if (normalizedDateTime.includes('+') || (normalizedDateTime.match(/-/g) || []).length > 2) {
+        normalizedDateTime = normalizedDateTime.split('+')[0].split('-').slice(0, 3).join('-') + ' ' + normalizedDateTime.split(' ')[1]?.split('+')[0]?.split('-')[0] || '';
+      }
+      
+      dadosUpdate.data_hora_consulta = normalizedDateTime;
     }
     
     await ConsultaModel.update(consultaId, dadosUpdate);
