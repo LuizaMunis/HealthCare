@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, TextInput, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -18,88 +18,16 @@ interface MedicationItem {
   statusHoje?: 'Tomado' | 'Pulado' | 'Adiado' | null;
 }
 
-const HistoryItem: React.FC<{ 
-  item: MedicationItem; 
-  onEdit: (item: MedicationItem) => void; 
-  onDelete: (id: number) => void; 
-}> = ({ item, onEdit, onDelete }) => {
-  const formattedDate = new Date(item.data_inicio_tratamento).toLocaleString('pt-BR', { 
-    day: '2-digit', 
-    month: '2-digit', 
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-
-  const formatDuration = (days: number) => {
-    if (days >= 365) {
-      const years = Math.floor(days / 365);
-      return `${years} ano${years > 1 ? 's' : ''}`;
-    } else if (days >= 30) {
-      const months = Math.floor(days / 30);
-      return `${months} mês${months > 1 ? 'es' : ''}`;
-    } else {
-      return `${days} dia${days > 1 ? 's' : ''}`;
-    }
-  };
-
-  const getStatusColor = (status?: string | null) => {
-    switch (status) {
-      case 'Tomado':
-        return '#28A745';
-      case 'Pulado':
-        return '#FFC107';
-      case 'Adiado':
-        return '#17A2B8';
-      default:
-        return '#6C757D';
-    }
-  };
-
-  const getStatusText = (status?: string | null) => {
-    switch (status) {
-      case 'Tomado':
-        return 'Tomado hoje';
-      case 'Pulado':
-        return 'Pulado hoje';
-      case 'Adiado':
-        return 'Adiado hoje';
-      default:
-        return 'Não tomado hoje';
-    }
-  };
-
-  return (
-    <View style={styles.itemContainer}>
-      <View style={styles.itemHeader}>
-        <View style={styles.medicationIcon}>
-          <Feather name="activity" size={20} color="#004A61" />
-        </View>
-        <View style={styles.itemDetails}>
-          <Text style={styles.itemDate}>{formattedDate}</Text>
-          <Text style={styles.itemTitle}>{item.nome_medicamento}</Text>
-          <Text style={styles.itemSubtitle}>Dosagem: {item.dosagem}</Text>
-          <Text style={styles.itemSubtitle}>
-            {item.uso_continuo ? 'Uso contínuo' : `Duração: ${formatDuration(item.duracao_dias_tratamento)}`}
-          </Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.statusHoje) + '20', borderColor: getStatusColor(item.statusHoje) }]}>
-            <Text style={[styles.statusText, { color: getStatusColor(item.statusHoje) }]}>
-              {getStatusText(item.statusHoje)}
-            </Text>
-          </View>
-        </View>
-      </View>
-      <View style={styles.itemActions}>
-        <TouchableOpacity onPress={() => onEdit(item)} style={styles.actionButton}>
-          <Feather name="edit" size={20} color="#004A61" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => onDelete(item.id)} style={styles.actionButton}>
-          <Feather name="trash-2" size={20} color="#D9534F" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+const formatDate = (value: string): string => {
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return 'Data inválida';
+  const day = `${d.getDate()}`.padStart(2,'0');
+  const month = `${d.getMonth()+1}`.padStart(2,'0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 };
+
+const statusToTaken = (status?: 'Tomado' | 'Pulado' | 'Adiado' | null) => status === 'Tomado';
 
 export default function MedicationHistoryScreen() {
   const router = useRouter();
@@ -107,6 +35,12 @@ export default function MedicationHistoryScreen() {
   const [records, setRecords] = useState<MedicationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filtros período + tomado
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [takenFilter, setTakenFilter] = useState<'Todos' | 'Tomado' | 'NaoTomado'>('Todos');
+  const [filteredRecords, setFilteredRecords] = useState<MedicationItem[] | null>(null);
 
   const fetchStatusHoje = async (medicamentoId: number, token: string, profileId: string): Promise<'Tomado' | 'Pulado' | 'Adiado' | null> => {
     try {
@@ -135,7 +69,7 @@ export default function MedicationHistoryScreen() {
     }
   };
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -174,9 +108,9 @@ export default function MedicationHistoryScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useFocusEffect(useCallback(() => { fetchHistory(); }, []));
+  useFocusEffect(useCallback(() => { fetchHistory(); }, [fetchHistory]));
 
   const handleDelete = async (id: number) => {
     Alert.alert('Confirmar Exclusão', 'Você tem certeza que deseja excluir este registro?', [
@@ -255,6 +189,41 @@ export default function MedicationHistoryScreen() {
     );
   }
 
+  // Máscara DD/MM/AAAA
+  const dateMask = (value:string): string => {
+    const digits = value.replace(/\D/g,'').slice(0,8); let r='';
+    for(let i=0;i<digits.length;i++){ r+=digits[i]; if(i===1||i===3) r+='/'; }
+    return r;
+  };
+
+  const applyFilter = () => {
+    let subset = [...records];
+    if (startDate || endDate) {
+      const parseDate = (val:string,end:boolean=false): number => {
+        const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(val.trim());
+        if(!m) return NaN; const [,dd,mm,yyyy]=m; const h=end?23:0, mi=end?59:0, s=end?59:0;
+        return new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd), h, mi, s).getTime();
+      };
+      const startTs = startDate? parseDate(startDate): -Infinity;
+      const endTs = endDate? parseDate(endDate,true): Infinity;
+      if(isNaN(startTs)||isNaN(endTs)){ Alert.alert('Filtro inválido','Formato DD/MM/AAAA'); return; }
+      if(startTs > endTs){ Alert.alert('Intervalo inválido','Início maior que fim'); return; }
+      subset = subset.filter(r => {
+        const t = new Date(r.data_inicio_tratamento).getTime();
+        return t >= startTs && t <= endTs;
+      });
+    }
+    if (takenFilter !== 'Todos') {
+      subset = subset.filter(r => takenFilter === 'Tomado' ? statusToTaken(r.statusHoje) : !statusToTaken(r.statusHoje));
+    }
+    setFilteredRecords(subset);
+  };
+
+  const clearFilter = () => { setStartDate(''); setEndDate(''); setTakenFilter('Todos'); setFilteredRecords(null); };
+
+  const dataToShow = filteredRecords || records;
+  const isEmpty = dataToShow.length === 0;
+
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -265,188 +234,129 @@ export default function MedicationHistoryScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      {records.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Feather name="activity" size={64} color="#CCCCCC" />
-          <Text style={styles.emptyText}>Nenhum medicamento registrado</Text>
-          <Text style={styles.emptySubtext}>Adicione sua primeira medicação para começar o histórico</Text>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => router.push('/monitor/medicamento')}
-          >
-            <Feather name="plus" size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Adicionar Medicamento</Text>
-          </TouchableOpacity>
+      {/* Filtros */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Filtros</Text>
+        <View style={styles.filterRow}>
+          <View style={styles.filterField}>
+            <Text style={styles.filterLabel}>Início</Text>
+            <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={startDate} keyboardType="number-pad" onChangeText={t=> setStartDate(dateMask(t))} />
+          </View>
+          <View style={styles.filterField}>
+            <Text style={styles.filterLabel}>Fim</Text>
+            <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={endDate} keyboardType="number-pad" onChangeText={t=> setEndDate(dateMask(t))} />
+          </View>
         </View>
-      ) : (
-        <FlatList 
-          data={records} 
-          keyExtractor={(item) => item.id.toString()} 
-          renderItem={({ item }) => (
-            <HistoryItem item={item} onEdit={handleEdit} onDelete={handleDelete} />
-          )} 
-          contentContainerStyle={styles.listContainer} 
-        />
-      )}
+        <View style={styles.chipRow}>
+          {(['Todos','Tomado','NaoTomado'] as const).map(opt => (
+            <TouchableOpacity key={opt} style={[styles.chip, takenFilter===opt && styles.chipActive]} onPress={()=> setTakenFilter(opt)}>
+              <Text style={[styles.chipText, takenFilter===opt && styles.chipTextActive]}>{opt === 'NaoTomado' ? 'Não Tomado' : opt}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.filterActions}>
+          <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={applyFilter}><Text style={styles.buttonPrimaryText}>Aplicar</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.buttonOutline]} onPress={clearFilter}><Text style={styles.buttonOutlineText}>Limpar</Text></TouchableOpacity>
+        </View>
+        {filteredRecords && <View style={styles.badgeInfo}><Text style={styles.badgeInfoText}>Mostrando {filteredRecords.length} / {records.length}</Text></View>}
+      </View>
 
+      {/* Tabela */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Registros</Text>
+        <View style={styles.tableHeader}>
+          <Text style={[styles.tableHeaderCell,{flex:2}]}>Data Início</Text>
+          <Text style={[styles.tableHeaderCell,{flex:2}]}>Medicamento</Text>
+          <Text style={styles.tableHeaderCell}>Dosagem</Text>
+          <Text style={styles.tableHeaderCell}>Tomado</Text>
+          <Text style={styles.tableHeaderCell}>Ações</Text>
+        </View>
+        {isEmpty ? (
+          <View style={styles.emptyWrapper}>
+            <Text style={styles.emptyText}>Nenhum registro encontrado.</Text>
+            <TouchableOpacity style={styles.addButton} onPress={()=> router.push('/monitor/medicamento')}>
+              <Feather name="plus" size={16} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>Adicionar Medicamento</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={dataToShow}
+            keyExtractor={i => i.id.toString()}
+            renderItem={({ item }) => {
+              const tomado = statusToTaken(item.statusHoje);
+              return (
+                <View style={[styles.tableRow, item.id % 2 === 0 && styles.tableRowAlt]}>
+                  <Text style={[styles.tableCell,{flex:2}]}>{formatDate(item.data_inicio_tratamento)}</Text>
+                  <Text style={[styles.tableCell,{flex:2}]}>{item.nome_medicamento}</Text>
+                  <Text style={styles.tableCell}>{item.dosagem}</Text>
+                  <View style={[styles.tableCell, styles.takenCell]}>
+                    <View style={[styles.takenDot, { backgroundColor: tomado ? '#28A745' : '#DC3545' }]} />
+                    <Text style={styles.takenText}>{tomado ? 'Sim' : 'Não'}</Text>
+                  </View>
+                  <View style={[styles.tableCell, styles.rowActions]}>
+                    <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconButton} hitSlop={{top:8,bottom:8,left:8,right:8}}>
+                      <Feather name="edit" size={18} color="#007094" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.iconButton} hitSlop={{top:8,bottom:8,left:8,right:8}}>
+                      <Feather name="trash-2" size={18} color="#D9534F" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            }}
+            contentContainerStyle={styles.tableListContent}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F4F8' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: '#E0E0E0' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  backButton: {},
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  listContainer: { padding: 20 },
-  itemContainer: { 
-    backgroundColor: '#FFFFFF', 
-    borderRadius: 12, 
-    padding: 16, 
-    marginBottom: 12, 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    elevation: 2, 
-    shadowColor: '#000', 
-    shadowOpacity: 0.1, 
-    shadowRadius: 5 
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  medicationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E8F4F8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  itemDetails: { 
-    flex: 1 
-  },
-  itemDate: { 
-    fontSize: 12, 
-    color: '#666', 
-    marginBottom: 4,
-    fontWeight: '500'
-  },
-  itemTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#004A61',
-    marginBottom: 2,
-  },
-  itemSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 1,
-  },
-  itemValues: { fontSize: 16, color: '#333' },
-  boldText: { fontWeight: 'bold' },
-  itemActions: { flexDirection: 'row' },
-  actionButton: { padding: 8, marginLeft: 8 },
-  
-  // Estados de loading e erro melhorados
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-    fontWeight: '500',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  errorText: { 
-    fontSize: 18, 
-    color: '#D9534F', 
-    textAlign: 'center', 
-    marginTop: 16,
-    fontWeight: 'bold'
-  },
-  errorSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  retryButton: { 
-    backgroundColor: '#004A61', 
-    paddingVertical: 12, 
-    paddingHorizontal: 24, 
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  retryButtonText: { 
-    fontSize: 16, 
-    color: '#FFFFFF', 
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  
-  // Estado vazio melhorado
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyText: { 
-    fontSize: 18, 
-    color: '#666', 
-    marginTop: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  addButton: {
-    backgroundColor: '#004A61',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  addButtonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  statusBadge: {
-    marginTop: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
+  container:{ flex:1, backgroundColor:'#F5F7FA' },
+  header:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:20, backgroundColor:'#FFFFFF', borderBottomWidth:1, borderBottomColor:'#E0E0E0' },
+  headerTitle:{ fontSize:18, fontWeight:'bold', color:'#333' },
+  backButton:{ padding:4 },
+  loadingContainer:{ flex:1, justifyContent:'center', alignItems:'center', padding:40 },
+  loadingText:{ fontSize:16, color:'#666', marginTop:12, fontWeight:'500' },
+  errorContainer:{ flex:1, justifyContent:'center', alignItems:'center', padding:40 },
+  errorText:{ fontSize:18, color:'#D9534F', textAlign:'center', marginTop:16, fontWeight:'bold' },
+  errorSubtext:{ fontSize:14, color:'#666', textAlign:'center', marginTop:8, marginBottom:24, lineHeight:20 },
+  retryButton:{ backgroundColor:'#004A61', paddingVertical:12, paddingHorizontal:24, borderRadius:8, flexDirection:'row', alignItems:'center' },
+  retryButtonText:{ fontSize:16, color:'#FFFFFF', fontWeight:'bold', marginLeft:8 },
+  card:{ backgroundColor:'#FFFFFF', marginHorizontal:16, marginTop:14, borderRadius:14, padding:14, ...Platform.select({ web:{ boxShadow:'0 4px 12px rgba(0,0,0,0.06)' }, default:{ elevation:3, shadowColor:'#000', shadowOpacity:0.08, shadowRadius:6 } }) },
+  sectionTitle:{ fontSize:16, fontWeight:'700', color:'#004A61', marginBottom:10 },
+  filterRow:{ flexDirection:'row', justifyContent:'space-between' },
+  filterField:{ flex:1, marginRight:10 },
+  filterLabel:{ fontSize:12, fontWeight:'600', color:'#475569', marginBottom:4 },
+  input:{ backgroundColor:'#F9FAFB', borderWidth:1, borderColor:'#D0D7DE', borderRadius:10, paddingHorizontal:12, paddingVertical:10, fontSize:14, color:'#1F2D3D' },
+  chipRow:{ flexDirection:'row', flexWrap:'wrap', marginTop:12 },
+  chip:{ paddingHorizontal:12, paddingVertical:8, backgroundColor:'#EEF2F6', borderRadius:20, marginRight:8, marginBottom:8 },
+  chipActive:{ backgroundColor:'#004A61' },
+  chipText:{ fontSize:12, fontWeight:'600', color:'#334155' },
+  chipTextActive:{ color:'#FFFFFF' },
+  button:{ flex:1, paddingVertical:12, borderRadius:10, alignItems:'center', justifyContent:'center', marginRight:10 },
+  buttonPrimary:{ backgroundColor:'#007094' },
+  buttonPrimaryText:{ color:'#FFFFFF', fontSize:14, fontWeight:'700' },
+  buttonOutline:{ backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#CBD5E1' },
+  buttonOutlineText:{ color:'#334155', fontSize:14, fontWeight:'600' },
+  filterActions:{ flexDirection:'row', marginTop:14 },
+  badgeInfo:{ alignSelf:'flex-start', marginTop:10, backgroundColor:'#E0F2FE', paddingHorizontal:10, paddingVertical:4, borderRadius:8 },
+  badgeInfoText:{ fontSize:12, fontWeight:'600', color:'#0369A1' },
+  emptyWrapper:{ paddingVertical:16, alignItems:'center' },
+  emptyText:{ fontSize:14, color:'#64748B', textAlign:'center', marginBottom:16 },
+  addButton:{ backgroundColor:'#004A61', paddingVertical:10, paddingHorizontal:20, borderRadius:10, flexDirection:'row', alignItems:'center' },
+  addButtonText:{ fontSize:14, color:'#FFFFFF', fontWeight:'700', marginLeft:8 },
+  tableHeader:{ flexDirection:'row', backgroundColor:'#004A61', paddingVertical:8, paddingHorizontal:12, borderRadius:10, marginTop:4 },
+  tableHeaderCell:{ flex:1, color:'#FFFFFF', fontSize:12, fontWeight:'700' },
+  tableRow:{ flexDirection:'row', paddingVertical:10, paddingHorizontal:12, borderBottomWidth:1, borderBottomColor:'#E2E8F0' },
+  tableRowAlt:{ backgroundColor:'#F8FAFC' },
+  tableCell:{ flex:1, fontSize:12, color:'#334155' },
+  rowActions:{ flexDirection:'row', justifyContent:'flex-start' },
+  iconButton:{ padding:4, marginRight:6, borderRadius:8, backgroundColor:'#F1F5F9' },
+  tableListContent:{},
+  takenCell:{ flexDirection:'row', alignItems:'center' },
+  takenDot:{ width:12, height:12, borderRadius:6, marginRight:6 },
+  takenText:{ fontSize:12, fontWeight:'600', color:'#334155' }
 });
