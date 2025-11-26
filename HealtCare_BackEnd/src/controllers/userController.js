@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/userModel');
 const ProfileModel = require('../models/profileModel');
+const codeGenerator = require('../utils/codeGenerator');
+const emailService = require('../services/emailService');
 
 class UserController {
   /**
@@ -309,6 +311,266 @@ class UserController {
   // quando lidarem com dados específicos de saúde, em vez de apenas com 'usuario'.
   // Como a sua estrutura agora separa usuario e perfil, os métodos para o perfil
   // deverão ser movidos para um novo 'ProfileController.js' para manter a responsabilidade única.
+
+  //------------------------------------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Solicita código de recuperação de senha.
+   * Gera um código, salva no banco e envia por email.
+   * Espera: { email }
+   * Retorna: { success: true, message: string }
+   */
+  static async forgotPassword(req, res) {
+    try {
+      const { email } = req.body;
+
+      // Validação básica
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email é obrigatório'
+        });
+      }
+
+      // Validar formato do email
+      const emailRegex = /\S+@\S+\.\S+/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Formato de email inválido'
+        });
+      }
+
+      // Buscar usuário por email
+      const user = await UserModel.findByEmail(email);
+      if (!user) {
+        // Por segurança, não revelamos se o email existe ou não
+        // Retornamos sempre sucesso para evitar enumeração de emails
+        return res.json({
+          success: true,
+          message: 'Se o email estiver cadastrado, você receberá um código de recuperação'
+        });
+      }
+
+      // Gerar código de recuperação
+      const code = codeGenerator.generateRecoveryCode();
+      const encodedToken = codeGenerator.encodeCodeWithTimestamp(code);
+
+      // Salvar código no banco de dados
+      await UserModel.setRecoveryToken(user.id, encodedToken);
+
+      // Enviar email com o código
+      const emailResult = await emailService.sendRecoveryCode(
+        user.email,
+        code,
+        user.nome_completo
+      );
+
+      // Se o email falhou, ainda retornamos sucesso para não revelar problemas técnicos
+      // Mas logamos o erro para debug
+      if (!emailResult.success) {
+        console.error('❌ Erro ao enviar email de recuperação:', emailResult.message);
+        // Em produção, você pode querer retornar erro ou usar um serviço de fallback
+        // Por enquanto, retornamos sucesso para não expor problemas técnicos
+      }
+
+      // Sempre retornar sucesso (por segurança, não revelamos se email existe)
+      return res.json({
+        success: true,
+        message: 'Se o email estiver cadastrado, você receberá um código de recuperação'
+      });
+
+    } catch (error) {
+      console.error('Erro ao processar solicitação de recuperação de senha:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno ao processar solicitação de recuperação de senha'
+      });
+    }
+  }
+
+  //------------------------------------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Verifica se o código de recuperação é válido.
+   * Espera: { email, code }
+   * Retorna: { success: boolean, message: string }
+   */
+  static async verifyCode(req, res) {
+    try {
+      const { email, code } = req.body;
+
+      // Validações básicas
+      if (!email || !code) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email e código são obrigatórios'
+        });
+      }
+
+      // Validar formato do email
+      const emailRegex = /\S+@\S+\.\S+/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Formato de email inválido'
+        });
+      }
+
+      // Validar formato do código (4 dígitos)
+      if (!/^\d{4}$/.test(code.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Código deve conter 4 dígitos numéricos'
+        });
+      }
+
+      // Buscar usuário por email
+      const user = await UserModel.findByEmail(email);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'Email não encontrado'
+        });
+      }
+
+      // Verificar se o usuário tem um token de recuperação
+      if (!user.token_recuperacao_senha) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nenhum código de recuperação foi solicitado para este email'
+        });
+      }
+
+      // Validar o código
+      const validation = codeGenerator.validateRecoveryCode(
+        code.trim(),
+        user.token_recuperacao_senha,
+        15 // 15 minutos de expiração
+      );
+
+      if (!validation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: validation.message || 'Código inválido ou expirado'
+        });
+      }
+
+      // Código válido
+      return res.json({
+        success: true,
+        message: 'Código válido. Você pode prosseguir para redefinir sua senha.'
+      });
+
+    } catch (error) {
+      console.error('Erro ao verificar código de recuperação:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno ao verificar código de recuperação'
+      });
+    }
+  }
+
+  //------------------------------------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Reseta a senha do usuário usando o código de recuperação.
+   * Espera: { email, code, newPassword }
+   * Retorna: { success: boolean, message: string }
+   */
+  static async resetPassword(req, res) {
+    try {
+      const { email, code, newPassword } = req.body;
+
+      // Validações básicas
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email, código e nova senha são obrigatórios'
+        });
+      }
+
+      // Validar formato do email
+      const emailRegex = /\S+@\S+\.\S+/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Formato de email inválido'
+        });
+      }
+
+      // Validar formato do código
+      if (!/^\d{4}$/.test(code.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Código deve conter 4 dígitos numéricos'
+        });
+      }
+
+      // Validar força da senha
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'A senha deve ter pelo menos 6 caracteres'
+        });
+      }
+
+      // Buscar usuário por email
+      const user = await UserModel.findByEmail(email, true);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'Email não encontrado'
+        });
+      }
+
+      // Verificar se o usuário tem um token de recuperação
+      if (!user.token_recuperacao_senha) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nenhum código de recuperação foi solicitado para este email'
+        });
+      }
+
+      // Validar o código
+      const validation = codeGenerator.validateRecoveryCode(
+        code.trim(),
+        user.token_recuperacao_senha,
+        15 // 15 minutos de expiração
+      );
+
+      if (!validation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: validation.message || 'Código inválido ou expirado'
+        });
+      }
+
+      // Gerar hash da nova senha
+      const nova_senha_hash = await bcrypt.hash(newPassword, 10);
+
+      // Atualizar senha no banco
+      await UserModel.updatePassword(user.id, nova_senha_hash);
+
+      // Limpar token de recuperação após uso bem-sucedido
+      await UserModel.clearRecoveryToken(user.id);
+
+      // Retornar sucesso
+      return res.json({
+        success: true,
+        message: 'Senha alterada com sucesso. Você já pode fazer login com a nova senha.'
+      });
+
+    } catch (error) {
+      console.error('Erro ao resetar senha:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno ao resetar senha'
+      });
+    }
+  }
+
+  //------------------------------------------------------------------------------------------------------------------------------------------------
 
 }
 

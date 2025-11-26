@@ -11,8 +11,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator
 } from 'react-native';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
+import ApiService from '@/services/apiService';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -21,8 +23,9 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (!newPassword || !confirmPassword) {
       Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
       return;
@@ -32,19 +35,45 @@ export default function ResetPasswordScreen() {
       return;
     }
     if (newPassword.length < 6) {
-        Alert.alert('Senha Inválida', 'A senha deve ter pelo menos 6 caracteres.');
-        return;
+      Alert.alert('Senha Inválida', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
     }
 
-    // --- LÓGICA DA API (Simulação) ---
-    // Aqui você enviaria o email, código e a newPassword para a API.
-    console.log(`Resetando senha para ${email} com o código ${code}`);
-    
-    Alert.alert(
-      'Sucesso!',
-      'Sua senha foi alterada. Você já pode fazer o login.',
-      [{ text: 'OK', onPress: () => router.replace('/login') }] // replace para não voltar
-    );
+    if (!email || !code) {
+      Alert.alert('Erro', 'Dados incompletos. Por favor, volte e tente novamente.');
+      router.back();
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await ApiService.resetPassword(email, code, newPassword);
+
+      if (result.success) {
+        Alert.alert(
+          'Sucesso!',
+          result.message || 'Sua senha foi alterada com sucesso. Você já pode fazer o login.',
+          [{ 
+            text: 'OK', 
+            onPress: () => router.replace('/login') // replace para não voltar
+          }]
+        );
+      } else {
+        Alert.alert(
+          'Erro',
+          result.error || 'Não foi possível alterar a senha. Verifique o código e tente novamente.'
+        );
+      }
+    } catch (error: any) {
+      console.error('Erro ao resetar senha:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -90,8 +119,16 @@ export default function ResetPasswordScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
-          <Text style={styles.buttonText}>Alterar senha</Text>
+        <TouchableOpacity 
+          style={[styles.button, isLoading && styles.buttonDisabled]} 
+          onPress={handleResetPassword}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Alterar senha</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -118,5 +155,6 @@ const styles = StyleSheet.create({
     passwordContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingRight: 15 },
     passwordInput: { flex: 1, paddingHorizontal: 15, paddingVertical: 18, fontSize: 16 },
     button: { backgroundColor: '#004A61', paddingVertical: 18, borderRadius: 12, alignItems: 'center', marginTop: 40 },
+    buttonDisabled: { opacity: 0.6 },
     buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 });

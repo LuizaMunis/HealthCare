@@ -41,6 +41,25 @@ router.post('/change-password',
   UserController.changePassword
 );
 
+// Rotas de recuperação de senha (não requerem autenticação)
+router.post('/forgot-password',
+  ValidationMiddleware.sanitizeInput,
+  ValidationMiddleware.validateForgotPassword(),
+  UserController.forgotPassword
+);
+
+router.post('/verify-code',
+  ValidationMiddleware.sanitizeInput,
+  ValidationMiddleware.validateVerifyCode(),
+  UserController.verifyCode
+);
+
+router.post('/reset-password',
+  ValidationMiddleware.sanitizeInput,
+  ValidationMiddleware.validateResetPassword(),
+  UserController.resetPassword
+);
+
 //router.get('/all', authMiddleware, UserController.getAllUsers);
 
 module.exports = router;

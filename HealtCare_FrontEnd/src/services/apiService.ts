@@ -57,6 +57,21 @@ interface PasswordData {
   confirmPassword: string;
 }
 
+interface ForgotPasswordData {
+  email: string;
+}
+
+interface VerifyCodeData {
+  email: string;
+  code: string;
+}
+
+interface ResetPasswordData {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
 const ApiService = {
   // --- AUTH ---
   register: async (userData: UserData) => {
@@ -227,6 +242,78 @@ const ApiService = {
       return response.data;
     } catch (error: any) {
       return { success: false, error: error.response?.data?.message || 'Erro ao alterar a senha.' };
+    }
+  },
+
+  // --- RECUPERAÇÃO DE SENHA ---
+  
+  /**
+   * Solicita código de recuperação de senha
+   * @param {string} email - Email do usuário
+   * @returns {Promise<Object>} { success: boolean, message?: string, error?: string }
+   */
+  forgotPassword: async (email: string) => {
+    try {
+      const response = await api.post(ENDPOINTS.USERS.FORGOT_PASSWORD, { email });
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erro ao solicitar recuperação de senha:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 
+               error.response?.data?.errors?.[0]?.message || 
+               'Erro ao solicitar código de recuperação. Tente novamente.' 
+      };
+    }
+  },
+
+  /**
+   * Verifica código de recuperação de senha
+   * @param {string} email - Email do usuário
+   * @param {string} code - Código de 4 dígitos
+   * @returns {Promise<Object>} { success: boolean, message?: string, error?: string }
+   */
+  verifyCode: async (email: string, code: string) => {
+    try {
+      const response = await api.post(ENDPOINTS.USERS.VERIFY_CODE, { 
+        email, 
+        code: code.trim() 
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erro ao verificar código:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 
+               error.response?.data?.errors?.[0]?.message || 
+               'Erro ao verificar código. Verifique se o código está correto.' 
+      };
+    }
+  },
+
+  /**
+   * Reseta a senha usando código de recuperação
+   * @param {string} email - Email do usuário
+   * @param {string} code - Código de 4 dígitos
+   * @param {string} newPassword - Nova senha
+   * @returns {Promise<Object>} { success: boolean, message?: string, error?: string }
+   */
+  resetPassword: async (email: string, code: string, newPassword: string) => {
+    try {
+      const response = await api.post(ENDPOINTS.USERS.RESET_PASSWORD, { 
+        email, 
+        code: code.trim(), 
+        newPassword 
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erro ao resetar senha:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 
+               error.response?.data?.errors?.[0]?.message || 
+               'Erro ao resetar senha. Verifique os dados e tente novamente.' 
+      };
     }
   },
 };

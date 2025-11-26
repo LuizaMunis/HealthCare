@@ -12,11 +12,14 @@ import {
   TouchableOpacity,
   View,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
+import ApiService from '@/services/apiService';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleRecoverPassword = async () => {
@@ -25,21 +28,47 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    // --- LÓGICA DA API (Simulação) ---
-    // Aqui você chamaria sua API para enviar o código de recuperação para o email.
-    // Por enquanto, vamos simular sucesso e navegar para a próxima tela.
-    console.log(`Solicitando código de recuperação para: ${email}`);
-    
-    Alert.alert(
-      'Código Enviado',
-      `Um código de recuperação foi enviado para ${email}.`,
-      [
-        { text: 'OK', onPress: () => router.push({
-            pathname: '/forgot-password/verify-code',
-            params: { email: email } // Passa o email para a próxima tela
-        })}
-      ]
-    );
+    // Validar formato básico de email
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Email Inválido', 'Por favor, insira um email válido.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await ApiService.forgotPassword(email.trim());
+
+      if (result.success) {
+        Alert.alert(
+          'Código Enviado',
+          result.message || 'Se o email estiver cadastrado, você receberá um código de recuperação em breve.',
+          [
+            { 
+              text: 'OK', 
+              onPress: () => router.push({
+                pathname: '/forgot-password/verify-code',
+                params: { email: email.trim() }
+              })
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Erro',
+          result.error || 'Não foi possível enviar o código de recuperação. Tente novamente mais tarde.'
+        );
+      }
+    } catch (error: any) {
+      console.error('Erro ao solicitar recuperação de senha:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,8 +99,16 @@ export default function ForgotPasswordScreen() {
               autoCapitalize="none"
             />
 
-            <TouchableOpacity style={styles.button} onPress={handleRecoverPassword}>
-              <Text style={styles.buttonText}>Recuperar senha</Text>
+            <TouchableOpacity 
+              style={[styles.button, isLoading && styles.buttonDisabled]} 
+              onPress={handleRecoverPassword}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>Recuperar senha</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.footer}>
@@ -107,6 +144,7 @@ const styles = StyleSheet.create({
     label: { fontSize: 16, color: '#334155', marginBottom: 8, marginTop: 15 },
     input: { backgroundColor: '#F8FAFC', paddingHorizontal: 15, paddingVertical: 18, borderRadius: 12, fontSize: 16, borderWidth: 1, borderColor: '#E2E8F0' },
     button: { backgroundColor: '#004A61', paddingVertical: 18, borderRadius: 12, alignItems: 'center', marginTop: 40 },
+    buttonDisabled: { opacity: 0.6 },
     buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
     footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
     footerText: { fontSize: 14, color: 'gray' },

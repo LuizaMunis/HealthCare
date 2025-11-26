@@ -106,6 +106,47 @@ class UserModel {
       throw error;
     }
   }
+
+  /**
+   * Busca um usuário pelo token de recuperação de senha
+   * @param {string} token - Token de recuperação (código codificado com timestamp)
+   * @returns {Object|null} Usuário encontrado ou null se não encontrado
+   */
+  static async findByRecoveryToken(token) {
+    const query = `
+      SELECT id, nome_completo, email, data_cadastro, token_recuperacao_senha
+      FROM usuario
+      WHERE token_recuperacao_senha = ?
+      LIMIT 1
+    `;
+    try {
+      const [rows] = await pool.execute(query, [token]);
+      return rows[0] || null;
+    } catch (error) {
+      console.error('❌ Erro ao buscar usuário por token de recuperação:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Limpa o token de recuperação de senha após uso
+   * @param {number} id - ID do usuário
+   * @returns {number} Número de linhas afetadas (deve ser 1 se sucesso)
+   */
+  static async clearRecoveryToken(id) {
+    const query = `
+      UPDATE usuario
+      SET token_recuperacao_senha = NULL
+      WHERE id = ?
+    `;
+    try {
+      const [result] = await pool.execute(query, [id]);
+      return result.affectedRows;
+    } catch (error) {
+      console.error('❌ Erro ao limpar token de recuperação:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = UserModel;
