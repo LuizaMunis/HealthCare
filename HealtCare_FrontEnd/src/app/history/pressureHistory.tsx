@@ -1,10 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput, ScrollView, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput, ScrollView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
+// Interface dos registros
 // Interface dos registros
 interface PressureHistoryItem {
   id: number;
@@ -134,6 +137,58 @@ const PressureChart: React.FC<{ data: PressureHistoryItem[] }> = ({ data }) => {
         <View style={styles.legendRangeBadge}><Text style={styles.legendRangeText}>{min + 5} - {max - 5} mmHg</Text></View>
       </View>
     </View>
+    <View style={styles.chartCard}>
+      <Text style={styles.sectionTitle}>Gráfico de Pressão Arterial</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.chartInnerWrapper}>
+          <Svg width={chartWidth} height={chartHeight}>
+            <Polyline points={`20,10 20,${chartHeight-10}`} stroke="#ccc" strokeWidth={1} />
+            <Polyline points={`20,${chartHeight-10} ${chartWidth-20},${chartHeight-10}`} stroke="#ccc" strokeWidth={1} />
+            <Polyline points={points(systolicValues)} fill="none" stroke="#E53935" strokeWidth={3} />
+            {systolicValues.map((v,i)=>{
+              const x = xForIndex(i);
+              return (
+                <Circle
+                  key={`s-${i}`}
+                  cx={x}
+                  cy={valueToY(v)}
+                  r={5}
+                  fill="#E53935"
+                  onPress={()=> setSelectedPoint({ x, y: valueToY(v), item: sorted[i], tipo:'sistolica' })}
+                />
+              );
+            })}
+            <Polyline points={points(diastolicValues)} fill="none" stroke="#1E88E5" strokeWidth={3} />
+            {diastolicValues.map((v,i)=>{
+              const x = xForIndex(i);
+              return (
+                <Circle
+                  key={`d-${i}`}
+                  cx={x}
+                  cy={valueToY(v)}
+                  r={5}
+                  fill="#1E88E5"
+                  onPress={()=> setSelectedPoint({ x, y: valueToY(v), item: sorted[i], tipo:'diastolica' })}
+                />
+              );
+            })}
+          </Svg>
+          <View style={styles.chartLabelsRow}>
+            {sorted.map((r,i)=>{
+              const d = new Date(r.data_hora_medicao);
+              const label = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}`;
+              return <Text key={r.id} style={[styles.chartLabel,{left:xForIndex(i) - 10, position:'absolute'}]}>{label}</Text>;
+            })}
+          </View>
+          {renderTooltip()}
+        </View>
+      </ScrollView>
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}><View style={[styles.legendDot,{backgroundColor:'#E53935'}]} /><Text style={styles.legendLabel}>Sistólica</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendDot,{backgroundColor:'#1E88E5'}]} /><Text style={styles.legendLabel}>Diastólica</Text></View>
+        <View style={styles.legendRangeBadge}><Text style={styles.legendRangeText}>{min + 5} - {max - 5} mmHg</Text></View>
+      </View>
+    </View>
   );
 };
 
@@ -149,13 +204,27 @@ export default function PressureHistoryScreen() {
   const [filteredRecords, setFilteredRecords] = useState<PressureHistoryItem[] | null>(null);
 
   // Modal edição
+  // Filtro período
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [filteredRecords, setFilteredRecords] = useState<PressureHistoryItem[] | null>(null);
+
+  // Modal edição
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PressureHistoryItem | null>(null);
   const [systolic, setSystolic] = useState(0);
   const [diastolic, setDiastolic] = useState(0);
   const [date, setDate] = useState('');
+  const [date, setDate] = useState('');
 
   const fetchHistory = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await AsyncStorage.getItem('healthcare_auth_token');
+      if (!token) throw new Error('Token de autenticação não encontrado.');
+      const profileId = await AsyncStorage.getItem('active_profile_id');
+      if (!profileId) throw new Error('Nenhum perfil ativo encontrado.');
     setLoading(true);
     setError(null);
     try {
@@ -183,11 +252,51 @@ export default function PressureHistoryScreen() {
     } finally {
       setLoading(false);
     }
+      const response = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}?perfil_id=${profileId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const result = await response.json();
+      console.log('Resposta da API pressão:', JSON.stringify(result, null, 2));
+      if (!response.ok) throw new Error(result.message || 'Falha ao buscar o histórico.');
+      const data = result.data;
+      if (Array.isArray(data)) {
+        data.sort((a,b)=> new Date(b.data_hora_medicao).getTime() - new Date(a.data_hora_medicao).getTime());
+        setRecords(data);
+      } else {
+        setRecords([]);
+      }
+    } catch (err:any) {
+      console.error('Erro fetchHistory pressão:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useFocusEffect(useCallback(() => { fetchHistory(); }, []));
+  useFocusEffect(useCallback(() => { fetchHistory(); }, []));
 
   const handleDelete = async (id: number) => {
+    Alert.alert('Confirmar Exclusão','Você tem certeza que deseja excluir este registro?',[
+      { text:'Cancelar', style:'cancel' },
+      { text:'Excluir', style:'destructive', onPress: async () => {
+        try {
+          const token = await AsyncStorage.getItem('healthcare_auth_token');
+          const profileId = await AsyncStorage.getItem('active_profile_id');
+          if (!profileId) { Alert.alert('Erro','Nenhum perfil ativo encontrado.'); return; }
+          const resp = await fetch(`${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${id}?perfil_id=${profileId}`, {
+            method:'DELETE',
+            headers:{ 'Authorization':`Bearer ${token}`, 'Content-Type':'application/json' }
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(()=>({}));
+            throw new Error(errData.message || `Falha ao excluir (HTTP ${resp.status}).`);
+          }
+          setRecords(prev => prev.filter(r => r.id !== id));
+          Alert.alert('Sucesso','Registro excluído com sucesso.');
+        } catch(e:any) { Alert.alert('Erro ao Excluir', e.message); }
+      }}
+    ]);
     Alert.alert('Confirmar Exclusão','Você tem certeza que deseja excluir este registro?',[
       { text:'Cancelar', style:'cancel' },
       { text:'Excluir', style:'destructive', onPress: async () => {
@@ -212,13 +321,18 @@ export default function PressureHistoryScreen() {
 
   const handleEdit = (item: PressureHistoryItem) => {
     setEditingRecord(item);
+    setEditingRecord(item);
     setSystolic(item.sistolica_mmhg);
     setDiastolic(item.diastolica_mmhg);
     setDate(new Date(item.data_hora_medicao).toISOString().split('T')[0]);
     setIsModalVisible(true);
+    setIsModalVisible(true);
   };
 
   const handleUpdate = async () => {
+    if (!editingRecord) return;
+    if (!systolic || !diastolic || systolic <=0 || diastolic <=0) {
+      Alert.alert('Atenção','Valores inválidos.');
     if (!editingRecord) return;
     if (!systolic || !diastolic || systolic <=0 || diastolic <=0) {
       Alert.alert('Atenção','Valores inválidos.');
@@ -228,7 +342,12 @@ export default function PressureHistoryScreen() {
       const token = await AsyncStorage.getItem('healthcare_auth_token');
       const profileId = await AsyncStorage.getItem('active_profile_id');
       if (!profileId) { Alert.alert('Erro','Nenhum perfil ativo encontrado.'); return; }
+      if (!profileId) { Alert.alert('Erro','Nenhum perfil ativo encontrado.'); return; }
       const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.PRESSURE_RECORDS}/${editingRecord.id}?perfil_id=${profileId}`;
+      const time = new Date(editingRecord.data_hora_medicao).toTimeString().slice(0,8);
+      const resp = await fetch(url, {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
       const time = new Date(editingRecord.data_hora_medicao).toTimeString().slice(0,8);
       const resp = await fetch(url, {
         method:'PUT',
@@ -239,11 +358,63 @@ export default function PressureHistoryScreen() {
             data_hora_medicao: `${date}T${time}`,
             perfil_id: parseInt(profileId)
         })
+            diastolica_mmhg: diastolic,
+            data_hora_medicao: `${date}T${time}`,
+            perfil_id: parseInt(profileId)
+        })
       });
       if (!resp.ok) {
         const errData = await resp.json().catch(()=>({}));
         throw new Error(errData.message || 'Falha ao atualizar o registro.');
+      if (!resp.ok) {
+        const errData = await resp.json().catch(()=>({}));
+        throw new Error(errData.message || 'Falha ao atualizar o registro.');
       }
+      Alert.alert('Sucesso!','Registro atualizado.');
+      setIsModalVisible(false);
+      setEditingRecord(null);
+      fetchHistory();
+    } catch(e:any) { Alert.alert('Erro ao Atualizar', e.message); }
+  };
+
+  // Filtro período
+  const formatDateMask = (value: string): string => {
+    const digits = value.replace(/\D/g,'').slice(0,8);
+    let r='';
+    for (let i=0;i<digits.length;i++) { r += digits[i]; if (i===1 || i===3) r+='/'; }
+    return r;
+  };
+
+  const applyFilter = () => {
+    if (!startDate && !endDate) { setFilteredRecords(null); return; }
+    const parseDate = (val:string, end:boolean=false): number => {
+      const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(val.trim());
+      if (!m) return NaN; const [,dd,mm,yyyy] = m; const day = +dd; const month = +mm -1; const year = +yyyy;
+      const h = end?23:0, mi=end?59:0, s=end?59:0;
+      return new Date(year,month,day,h,mi,s).getTime();
+    };
+    const start = startDate? parseDate(startDate,false) : -Infinity;
+    const end = endDate? parseDate(endDate,true) : Infinity;
+    if (isNaN(start) || isNaN(end)) { Alert.alert('Filtro inválido','Formato DD/MM/AAAA.'); return; }
+    if (start > end) { Alert.alert('Intervalo inválido','Início maior que fim.'); return; }
+    const subset = records.filter(r => {
+      const t = new Date(r.data_hora_medicao).getTime();
+      return t >= start && t <= end;
+    });
+    setFilteredRecords(subset);
+  };
+
+  const clearFilter = () => {
+    setStartDate(''); setEndDate(''); setFilteredRecords(null);
+  };
+
+  if (loading) return <ActivityIndicator size="large" color="#004A61" style={styles.centered} />;
+  if (error && records.length === 0) return (
+    <View style={styles.centered}>
+      <Text style={styles.errorText}>Erro ao carregar dados: {error}</Text>
+      <TouchableOpacity onPress={fetchHistory} style={styles.retryButton}><Text style={styles.saveButtonText}>Tentar Novamente</Text></TouchableOpacity>
+    </View>
+  );
       Alert.alert('Sucesso!','Registro atualizado.');
       setIsModalVisible(false);
       setEditingRecord(null);
@@ -317,7 +488,74 @@ export default function PressureHistoryScreen() {
               <TouchableOpacity style={[styles.button, styles.buttonOutline]} onPress={clearFilter}><Text style={styles.buttonOutlineText}>Limpar</Text></TouchableOpacity>
             </View>
             {filteredRecords && <View style={styles.badgeInfo}><Text style={styles.badgeInfoText}>Mostrando {filteredRecords.length} / {records.length}</Text></View>}
+      <ScrollView contentContainerStyle={styles.scrollContent} nestedScrollEnabled>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}><Feather name="arrow-left" size={24} color="#004A61" /></TouchableOpacity>
+          <Text style={styles.headerTitle}>Histórico de Pressão</Text>
+          <View style={{ width:24 }} />
         </View>
+
+        {/* Filtro */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Filtrar por Período</Text>
+            <View style={styles.filterRow}>
+              <View style={styles.filterField}>
+                <Text style={styles.filterLabel}>Início</Text>
+                <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={startDate} keyboardType="number-pad" onChangeText={t=> setStartDate(formatDateMask(t))} />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={styles.filterLabel}>Fim</Text>
+                <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={endDate} keyboardType="number-pad" onChangeText={t=> setEndDate(formatDateMask(t))} />
+              </View>
+            </View>
+            <View style={styles.filterActions}>
+              <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={applyFilter}><Text style={styles.buttonPrimaryText}>Aplicar</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonOutline]} onPress={clearFilter}><Text style={styles.buttonOutlineText}>Limpar</Text></TouchableOpacity>
+            </View>
+            {filteredRecords && <View style={styles.badgeInfo}><Text style={styles.badgeInfoText}>Mostrando {filteredRecords.length} / {records.length}</Text></View>}
+        </View>
+
+        {/* Gráfico */}
+        <PressureChart data={filteredRecords || records} />
+
+        {/* Tabela */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Registros de Pressão</Text>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderCell,{flex:2}]}>Data</Text>
+            <Text style={styles.tableHeaderCell}>Sistólica</Text>
+            <Text style={styles.tableHeaderCell}>Diastólica</Text>
+            <Text style={styles.tableHeaderCell}>Ações</Text>
+          </View>
+          {(filteredRecords ? filteredRecords.length===0 : records.length===0) ? (
+            <View style={styles.emptyWrapper}><Text style={styles.emptyText}>Nenhum registro encontrado.</Text></View>
+          ) : (
+            <FlatList
+              data={filteredRecords || records}
+              keyExtractor={item => item.id.toString()}
+              renderItem={({ item }) => {
+                const dt = formatDateTime(item.data_hora_medicao);
+                return (
+                  <View style={[styles.tableRow, item.id % 2 === 0 && styles.tableRowAlt]}>
+                    <Text style={[styles.tableCell,{flex:2}]}>{dt}</Text>
+                    <Text style={styles.tableCell}>{item.sistolica_mmhg}</Text>
+                    <Text style={styles.tableCell}>{item.diastolica_mmhg}</Text>
+                    <View style={[styles.tableCell, styles.rowActions]}>
+                      <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconButton} hitSlop={{top:8,bottom:8,left:8,right:8}}><Feather name="edit" size={18} color="#007094" /></TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.iconButton} hitSlop={{top:8,bottom:8,left:8,right:8}}><Feather name="trash-2" size={18} color="#D9534F" /></TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }}
+              contentContainerStyle={styles.tableListContent}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Modal de edição */}
+      <Modal animationType="slide" transparent visible={isModalVisible} onRequestClose={()=> setIsModalVisible(false)}>
 
         {/* Gráfico */}
         <PressureChart data={filteredRecords || records} />
@@ -362,8 +600,29 @@ export default function PressureHistoryScreen() {
       <Modal animationType="slide" transparent visible={isModalVisible} onRequestClose={()=> setIsModalVisible(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalCard}>
+          <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Editar Registro</Text>
             <View style={styles.formContainer}>
+              <View style={styles.dualPressureRow}>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>Sistólica</Text>
+                  <View style={styles.metricBody}>
+                    <TouchableOpacity style={styles.metricControl} onPress={()=> setSystolic(p=> p-1)}><Feather name="minus" size={22} color="#555" /></TouchableOpacity>
+                    <View style={styles.metricValueWrap}><Text style={styles.metricValue}>{systolic}</Text><Text style={styles.metricUnit}>mmHg</Text></View>
+                    <TouchableOpacity style={styles.metricControl} onPress={()=> setSystolic(p=> p+1)}><Feather name="plus" size={22} color="#555" /></TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>Diastólica</Text>
+                  <View style={styles.metricBody}>
+                    <TouchableOpacity style={styles.metricControl} onPress={()=> setDiastolic(p=> p-1)}><Feather name="minus" size={22} color="#555" /></TouchableOpacity>
+                    <View style={styles.metricValueWrap}><Text style={styles.metricValue}>{diastolic}</Text><Text style={styles.metricUnit}>mmHg</Text></View>
+                    <TouchableOpacity style={styles.metricControl} onPress={()=> setDiastolic(p=> p+1)}><Feather name="plus" size={22} color="#555" /></TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              <Text style={styles.inputLabel}>Data do registro</Text>
+              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder="AAAA-MM-DD" />
               <View style={styles.dualPressureRow}>
                 <View style={styles.metricCard}>
                   <Text style={styles.metricLabel}>Sistólica</Text>
@@ -388,14 +647,20 @@ export default function PressureHistoryScreen() {
             <View style={styles.modalActions}>
               <TouchableOpacity style={[styles.button, styles.buttonNeutral]} onPress={()=> setIsModalVisible(false)}><Text style={styles.buttonNeutralText}>Cancelar</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleUpdate}><Text style={styles.buttonPrimaryText}>Salvar</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonNeutral]} onPress={()=> setIsModalVisible(false)}><Text style={styles.buttonNeutralText}>Cancelar</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleUpdate}><Text style={styles.buttonPrimaryText}>Salvar</Text></TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
     </SafeAreaView>
   );
+      </Modal>
+    </SafeAreaView>
+  );
 }
 
+// Estilos
 // Estilos
 const styles = StyleSheet.create({
   container: { flex:1, backgroundColor:'#F5F7FA' },
