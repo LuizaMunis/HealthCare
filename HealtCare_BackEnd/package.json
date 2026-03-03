@@ -5,7 +5,11 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "test:email": "node src/test-email-service.js",
+    "test:usermodel": "node src/test-user-model.js",
+    "test:controllers": "node src/test-controllers.js",
+    "test:routes": "node src/test-routes-validation.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -15,6 +19,7 @@
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.6.0",
+    "nodemailer": "^7.0.11",
     "react-dom": "19.0.0",
     "react-native-web": "^0.20.0"
   },

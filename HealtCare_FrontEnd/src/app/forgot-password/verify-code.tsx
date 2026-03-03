@@ -11,12 +11,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator
 } from 'react-native';
+import ApiService from '@/services/apiService';
 
 export default function VerifyCodeScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>(); // Recebe o email da tela anterior
   const [code, setCode] = useState(['', '', '', '']);
+  const [isLoading, setIsLoading] = useState(false);
   const inputs = useRef<TextInput[]>([]);
 
   const handleCodeChange = (text: string, index: number) => {
@@ -32,27 +35,53 @@ export default function VerifyCodeScreen() {
     }
   };
 
-  const handleVerifyCode = () => {
+  const handleVerifyCode = async () => {
     const fullCode = code.join('');
     if (fullCode.length !== 4) {
       Alert.alert('Código Inválido', 'Por favor, insira o código de 4 dígitos.');
       return;
     }
 
-    // --- LÓGICA DA API (Simulação) ---
-    // Aqui você validaria o código junto com o email.
-    console.log(`Verificando código ${fullCode} para o email ${email}`);
+    if (!email) {
+      Alert.alert('Erro', 'Email não encontrado. Por favor, volte e tente novamente.');
+      router.back();
+      return;
+    }
 
-    Alert.alert(
-      'Código Verificado!',
-      'Agora você pode criar uma nova senha.',
-      [
-        { text: 'OK', onPress: () => router.push({
-            pathname: '/forgot-password/reset-password',
-            params: { email: email, code: fullCode } // Passa email e código para a próxima tela
-        })}
-      ]
-    );
+    setIsLoading(true);
+
+    try {
+      const result = await ApiService.verifyCode(email, fullCode);
+
+      if (result.success) {
+        Alert.alert(
+          'Código Verificado!',
+          result.message || 'Agora você pode criar uma nova senha.',
+          [
+            { 
+              text: 'OK', 
+              onPress: () => router.push({
+                pathname: '/forgot-password/reset-password',
+                params: { email: email, code: fullCode }
+              })
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Código Inválido',
+          result.error || 'O código informado está incorreto ou expirou. Verifique e tente novamente.'
+        );
+      }
+    } catch (error: any) {
+      console.error('Erro ao verificar código:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível verificar o código. Verifique sua conexão e tente novamente.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -88,8 +117,16 @@ export default function VerifyCodeScreen() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleVerifyCode}>
-          <Text style={styles.buttonText}>Inserir código</Text>
+        <TouchableOpacity 
+          style={[styles.button, isLoading && styles.buttonDisabled]} 
+          onPress={handleVerifyCode}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Inserir código</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -130,5 +167,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFC',
     },
     button: { backgroundColor: '#004A61', paddingVertical: 18, borderRadius: 12, alignItems: 'center', width: '100%' },
+    buttonDisabled: { opacity: 0.6 },
     buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 });

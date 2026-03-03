@@ -264,6 +264,109 @@ class ValidationMiddleware {
   }
 
   /**
+   * Middleware para validar solicitação de recuperação de senha
+   */
+  static validateForgotPassword() {
+    return [
+      body('email')
+        .notEmpty()
+        .withMessage('Email é obrigatório')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Email deve ter um formato válido'),
+      
+      ValidationMiddleware.handleValidationErrors
+    ];
+  }
+
+  /**
+   * Middleware para validar verificação de código de recuperação
+   */
+  static validateVerifyCode() {
+    return [
+      body('email')
+        .notEmpty()
+        .withMessage('Email é obrigatório')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Email deve ter um formato válido'),
+      
+      body('code')
+        .notEmpty()
+        .withMessage('Código é obrigatório')
+        .isLength({ min: 4, max: 6 })
+        .withMessage('Código deve ter entre 4 e 6 dígitos')
+        .isNumeric()
+        .withMessage('Código deve conter apenas números')
+        .custom((value) => {
+          // Garantir que o código tem exatamente 4 dígitos (padrão do sistema)
+          const trimmedValue = value.trim();
+          if (!/^\d{4}$/.test(trimmedValue)) {
+            throw new Error('Código deve conter exatamente 4 dígitos numéricos');
+          }
+          return true;
+        }),
+      
+      ValidationMiddleware.handleValidationErrors
+    ];
+  }
+
+  /**
+   * Middleware para validar reset de senha
+   */
+  static validateResetPassword() {
+    return [
+      body('email')
+        .notEmpty()
+        .withMessage('Email é obrigatório')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Email deve ter um formato válido'),
+      
+      body('code')
+        .notEmpty()
+        .withMessage('Código é obrigatório')
+        .isLength({ min: 4, max: 6 })
+        .withMessage('Código deve ter entre 4 e 6 dígitos')
+        .isNumeric()
+        .withMessage('Código deve conter apenas números')
+        .custom((value) => {
+          // Garantir que o código tem exatamente 4 dígitos (padrão do sistema)
+          const trimmedValue = value.trim();
+          if (!/^\d{4}$/.test(trimmedValue)) {
+            throw new Error('Código deve conter exatamente 4 dígitos numéricos');
+          }
+          return true;
+        }),
+      
+      body('newPassword')
+        .notEmpty()
+        .withMessage('Nova senha é obrigatória')
+        .isLength({ min: 6 })
+        .withMessage('Nova senha deve ter pelo menos 6 caracteres')
+        .custom((value) => {
+          // Validação básica de força da senha
+          if (value.length < 6) {
+            throw new Error('Nova senha deve ter pelo menos 6 caracteres');
+          }
+          
+          // Aviso opcional para senhas mais seguras
+          const hasUpperCase = /[A-Z]/.test(value);
+          const hasLowerCase = /[a-z]/.test(value);
+          const hasNumbers = /\d/.test(value);
+          
+          if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+            console.warn('Senha recomendada: use letras maiúsculas, minúsculas e números para maior segurança');
+          }
+          
+          return true;
+        }),
+      
+      ValidationMiddleware.handleValidationErrors
+    ];
+  }
+
+  /**
    * Middleware para validar dados de atualização de perfil
    */
   static validateProfileUpdate() {

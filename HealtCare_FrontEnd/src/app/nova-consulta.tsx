@@ -17,6 +17,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, ENDPOINTS } from '@/constants/api';
 
 export default function NovaConsultaScreen() {
   const router = useRouter();
@@ -33,6 +35,7 @@ export default function NovaConsultaScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedHour, setSelectedHour] = useState(8);
   const [selectedMinute, setSelectedMinute] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   // Configurações dos seletores de hora
   const ITEM_HEIGHT = 44;
@@ -314,6 +317,7 @@ export default function NovaConsultaScreen() {
       }
 
       if (result.success) {
+        setSaving(false);
         Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
         router.back();
       } else {
@@ -503,8 +507,14 @@ export default function NovaConsultaScreen() {
 
       {/* Botão Salvar */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Salvar</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={saving}
+        >
+          <Text style={styles.saveButtonText}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -853,6 +863,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
   saveButtonText: {
     fontSize: 16,

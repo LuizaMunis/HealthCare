@@ -53,6 +53,9 @@ export const ENDPOINTS = {
     LOGIN: '/users/login',
     PROFILE: '/users/profile', 
     CHANGE_PASSWORD: '/users/change-password',
+    FORGOT_PASSWORD: '/users/forgot-password',
+    VERIFY_CODE: '/users/verify-code',
+    RESET_PASSWORD: '/users/reset-password',
   },
   PROFILE: {
     GET_SAVE: '/perfil',
